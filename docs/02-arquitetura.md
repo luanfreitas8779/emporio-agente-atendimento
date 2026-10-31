@@ -109,6 +109,19 @@ Tabelas operacionais:
 - **Alternativas:** deixar o modelo traduzir, mais simples e menos confiável; substituir `status` pelo texto, o que perderia o registro original exigido pelo DQ-16 e pelo TC-301.
 - **Consequências:** a tradução é testável sem chamar o modelo, e um novo status exige atualizar o mapa, o que a validação da carga (`docs/03-dados.md`, seção 8) já impede de passar despercebido. O modelo continua redigindo a frase, então o texto final ainda depende do prompt e da avaliação manual. O mesmo princípio vale para novos dados exibidos ao cliente: formatar em código, não pedir ao modelo.
 
+### ADR-013: Arquitetura híbrida com guarda na saída
+
+- **Status:** Aceita para o MVP.
+- **Contexto:** o modelo escolhe a ferramenta e redige a resposta, então pode citar valores que a ferramenta não devolveu. As próximas issues (trocas, histórico, interesses, escopo) acrescentam regras e ferramentas, o que amplia essa superfície. Trocar a orquestração por uma em que o modelo só interpreta a intenção é possível, mas não cabe no prazo do MVP.
+- **Decisão:** manter o function calling do ADR-001 e mover para o código tudo o que não depende de interpretação:
+  1. **Fatos prontos.** Valores, datas, situações e vereditos de regra (como o prazo de devolução) são calculados e formatados em código. O modelo apenas os repassa (ADR-012).
+  2. **Guarda na saída.** Antes de a resposta chegar ao cliente, o código confere se todo valor em reais, percentual, data e código de rastreio citado consta nos retornos das ferramentas daquele turno ou na própria mensagem do cliente. Datas são comparadas pelo dia, não pelo formato. Se algum valor não for confirmado, o modelo recebe um pedido de correção uma única vez. Persistindo o problema, o cliente recebe uma resposta segura, sem o texto do modelo.
+  3. **Estado da conversa em código.** Os dados que precisam atravessar mensagens, como o pedido em análise, o produto em foco e a pergunta pendente, ficam em uma estrutura pequena persistida por telefone, e não na memória do modelo (issue #7).
+  4. **Memória curta.** O modelo recebe apenas as últimas trocas completas da conversa, nunca uma chamada de ferramenta separada de seu retorno (issue #7).
+  5. **Dados mínimos.** Do cadastro, o modelo recebe só o primeiro nome.
+- **Alternativas:** modelo que apenas interpreta, em duas etapas (primeira chamada devolve intenção e dados, o código executa as ferramentas e monta os fatos, a segunda redige). É mais previsível e usa sempre 2 requisições, mas exige reescrever a orquestração e foi adiada.
+- **Consequências:** a guarda pega o erro mais perigoso, o valor inventado, sem custo quando a resposta está correta; cada correção custa uma requisição. Ela não detecta erro de interpretação, como confundir troca com arrependimento, nem números escritos por extenso. A evolução para duas etapas continua possível, porque as ferramentas e seus testes são reaproveitados.
+
 ### ADR-004: SQLite como armazenamento
 
 - **Status:** Aceita.
