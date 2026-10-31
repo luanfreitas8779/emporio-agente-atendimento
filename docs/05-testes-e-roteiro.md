@@ -110,16 +110,20 @@ As conversas serão salvas em `examples/`, a partir de execuções reais.
 | Meta de conclusão técnica | 02/11/2026, 12:00 (UTC-3) |
 | Esforço estimado | 14,5 horas |
 
-| Etapa | Entrega | Estimativa |
-|---|---|---|
-| 1. Configuração | Ambiente, dependências, `.env.example` e testes | 1 h |
-| 2. Dados | Carga para SQLite e validações | 2 h |
-| 3. Regras | Preço, disponibilidade e políticas | 2 h |
-| 4. Agente | Persona, ferramentas e fluxo com modelo simulado | 3 h |
-| 5. Persistência | Histórico, interesses e encaminhamentos | 2 h |
-| 6. Interface | Chat Streamlit e painel de ferramentas | 1,5 h |
-| 7. Validação | Avaliação com Gemini e ajustes | 1,5 h |
-| 8. Entrega | README, conversas de referência e revisão final | 1,5 h |
+O trabalho está dividido em fatias verticais, acompanhadas no GitHub Issues a partir da [spec](https://github.com/luanfreitas8779/emporio-agente-atendimento/issues/1).
+
+| Issue | Ticket | Bloqueado por | Estimativa |
+|---|---|---|---|
+| #2 | Primeira resposta de ponta a ponta | Nenhum | 3,5 h |
+| #3 | Catálogo com disponibilidade e preços | #2 | 1,5 h |
+| #4 | Políticas da loja | #2 | 1,5 h |
+| #5 | Identificação e pedidos | #2 | 1,5 h |
+| #6 | Trocas e devoluções | #4, #5 | 1 h |
+| #7 | Histórico persistente | #5 | 1,5 h |
+| #8 | Interesses e reposição | #3, #7 | 1,5 h |
+| #9 | Escopo e encaminhamento | #4, #5 | 1 h |
+| #10 | Limite de uso e painel de ferramentas | #2 | 1 h |
+| #11 | Validação e documentação final | #3 a #10 | 1,5 h |
 
 Se o prazo apertar, serão reduzidos primeiro o acabamento visual e as avaliações adicionais. Agente, regras, persistência e documentação permanecem prioritários.
 
