@@ -612,11 +612,14 @@ def test_devolucao_sem_cadastro_explica_que_pedidos_exigem_telefone_cadastrado(c
     assert retorno.content == SEM_CADASTRO
 
 
-def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(conexao):
-    for argumentos in (
+@pytest.mark.parametrize(
+    "argumentos",
+    [
         {"numero_pedido": 7, "motivo": "fiquei com dó"},
         {"numero_pedido": 7, "motivo": "defeito", "customer_id": 14},
-    ):
-        retorno = chamar_ferramenta(conexao, ANA, "avaliar_devolucao", argumentos)
+    ],
+)
+def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(conexao, argumentos):
+    retorno = chamar_ferramenta(conexao, ANA, "avaliar_devolucao", argumentos)
 
-        assert retorno.outcome == "retried"
+    assert retorno.outcome == "retried"
