@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import date, timedelta
+from dataclasses import field
 from enum import StrEnum
 
 from pydantic.dataclasses import dataclass as dataclass_pydantic
@@ -24,6 +25,7 @@ class Resultado(StrEnum):
     DENTRO_DO_PRAZO = "dentro_do_prazo"
     FORA_DO_PRAZO = "fora_do_prazo"
     NAO_SE_APLICA = "nao_se_aplica"
+    FALTAM_DADOS = "faltam_dados"
 
 
 @dataclass_pydantic(frozen=True)
@@ -37,6 +39,8 @@ class Regra:
 class Veredito:
     resultado: Resultado
     regras: list[Regra]
+    # O que o modelo deve perguntar ao cliente antes de haver veredito.
+    faltando: list[str] = field(default_factory=list)
 
 
 def avaliar_devolucao(
@@ -47,6 +51,8 @@ def avaliar_devolucao(
     canal: Canal | None,
     hoje: date,
 ) -> Veredito:
+    if motivo == Motivo.ARREPENDIMENTO and canal is None:
+        return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
         return Veredito(Resultado.NAO_SE_APLICA, [])
     linha = conexao.execute(

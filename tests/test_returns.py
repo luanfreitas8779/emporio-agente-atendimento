@@ -38,3 +38,14 @@ def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(conexao):
 
     assert veredito.resultado == "nao_se_aplica"
     assert veredito.regras == []
+
+
+def test_arrependimento_sem_canal_pede_o_canal_de_compra(conexao):
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal=None,
+        hoje=date(2026, 2, 20),
+    )
+
+    assert veredito.resultado == "faltam_dados"
+    assert veredito.faltando == ["canal_de_compra"]
+    assert veredito.regras == []
