@@ -161,6 +161,11 @@ Situação após as issues #3 (catálogo), #4 (políticas) e #5 (identificação
 | Cota do Gemini | Cada pergunta usa, em média, de 2 a 3 requisições ao modelo, por causa das chamadas de ferramenta. O limite considerado de 20 por dia foi atingido durante a validação das issues #3 e #4 e voltou a ser consumido quase por inteiro na issue #5 | Planejar os ciclos de avaliação por quantidade de requisições e registrar respostas 429 |
 | Conversas de referência | Ainda não há arquivos em `examples/` | Gerar a partir de execuções reais (issue #11) |
 | Status do pedido em inglês | O agente repete o status registrado (`shipped`, `confirmed`) na resposta ao cliente | Mapear os status para descrições em português em código, com teste |
-| Telefone com código do país | O telefone é normalizado para dígitos, mas `+55` ou `55` no início não é removido, então não identifica o cliente | Definir a regra de normalização do código do país e cobrir com teste |
 | Redação da resposta de pedidos | O prompt de pedidos (data de entrega em formato brasileiro, recusa de terceiros, explicação sem cadastro) foi validado com 3 perguntas reais, sem teste automático | Revalidar com o Gemini a cada mudança do prompt |
 | Trocas e devoluções | A consulta de pedidos não informa canal de compra nem prazos | Tratar na issue #6 |
+| Data de referência configurável | A decisão da spec (padrão 2026-03-25) ainda não existe em `src/config.py`; só os prazos de troca dependem dela | Implementar na issue #6, com teste de prazo |
+| Pipeline de carga incompleto | Faltam `specs` como JSON, índices e as tabelas operacionais (conversas, interesses, encaminhamentos) | Criar as tabelas nas issues #7, #8 e #9, junto com a carga que as usa |
+| Tipos de domínio | Disponibilidade, status e preços circulam como texto, que é o contrato entre as ferramentas e o modelo. Um `Enum` ou tipo `Dinheiro` só valeria se surgissem novos cálculos | Reavaliar ao implementar prazos e devoluções (issue #6) |
+| Tamanho de `load_data.py` | O módulo reúne esquema, validação e carga de seis tabelas. Vai crescer com as tabelas operacionais | Separar esquema e validação se passar de cerca de 400 linhas |
+| Soma das parcelas | O valor da parcela é arredondado individualmente e pode diferir do total em até alguns centavos | Aceito: é o comportamento usual do cartão; o texto não promete soma exata |
+| Modelos simulados dos testes | Os modelos falsos dependem da posição das mensagens (`len(mensagens) == 1`) | Revisar se a biblioteca mudar a estrutura das mensagens na atualização de versão |

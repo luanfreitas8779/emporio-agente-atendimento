@@ -2,8 +2,14 @@ import pytest
 
 from src.catalog import buscar_produtos
 from src.database import conectar
+from src.load_data import (
+    ErroDeCarga,
+    carregar_catalogo,
+    carregar_clientes,
+    carregar_dados,
+    carregar_pedidos,
+)
 from src.orders import consultar_pedidos, identificar_cliente
-from src.load_data import ErroDeCarga, carregar_catalogo, carregar_clientes, carregar_dados, carregar_pedidos
 from tests.conftest import PASTA_DADOS
 
 

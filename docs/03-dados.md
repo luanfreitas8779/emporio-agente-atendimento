@@ -120,8 +120,8 @@ Com esse valor, nenhum pedido entregue está dentro dos 7 dias de arrependimento
 1. Ler os arquivos de origem sem alterá-los.
 2. Converter números, datas e booleanos.
 3. Interpretar `specs` como JSON.
-4. Normalizar telefones para conter apenas dígitos.
-5. Validar ids e relacionamentos.
+4. Normalizar telefones para conter apenas dígitos, sem o código do país.
+5. Validar cada registro conforme a seção 8, antes de alterar o banco.
 6. Criar as tabelas e os índices no SQLite.
 7. Criar as tabelas operacionais.
 8. Registrar os erros de validação e interromper a carga em caso de falha crítica.
@@ -132,3 +132,34 @@ Com esse valor, nenhum pedido entregue está dentro dos 7 dias de arrependimento
 - E-mail e cidade não são necessários para as respostas do MVP e não são expostos ao agente.
 - Os dados versionados são fictícios. Telefones podem coincidir com números reais, então não devem ser usados para contato.
 - Dados reais só podem ser usados após a revisão dos termos do provedor e a adequação à LGPD.
+
+## 8. Validação de entrada
+
+Nenhum dado entra no sistema sem validação. Há duas fronteiras: a carga dos arquivos de origem e os argumentos das ferramentas do agente.
+
+### 8.1 Carga dos arquivos
+
+Qualquer violação interrompe a carga com `ErroDeCarga`, que informa a entidade e o id. Toda a validação ocorre antes de recriar as tabelas, então uma carga que falha preserva o banco anterior.
+
+| Entidade | Regras |
+|---|---|
+| Todas | Id numérico e sem duplicidade |
+| Produto | Categoria existente; preço não negativo e sem fração de centavo; estoque inteiro não negativo; `status` em `active`, `coming_soon` ou `discontinued` |
+| Promoção | Produto existente; desconto de 0 a 100; `is_active` igual a 0 ou 1 |
+| Cliente | Nome preenchido; telefone brasileiro com 10 ou 11 dígitos, aceitando `+55`; telefone sem duplicidade entre clientes |
+| Pedido | Cliente existente; total não negativo e sem fração de centavo; `status` em `pending`, `confirmed`, `shipped`, `delivered` ou `cancelled`; pagamento em `pix`, `debit`, `boleto` ou `credit_1x` a `credit_12x` |
+| Item de pedido | Pedido e produto existentes; quantidade positiva |
+
+Valores monetários com mais de duas casas são recusados, e não arredondados, para que um erro na origem não passe despercebido.
+
+### 8.2 Argumentos das ferramentas
+
+O modelo é uma fonte de entrada não confiável. Os argumentos são validados pelo Pydantic AI, e um valor inválido volta ao modelo como pedido de correção:
+
+- `preco_maximo`, `valor`: maiores que zero.
+- `parcelas`, `numero_pedido`: inteiros a partir de 1.
+- `secao`: uma das seções de `policies.SECOES`.
+- Parcelas acima de 12 não são recusadas: a resposta informa o limite de 12x.
+- Argumentos desconhecidos, como `customer_id`, são rejeitados.
+
+O telefone da sessão não é argumento do modelo. Ele é normalizado por `src/phone.py`, e um telefone inválido ou sem cadastro não identifica ninguém.
