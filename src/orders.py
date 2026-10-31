@@ -6,6 +6,7 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass as dataclass_pydantic
 
 from src.catalog import formatar_preco
+from src.datas import formatar_data
 from src.phone import normalizar_telefone
 
 FORMAS_DE_PAGAMENTO = {
@@ -104,7 +105,7 @@ def consultar_pedidos(
     return [
         Pedido(
             linha["order_id"],
-            linha["order_date"],
+            formatar_data(linha["order_date"]),
             linha["status"],
             STATUS_DE_PEDIDO[linha["status"]],
             consultar_itens(conexao, linha["order_id"]),
@@ -112,7 +113,7 @@ def consultar_pedidos(
             formatar_preco(linha["total_cents"]),
             descrever_pagamento(linha["payment_method"]),
             linha["tracking_code"],
-            linha["estimated_delivery"],
+            formatar_data(linha["estimated_delivery"]),
         )
         for linha in linhas
     ]

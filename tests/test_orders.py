@@ -28,7 +28,7 @@ def test_cliente_2_consulta_o_pedido_8_com_status_e_rastreio(conexao):
     assert pedido.numero == 8
     assert pedido.status == "shipped"
     assert pedido.rastreio == "BRJL5544332BR"
-    assert pedido.entrega_estimada == "2026-02-28"
+    assert pedido.entrega_estimada == "28/02/2026"
 
 
 def test_pedido_de_outro_cliente_e_tratado_como_nao_encontrado(conexao):
@@ -45,7 +45,7 @@ def test_sem_numero_lista_apenas_os_pedidos_do_cliente(conexao):
 def test_pedido_mostra_itens_data_e_pagamento(conexao):
     (pedido,) = consultar_pedidos(conexao, cliente_id=2, numero=8)
 
-    assert pedido.data == "2026-02-15"
+    assert pedido.data == "15/02/2026"
     assert pedido.pagamento == "débito"
     assert [(i.nome, i.quantidade) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
 
