@@ -623,3 +623,28 @@ def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(conexao, 
     retorno = chamar_ferramenta(conexao, ANA, "avaliar_devolucao", argumentos)
 
     assert retorno.outcome == "retried"
+
+
+def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos: dict):
+    def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        ultima = mensagens[-1].parts[0]
+        if ultima.part_kind == "user-prompt" and ultima.content == "Quero devolver":
+            return ModelResponse(parts=[ToolCallPart("avaliar_devolucao", argumentos)])
+        if ultima.part_kind == "tool-return":
+            return ModelResponse(parts=[TextPart("ok")])
+        return ModelResponse(parts=[TextPart(info.instructions or "")])
+
+    return modelo
+
+
+def test_canal_nao_informado_vira_pergunta_pendente_na_mensagem_seguinte(conexao):
+    sessao = Sessao(conexao, telefone=LETICIA)
+    modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(
+        {"numero_pedido": 7, "motivo": "arrependimento"}
+    )
+
+    with agente.override(model=FunctionModel(modelo)):
+        responder("Quero devolver", sessao)
+        instrucoes = responder("Foi online", sessao)
+
+    assert "Pergunta pendente: o canal de compra do pedido 7" in instrucoes

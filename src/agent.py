@@ -74,6 +74,11 @@ RESPOSTA_SEGURA = (
     "Pode reformular a pergunta ou falar com a nossa equipe?"
 )
 
+PERGUNTAS_PENDENTES = {
+    "canal_de_compra": "o canal de compra",
+    "motivo": "o motivo da devolução",
+}
+
 
 @dataclass
 class Sessao:
@@ -146,6 +151,12 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
         if nome:
             texto += f"\nProduto em foco: {nome}."
+    pergunta = ctx.deps.estado.pergunta_pendente
+    if pergunta is not None and pedido is not None:
+        texto += (
+            f"\nPergunta pendente: {PERGUNTAS_PENDENTES[pergunta]} do pedido {pedido}. "
+            "A próxima mensagem do cliente provavelmente responde a ela."
+        )
     return texto
 
 
@@ -236,9 +247,14 @@ def avaliar_devolucao(
     cliente = ctx.deps.cliente
     if cliente is None:
         return SEM_CADASTRO
-    return returns.avaliar_devolucao(
+    veredito = returns.avaliar_devolucao(
         ctx.deps.conexao, cliente.id, numero_pedido, motivo, canal, ctx.deps.hoje
     )
+    if veredito.resultado != returns.Resultado.PEDIDO_NAO_ENCONTRADO:
+        ctx.deps.estado.pedido_em_analise = numero_pedido
+    # O código controla a pergunta pendente: nasce de um veredito sem dados e some com um veredito.
+    ctx.deps.estado.pergunta_pendente = veredito.faltando[0] if veredito.faltando else None
+    return veredito
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
