@@ -51,6 +51,8 @@ def valor_da_parcela(valor_em_centavos: int, parcelas: int) -> str:
 
 
 def descrever_parcelamento(valor: float, parcelas: int | None) -> str:
+    if valor <= 0 or (parcelas is not None and parcelas < 1):
+        raise ValueError("O valor e o número de parcelas devem ser positivos.")
     centavos = int((Decimal(str(valor)) * 100).quantize(Decimal(1), ROUND_HALF_UP))
     maximo = max(
         (n for n in range(1, MAXIMO_DE_PARCELAS + 1) if n == 1 or atende_parcela_minima(centavos, n)),
@@ -60,7 +62,11 @@ def descrever_parcelamento(valor: float, parcelas: int | None) -> str:
         f"máximo de {maximo}x de {valor_da_parcela(centavos, maximo)}."
     ]
     if parcelas is not None:
-        if parcelas == 1 or atende_parcela_minima(centavos, parcelas):
+        if parcelas > MAXIMO_DE_PARCELAS:
+            linhas.append(
+                f"{parcelas}x não é possível: o parcelamento vai até {MAXIMO_DE_PARCELAS}x."
+            )
+        elif parcelas == 1 or atende_parcela_minima(centavos, parcelas):
             linhas.append(f"{parcelas}x atende à parcela mínima.")
         else:
             minima = formatar_preco(parcela_minima_em_centavos(parcelas))

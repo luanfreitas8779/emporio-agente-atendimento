@@ -134,3 +134,17 @@ def test_cliente_pode_pedir_a_exclusao_dos_dados():
 def test_toda_secao_da_especificacao_tem_conteudo():
     for secao in SECOES:
         assert consultar_politicas(secao).strip()
+
+
+def test_mais_de_12_parcelas_nao_sao_oferecidas():
+    texto = consultar_politicas("pagamentos", valor=5000, parcelas=13)
+
+    assert "até 12x" in texto
+    assert "13x" in texto
+    assert "atende à parcela mínima" not in texto
+
+
+@pytest.mark.parametrize("valor, parcelas", [(0, 3), (-10, 3), (100, 0), (100, -2)])
+def test_recusa_valor_ou_parcelas_nao_positivos(valor, parcelas):
+    with pytest.raises(ValueError):
+        consultar_politicas("pagamentos", valor=valor, parcelas=parcelas)
