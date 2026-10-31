@@ -157,3 +157,20 @@ def test_cliente_identificado_consulta_o_status_e_o_rastreio_do_pedido_8(conexao
 
     assert "shipped" in resposta
     assert "BRJL5544332BR" in resposta
+
+
+def test_telefone_sem_cadastro_recebe_a_explicacao_de_que_nao_ha_pedidos(conexao):
+    sessao = Sessao(conexao, telefone="(67) 90000-0000")
+
+    with agente.override(model=FunctionModel(modelo_que_consulta_o_pedido_8)):
+        resposta = responder("Onde está meu pedido 8?", sessao)
+
+    assert "sem cadastro" in resposta
+    assert "shipped" not in resposta
+
+
+def test_sessao_sem_telefone_tambem_nao_consulta_pedidos(conexao):
+    with agente.override(model=FunctionModel(modelo_que_consulta_o_pedido_8)):
+        resposta = responder("Onde está meu pedido 8?", Sessao(conexao))
+
+    assert "sem cadastro" in resposta

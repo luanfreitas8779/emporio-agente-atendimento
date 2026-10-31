@@ -44,6 +44,11 @@ Regras de catálogo:
   a ferramenta; só ofereça o que a ferramenta devolveu.
 """
 
+SEM_CADASTRO = (
+    "Telefone sem cadastro: não é possível consultar pedidos. "
+    "O cliente ainda pode tirar dúvidas gerais."
+)
+
 
 @dataclass
 class Sessao:
@@ -119,7 +124,7 @@ def consultar_politicas(
 @agente.tool
 def consultar_meus_pedidos(
     ctx: RunContext[Sessao], numero_pedido: int | None = None
-) -> list[orders.Pedido]:
+) -> list[orders.Pedido] | str:
     """Consulta os pedidos do cliente desta conversa.
 
     Devolve data, status, itens, total registrado, pagamento, rastreio e entrega
@@ -128,7 +133,13 @@ def consultar_meus_pedidos(
     Args:
         numero_pedido: Número do pedido. Sem ele, devolve todos os pedidos do cliente.
     """
-    cliente = orders.identificar_cliente(ctx.deps.conexao, ctx.deps.telefone)
+    cliente = (
+        orders.identificar_cliente(ctx.deps.conexao, ctx.deps.telefone)
+        if ctx.deps.telefone
+        else None
+    )
+    if cliente is None:
+        return SEM_CADASTRO
     return orders.consultar_pedidos(ctx.deps.conexao, cliente.id, numero_pedido)
 
 
