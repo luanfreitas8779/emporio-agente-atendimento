@@ -442,3 +442,28 @@ def test_historico_corrompido_e_ignorado_e_o_atendimento_continua(conexao):
         resposta = responder("Oi", sessao)
 
     assert resposta == "Oi"
+
+
+def modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    ultima = mensagens[-1].parts[0]
+    if ultima.part_kind == "user-prompt" and ultima.content == "Tem o Giannini?":
+        return ModelResponse(
+            parts=[ToolCallPart("buscar_produtos", {"termo": "Giannini GF-3D"})]
+        )
+    if ultima.part_kind == "tool-return":
+        return ModelResponse(parts=[TextPart("ok")])
+    return ModelResponse(parts=[TextPart(info.instructions or "")])
+
+
+def test_produto_unico_encontrado_fica_em_foco_nas_mensagens_seguintes(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(
+        model=FunctionModel(modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes)
+    ):
+        responder("Tem o Giannini?", sessao)
+        instrucoes = responder("E o preço?", sessao)
+
+    assert "Produto em foco: Giannini GF-3D" in instrucoes

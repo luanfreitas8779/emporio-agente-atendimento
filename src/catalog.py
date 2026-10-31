@@ -114,3 +114,10 @@ def buscar_produtos(
             continue
         produtos.append(produto)
     return produtos
+
+
+def nome_do_produto(conexao: sqlite3.Connection, produto_id: int) -> str | None:
+    linha = conexao.execute(
+        "SELECT name FROM products WHERE product_id = ?", (produto_id,)
+    ).fetchone()
+    return linha["name"] if linha else None

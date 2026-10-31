@@ -1,7 +1,7 @@
 import contextvars
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
 from pydantic import Field
@@ -78,6 +78,7 @@ RESPOSTA_SEGURA = (
 class Sessao:
     conexao: sqlite3.Connection
     telefone: str | None = None
+    estado: memory.Estado = field(default_factory=memory.Estado)
 
     @property
     def cliente(self) -> orders.Cliente | None:
@@ -131,9 +132,16 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
 def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     cliente = ctx.deps.cliente
     if cliente is None:
-        return "O cliente desta conversa está sem cadastro: não consulte pedidos."
-    # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
-    return f"O cliente desta conversa se chama {cliente.primeiro_nome}."
+        texto = "O cliente desta conversa está sem cadastro: não consulte pedidos."
+    else:
+        # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
+        texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
+    foco = ctx.deps.estado.produto_em_foco
+    if foco is not None:
+        nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
+        if nome:
+            texto += f"\nProduto em foco: {nome}."
+    return texto
 
 
 @agente.tool
@@ -152,9 +160,12 @@ def buscar_produtos(
         preco_maximo: Preço máximo em reais, considerando o preço final.
         somente_disponiveis: Use true quando o cliente pedir apenas opções disponíveis.
     """
-    return catalog.buscar_produtos(
+    produtos = catalog.buscar_produtos(
         ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis
     )
+    if len(produtos) == 1:
+        ctx.deps.estado.produto_em_foco = produtos[0].id
+    return produtos
 
 
 @agente.tool
@@ -200,12 +211,14 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     # O contexto copiado preserva o modelo simulado dos testes na outra thread.
     contexto = contextvars.copy_context()
     historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
+    sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
     execucao = _executor.submit(
         contexto.run, agente.run_sync, mensagem, deps=sessao, message_history=historico
     )
     try:
         resultado = execucao.result()
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
+        memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
