@@ -34,27 +34,6 @@ def test_responde_com_um_loop_assincrono_em_execucao(conexao):
     assert "R$ 2.199,00" in resposta
 
 
-def modelo_que_busca_violoes_ate_1000(
-    mensagens: list[ModelMessage], info: AgentInfo
-) -> ModelResponse:
-    if len(mensagens) == 1:
-        argumentos = {
-            "categoria": "Violões",
-            "preco_maximo": 1000,
-            "somente_disponiveis": True,
-        }
-        return ModelResponse(parts=[ToolCallPart("buscar_produtos", argumentos)])
-    resultado = mensagens[-1].parts[0].content
-    return ModelResponse(parts=[TextPart(f"{len(resultado)} opções")])
-
-
-def test_agente_busca_por_categoria_e_preco_maximo(conexao):
-    with agente.override(model=FunctionModel(modelo_que_busca_violoes_ate_1000)):
-        resposta = responder("Violões disponíveis até R$ 1000?", Sessao(conexao))
-
-    assert resposta == "12 opções"
-
-
 def modelo_que_consulta_os_horarios(
     mensagens: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
@@ -87,3 +66,58 @@ def test_agente_recusa_secao_fora_da_lista_e_deixa_o_modelo_tentar_de_novo(conex
         resposta = responder("Me conta uma fofoca", Sessao(conexao))
 
     assert resposta == "tentou de novo"
+
+
+def modelo_que_busca_violoes_disponiveis_ate_1000(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        argumentos = {
+            "categoria": "Violões",
+            "preco_maximo": 1000,
+            "somente_disponiveis": True,
+        }
+        return ModelResponse(parts=[ToolCallPart("buscar_produtos", argumentos)])
+    produtos = mensagens[-1].parts[0].content
+    return ModelResponse(parts=[TextPart(str(len(produtos)))])
+
+
+def test_agente_lista_os_12_violoes_disponiveis_ate_1000_reais(conexao):
+    with agente.override(
+        model=FunctionModel(modelo_que_busca_violoes_disponiveis_ate_1000)
+    ):
+        resposta = responder("Violões disponíveis até R$ 1000?", Sessao(conexao))
+
+    assert resposta == "12"
+
+
+def modelo_que_sugere_alternativas_ao_produto_indisponivel(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    resultados = [
+        parte.content
+        for mensagem in mensagens
+        for parte in mensagem.parts
+        if parte.part_kind == "tool-return"
+    ]
+    if not resultados:
+        return ModelResponse(
+            parts=[ToolCallPart("buscar_produtos", {"termo": "Giannini GF-3D"})]
+        )
+    if len(resultados) == 1:
+        (giannini,) = resultados[0]
+        assert giannini.disponibilidade == "indisponivel"
+        argumentos = {"categoria": giannini.categoria, "somente_disponiveis": True}
+        return ModelResponse(parts=[ToolCallPart("buscar_produtos", argumentos)])
+    nomes = [produto.nome for produto in resultados[1]]
+    return ModelResponse(parts=[TextPart("; ".join(nomes))])
+
+
+def test_agente_encontra_alternativas_disponiveis_para_produto_sem_estoque(conexao):
+    with agente.override(
+        model=FunctionModel(modelo_que_sugere_alternativas_ao_produto_indisponivel)
+    ):
+        resposta = responder("Tem o Giannini GF-3D?", Sessao(conexao))
+
+    assert "Yamaha C40 Nylon Natural" in resposta
+    assert "Giannini GF-3D" not in resposta
