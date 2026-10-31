@@ -56,6 +56,15 @@ class Estado:
 
 def criar_tabelas(conexao: sqlite3.Connection) -> None:
     conexao.executescript(ESQUEMA)
+    # CREATE TABLE IF NOT EXISTS não altera uma tabela existente: bancos criados antes
+    # da pergunta pendente (issue #6) recebem a coluna aqui, sem perder as conversas.
+    colunas = {linha["name"] for linha in conexao.execute("PRAGMA table_info(conversation_state)")}
+    if "pergunta_pendente" not in colunas:
+        conexao.execute(
+            "ALTER TABLE conversation_state ADD COLUMN pergunta_pendente TEXT "
+            "CHECK (pergunta_pendente IN ('canal_de_compra', 'motivo'))"
+        )
+        conexao.commit()
 
 
 def _agora() -> str:
