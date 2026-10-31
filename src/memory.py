@@ -7,6 +7,8 @@ from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
     ModelRequest,
+    ModelResponse,
+    TextPart,
     ToolReturnPart,
     UserPromptPart,
 )
@@ -79,7 +81,7 @@ def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
     return []
 
 
-def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> list[ModelMessage]:
+def _ler_mensagens(conexao: sqlite3.Connection, telefone: str | None) -> list[ModelMessage]:
     chave = normalizar_telefone(telefone or "")
     if chave is None:
         return []
@@ -99,7 +101,34 @@ def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> lis
             # Uma linha ilegível não pode travar o atendimento nem deixar um turno
             # pela metade: o histórico recomeça depois dela.
             mensagens = []
-    return limitar_historico(mensagens)
+    return mensagens
+
+
+def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> list[ModelMessage]:
+    return limitar_historico(_ler_mensagens(conexao, telefone))
+
+
+def exibir_conversa(conexao: sqlite3.Connection, telefone: str | None) -> list[tuple[str, str]]:
+    """Fala do cliente e resposta final de cada turno, como o cliente as viu."""
+    conversa: list[tuple[str, str]] = []
+    resposta: str | None = None
+    for mensagem in _ler_mensagens(conexao, telefone):
+        if _inicia_um_turno(mensagem):
+            if resposta is not None:
+                conversa.append(("assistant", resposta))
+                resposta = None
+            texto = " ".join(
+                str(p.content) for p in mensagem.parts if isinstance(p, UserPromptPart)
+            )
+            conversa.append(("user", texto))
+        elif isinstance(mensagem, ModelResponse):
+            textos = [p.content for p in mensagem.parts if isinstance(p, TextPart)]
+            if textos:
+                # Respostas rejeitadas pela guarda são sobrescritas pela seguinte.
+                resposta = " ".join(textos)
+    if resposta is not None:
+        conversa.append(("assistant", resposta))
+    return conversa
 
 
 def salvar_mensagens(

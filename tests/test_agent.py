@@ -7,6 +7,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
 from src.load_data import ler_csv
+from src.memory import exibir_conversa
 from tests.conftest import PASTA_DADOS
 
 
@@ -531,3 +532,42 @@ def test_busca_com_varios_resultados_nao_define_produto_em_foco(conexao):
         instrucoes = responder("E agora?", sessao)
 
     assert "Produto em foco" not in instrucoes
+
+
+def test_conversa_antiga_e_exibida_so_com_o_que_o_cliente_viu(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(
+        model=FunctionModel(modelo_que_consulta_o_horario_e_lista_as_perguntas)
+    ):
+        responder("P1", sessao)
+        responder("P2", sessao)
+
+    assert exibir_conversa(conexao, "67996547821") == [
+        ("user", "P1"),
+        ("assistant", "P1"),
+        ("user", "P2"),
+        ("assistant", "P1 | P2"),
+    ]
+
+
+def modelo_que_inventa_um_preco_e_depois_se_corrige(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
+    return ModelResponse(parts=[TextPart("Não tenho esse valor")])
+
+
+def test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda(conexao):
+    with agente.override(model=FunctionModel(modelo_que_inventa_um_preco_e_depois_se_corrige)):
+        responder("Preço?", Sessao(conexao, telefone=ANA))
+
+    assert exibir_conversa(conexao, ANA) == [
+        ("user", "Preço?"),
+        ("assistant", "Não tenho esse valor"),
+    ]
+
+
+def test_telefone_sem_conversa_exibe_lista_vazia(conexao):
+    assert exibir_conversa(conexao, "(67) 90000-0000") == []
