@@ -20,9 +20,8 @@ if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
 # O telefone identifica a sessão. Digitá-lo não prova identidade (ADR-009).
-st.session_state.telefone = st.sidebar.text_input(
-    "Seu telefone", value=st.session_state.get("telefone", ""), placeholder="(67) 99999-9999"
-)
+# O key mantém o mesmo campo entre execuções; mudar o value a cada uma o recriava vazio.
+st.sidebar.text_input("Seu telefone", key="telefone", placeholder="(67) 99999-9999")
 st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
 
 # Ao informar (ou trocar) o telefone, a tela mostra a conversa guardada para ele.
