@@ -492,3 +492,42 @@ def test_pedido_consultado_fica_em_analise_nas_mensagens_seguintes(conexao):
         instrucoes = responder("E o rastreio?", sessao)
 
     assert "Pedido em análise: 8" in instrucoes
+
+
+def test_estado_sobrevive_ao_reinicio_e_nao_vaza_para_outro_telefone(conexao, tmp_path):
+    modelo = FunctionModel(modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes)
+    with agente.override(model=modelo):
+        responder("Tem o Giannini?", Sessao(conexao, telefone=ANA))
+
+        nova = conectar(tmp_path / "teste.db")
+        try:
+            da_ana = responder("E o preço?", Sessao(nova, telefone="67996547821"))
+            de_outra_pessoa = responder("E o preço?", Sessao(nova, telefone="(67) 90000-0000"))
+        finally:
+            nova.close()
+
+    assert "Produto em foco: Giannini GF-3D" in da_ana
+    assert "Produto em foco" not in de_outra_pessoa
+
+
+def modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    ultima = mensagens[-1].parts[0]
+    if ultima.part_kind == "user-prompt" and ultima.content == "Quais violões?":
+        return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"categoria": "Violões"})])
+    if ultima.part_kind == "tool-return":
+        return ModelResponse(parts=[TextPart("ok")])
+    return ModelResponse(parts=[TextPart(info.instructions or "")])
+
+
+def test_busca_com_varios_resultados_nao_define_produto_em_foco(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(
+        model=FunctionModel(modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes)
+    ):
+        responder("Quais violões?", sessao)
+        instrucoes = responder("E agora?", sessao)
+
+    assert "Produto em foco" not in instrucoes
