@@ -98,3 +98,24 @@ def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,99,2026-01-01,delivered,100,pix,,,", "1,1,93"
         )
+
+
+def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_path):
+    with pytest.raises(ErroDeCarga, match="item do pedido 1"):
+        carregar_pedidos_de(
+            tmp_path, CLIENTE, "1,1,2026-01-01,delivered,100,pix,,,", "1,1,99999"
+        )
+
+
+def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_path):
+    with pytest.raises(ErroDeCarga, match="item do pedido 7"):
+        carregar_pedidos_de(
+            tmp_path, CLIENTE, "1,1,2026-01-01,delivered,100,pix,,,", "7,1,93"
+        )
+
+
+def test_interrompe_a_carga_quando_o_total_do_pedido_e_invalido(tmp_path):
+    with pytest.raises(ErroDeCarga, match="pedido 1"):
+        carregar_pedidos_de(
+            tmp_path, CLIENTE, "1,1,2026-01-01,delivered,abc,pix,,,", "1,1,93"
+        )

@@ -162,32 +162,58 @@ def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.commit()
 
 
-def validar_cliente_do_pedido(pedido: dict[str, str], clientes: set[int]) -> int:
-    if int(pedido["customer_id"]) not in clientes:
-        raise ErroDeCarga(f"pedido {pedido['order_id']}: cliente inexistente")
-    return int(pedido["order_id"])
+def preparar_pedido(pedido: dict[str, str], clientes: set[int]) -> tuple:
+    identificador = pedido["order_id"]
+    try:
+        cliente = int(pedido["customer_id"])
+        total = int(Decimal(pedido["total_brl"]) * 100)
+        numero = int(identificador)
+    except (ValueError, ArithmeticError) as erro:
+        raise ErroDeCarga(f"pedido {identificador}: valor inválido") from erro
+    if cliente not in clientes:
+        raise ErroDeCarga(f"pedido {identificador}: cliente inexistente")
+    return (
+        numero,
+        cliente,
+        pedido["order_date"],
+        pedido["status"],
+        total,
+        pedido["payment_method"],
+        pedido["tracking_code"] or None,
+        pedido["estimated_delivery"] or None,
+    )
+
+
+def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -> tuple:
+    identificador = item["order_id"]
+    try:
+        numero, produto, quantidade = (
+            int(identificador),
+            int(item["product_id"]),
+            int(item["quantity"]),
+        )
+    except ValueError as erro:
+        raise ErroDeCarga(f"item do pedido {identificador}: valor inválido") from erro
+    if numero not in pedidos:
+        raise ErroDeCarga(f"item do pedido {identificador}: pedido inexistente")
+    if produto not in produtos:
+        raise ErroDeCarga(f"item do pedido {identificador}: produto inexistente")
+    return (numero, produto, quantidade)
 
 
 def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     clientes = {linha[0] for linha in conexao.execute("SELECT customer_id FROM customers")}
+    produtos = {linha[0] for linha in conexao.execute("SELECT product_id FROM products")}
+    # A validação vem antes do esquema para uma falha não apagar o banco atual.
     pedidos = [
-        (
-            validar_cliente_do_pedido(pedido, clientes),
-            int(pedido["customer_id"]),
-            pedido["order_date"],
-            pedido["status"],
-            int(Decimal(pedido["total_brl"]) * 100),
-            pedido["payment_method"],
-            pedido["tracking_code"] or None,
-            pedido["estimated_delivery"] or None,
-        )
-        for pedido in ler_csv(pasta_dados / "orders.csv")
+        preparar_pedido(pedido, clientes) for pedido in ler_csv(pasta_dados / "orders.csv")
     ]
-    conexao.executescript(ESQUEMA_PEDIDOS)
+    ids_pedidos = {pedido[0] for pedido in pedidos}
     itens = [
-        (int(item["order_id"]), int(item["product_id"]), int(item["quantity"]))
+        preparar_item(item, ids_pedidos, produtos)
         for item in ler_csv(pasta_dados / "order_items.csv")
     ]
+    conexao.executescript(ESQUEMA_PEDIDOS)
     conexao.executemany("INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?, ?)", pedidos)
     conexao.executemany("INSERT INTO order_items VALUES (?, ?, ?)", itens)
     conexao.commit()
