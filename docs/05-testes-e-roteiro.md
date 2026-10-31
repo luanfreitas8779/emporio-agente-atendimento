@@ -80,6 +80,12 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-403 | "Chegou o violão?", sem reposição | Identifica o produto e informa indisponibilidade | CA-08 |
 | TC-404 | Mesma pergunta após simular reposição | Informa disponibilidade | CA-08 |
 | TC-405 | Outro telefone faz a mesma pergunta | Não usa interesses de terceiros | CA-05 |
+| TC-406 | Segunda mensagem depende da primeira, na mesma sessão | O modelo recebe a primeira mensagem no histórico | RF-08 |
+| TC-407 | Mesmo telefone em nova sessão, após reinício | Recupera a conversa recente | RF-08 |
+| TC-408 | Telefone diferente | Não recebe o histórico nem o estado de outra pessoa | CA-05 |
+| TC-409 | Conversa com mais de 7 mensagens, com e sem ferramenta | O modelo recebe só turnos inteiros, sem separar chamada e retorno | RF-08 |
+| TC-410 | Valor citado só em turno anterior | A guarda não o aceita | RNF-01 |
+| TC-411 | Linha do histórico ilegível | O atendimento continua sem o histórico anterior | RNF-01 |
 
 ### 3.6 Escopo e segurança
 
@@ -148,7 +154,7 @@ Se o prazo apertar, serão reduzidos primeiro o acabamento visual e as avaliaç�
 
 ## 8. Pendências conhecidas
 
-Situação após as issues #3 (catálogo), #4 (políticas) e #5 (identificação e pedidos). Os itens abaixo seguem abertos e devem ser tratados antes do release.
+Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação e pedidos) e #7 (histórico persistente). Os itens abaixo seguem abertos e devem ser tratados antes do release.
 
 | Pendência | Detalhe | Tratamento previsto |
 |---|---|---|
@@ -163,9 +169,16 @@ Situação após as issues #3 (catálogo), #4 (políticas) e #5 (identificação
 | Redação da resposta de pedidos | O prompt de pedidos (data de entrega em formato brasileiro, recusa de terceiros, explicação sem cadastro) foi validado com 3 perguntas reais, sem teste automático | Revalidar com o Gemini a cada mudança do prompt |
 | Trocas e devoluções | A consulta de pedidos não informa canal de compra nem prazos | Tratar na issue #6 |
 | Data de referência configurável | A decisão da spec (padrão 2026-03-25) ainda não existe em `src/config.py`; só os prazos de troca dependem dela | Implementar na issue #6, com teste de prazo |
-| Pipeline de carga incompleto | Faltam `specs` como JSON, índices e as tabelas operacionais (conversas, interesses, encaminhamentos) | Criar as tabelas nas issues #7, #8 e #9, junto com a carga que as usa |
+| Pipeline de carga incompleto | Faltam `specs` como JSON, índices e as tabelas de interesses e encaminhamentos. As tabelas de conversa, mensagens e estado já são criadas pela carga (issue #7) | Criar as tabelas restantes nas issues #8 e #9, junto com a carga que as usa |
 | Tipos de domínio | Disponibilidade, status e preços circulam como texto, que é o contrato entre as ferramentas e o modelo. Um `Enum` ou tipo `Dinheiro` só valeria se surgissem novos cálculos | Reavaliar ao implementar prazos e devoluções (issue #6) |
 | Tamanho de `load_data.py` | O módulo reúne esquema, validação e carga de seis tabelas. Vai crescer com as tabelas operacionais | Separar esquema e validação se passar de cerca de 400 linhas |
 | Soma das parcelas | O valor da parcela é arredondado individualmente e pode diferir do total em até alguns centavos | Aceito: é o comportamento usual do cartão; o texto não promete soma exata |
 | Modelos simulados dos testes | Os modelos falsos dependem da posição das mensagens (`len(mensagens) == 1`) | Revisar se a biblioteca mudar a estrutura das mensagens na atualização de versão |
 | Guarda na saída sem validação real | A guarda (`src/guardrail.py`) foi testada só com modelo simulado. Com o Gemini real pode rejeitar respostas corretas, por exemplo ao citar um percentual que as ferramentas não trazem (como os 5% do PIX), e cada rejeição custa uma requisição | Observar na validação com o Gemini (issue #11) e ajustar os padrões ou as fontes |
+| Pergunta pendente no estado | O estado da conversa (ADR-014) guarda só pedido em análise e produto em foco. A pergunta pendente não foi criada porque nada a preenche ainda | Acrescentar o campo na issue #6, com a regra de troca e devolução que a usa |
+| Foco desatualizado | O produto em foco e o pedido em análise só mudam quando uma ferramenta devolve um único resultado. Depois de uma busca com vários produtos, o foco anterior continua no contexto | Reavaliar na issue #8 (interesses) se o foco precisa ser limpo |
+| Tentativa rejeitada no histórico | Quando a guarda pede uma correção e o modelo acerta, a resposta rejeitada e o pedido de correção ficam em `messages` e voltam ao modelo nas mensagens seguintes. A tela não os exibe | Descartar essas mensagens ao salvar, se a validação com o Gemini mostrar influência nas respostas |
+| Conversa sem telefone válido | Telefone vazio ou inválido não guarda histórico nem estado: a conversa vale só para a tela aberta e some ao trocar o telefone | Aceito para o MVP; um canal autenticado (ADR-009) elimina o caso |
+| Retenção do histórico | O histórico cresce sem limite e a tela recupera a conversa inteira. Ele pode conter dados pessoais (`docs/03-dados.md`, seção 7) | Definir prazo de retenção e exclusão antes de qualquer uso com dados reais |
+| Banco anterior à issue #7 | Um `emporio.db` criado antes das tabelas de conversa falha ao abrir o chat | Rodar `python -m src.load_data` para recriar o banco |
+| Histórico sem validação com o Gemini | O histórico, o corte em turnos e o estado foram testados com modelo simulado. O comportamento do Gemini com mensagens anteriores (por exemplo, se a guarda rejeita respostas corretas ao retomar o assunto) depende da validação real | Ver o resultado da validação registrado na issue #7 e repetir na issue #11 |

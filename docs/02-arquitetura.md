@@ -61,8 +61,9 @@ Tabelas operacionais:
 
 | Tabela | Campos principais | Finalidade |
 |---|---|---|
-| `conversations` | `id`, `phone`, `created_at`, `updated_at` | Agrupar conversas por telefone |
-| `messages` | `id`, `conversation_id`, `content`, `created_at` | Guardar o histórico serializado |
+| `conversations` | `id`, `phone` (único), `created_at`, `updated_at` | Uma conversa contínua por telefone |
+| `messages` | `id`, `conversation_id`, `content`, `created_at` | Guardar o histórico: cada linha é uma mensagem do Pydantic AI serializada em JSON |
+| `conversation_state` | `phone` (chave), `pedido_em_analise`, `produto_em_foco`, `updated_at` | Estado pequeno da conversa, mantido em código (ADR-014) |
 | `product_interests` | `id`, `phone`, `product_id`, `status`, `created_at` | Acompanhar interesses em produtos |
 | `handoffs` | `id`, `phone`, `reason`, `summary`, `created_at` | Registrar encaminhamentos para a equipe |
 
@@ -116,11 +117,26 @@ Tabelas operacionais:
 - **Decisão:** manter o function calling do ADR-001 e mover para o código tudo o que não depende de interpretação:
   1. **Fatos prontos.** Valores, datas, situações e vereditos de regra (como o prazo de devolução) são calculados e formatados em código. O modelo apenas os repassa (ADR-012).
   2. **Guarda na saída.** Antes de a resposta chegar ao cliente, o código confere se todo valor em reais, percentual, data e código de rastreio citado consta nos retornos das ferramentas daquele turno ou na própria mensagem do cliente. Datas são comparadas pelo dia, não pelo formato. Se algum valor não for confirmado, o modelo recebe um pedido de correção uma única vez. Persistindo o problema, o cliente recebe uma resposta segura, sem o texto do modelo.
-  3. **Estado da conversa em código.** Os dados que precisam atravessar mensagens, como o pedido em análise, o produto em foco e a pergunta pendente, ficam em uma estrutura pequena persistida por telefone, e não na memória do modelo (issue #7).
-  4. **Memória curta.** O modelo recebe apenas as últimas trocas completas da conversa, nunca uma chamada de ferramenta separada de seu retorno (issue #7).
+  3. **Estado da conversa em código.** Os dados que precisam atravessar mensagens, como o pedido em análise e o produto em foco, ficam em uma estrutura pequena persistida por telefone, e não na memória do modelo (ADR-014).
+  4. **Memória curta.** O modelo recebe apenas as últimas mensagens da conversa, cortadas em turnos inteiros, nunca uma chamada de ferramenta separada de seu retorno (ADR-014).
   5. **Dados mínimos.** Do cadastro, o modelo recebe só o primeiro nome.
 - **Alternativas:** modelo que apenas interpreta, em duas etapas (primeira chamada devolve intenção e dados, o código executa as ferramentas e monta os fatos, a segunda redige). É mais previsível e usa sempre 2 requisições, mas exige reescrever a orquestração e foi adiada.
 - **Consequências:** a guarda pega o erro mais perigoso, o valor inventado, sem custo quando a resposta está correta; cada correção custa uma requisição. Ela não detecta erro de interpretação, como confundir troca com arrependimento, nem números escritos por extenso. A evolução para duas etapas continua possível, porque as ferramentas e seus testes são reaproveitados.
+
+### ADR-014: Histórico e estado da conversa persistidos por telefone
+
+- **Status:** Aceita.
+- **Contexto:** o cliente volta em outra sessão e espera continuar a conversa. Reenviar todo o histórico consome cota (ADR-008), e confiar na memória do modelo para saber qual pedido ou produto está em discussão deixa a conversa sujeita a esquecimentos. A API do modelo também rejeita uma conversa em que uma chamada de ferramenta aparece sem o seu retorno.
+- **Decisão:**
+  1. **Uma conversa por telefone.** O telefone normalizado por `src/phone.py` é a chave. Telefone inválido ou ausente não identifica ninguém: a conversa não é carregada nem salva e vale só para a tela aberta.
+  2. **Mensagens.** Cada mensagem do Pydantic AI (`ModelRequest` ou `ModelResponse`) é serializada em JSON com `ModelMessagesTypeAdapter` e guardada em `messages`. O banco guarda o registro completo; o corte é feito na leitura. Uma linha ilegível descarta o que veio antes dela, em vez de travar o atendimento.
+  3. **Regra de corte.** O modelo recebe no máximo 7 mensagens. O corte começa no primeiro *turno* inteiro que cabe: um turno começa em uma fala do cliente que não responde a uma chamada de ferramenta, e vai até a próxima fala. Um turno que estoura o limite é descartado por completo. Com ferramenta, um turno tem 4 mensagens (fala, chamada, retorno, resposta), então 7 mensagens comportam um turno com ferramenta; sem ferramenta, o turno tem 2 e cabem 3. O corte é feito pelo próprio código ao carregar o histórico, e não por um *history processor* do Pydantic AI, porque o processador roda a cada chamada ao modelo dentro do turno e substitui o histórico da execução, o que poderia mexer nas fontes da guarda (ADR-013).
+  4. **Guarda na saída.** Continua considerando só o turno atual (`fontes_do_turno`). Valores de mensagens antigas não sustentam respostas novas, mesmo estando no histórico enviado ao modelo.
+  5. **Resposta segura.** Quando a guarda desiste, o histórico guarda só a fala do cliente e a resposta segura, sem a tentativa rejeitada.
+  6. **Estado.** A tabela `conversation_state` guarda, por telefone, `pedido_em_analise` (número do pedido) e `produto_em_foco` (id do produto). O código os preenche a partir dos retornos das ferramentas: um único pedido encontrado define o pedido em análise, e uma busca com um único produto define o produto em foco. Buscas com vários resultados não alteram o estado. Os dois campos entram no contexto dinâmico do prompt (ADR-007). Não há máquina de estados: cada campo é só um valor.
+  7. **Sem chave estrangeira para a origem.** As tabelas operacionais não referenciam `products` nem `orders`, porque a carga recria essas tabelas. Os ids são validados pelo código que os grava (`CHECK` maior que zero).
+- **Alternativas:** guardar o histórico inteiro em um único campo, o que impede o corte por mensagem; resumir conversas antigas com o modelo, o que gasta cota e pode inventar; deixar o modelo registrar o foco por conta própria, o que reabre o problema da memória.
+- **Consequências:** a continuidade não depende do modelo, e o isolamento por telefone vale para histórico e estado. O estado só muda quando uma ferramenta devolve exatamente um resultado, então o foco pode ficar desatualizado até a próxima busca. A pergunta pendente não foi criada: entra com a issue #6, quando houver quem a preencha. O telefone digitado não prova identidade (ADR-009), então quem digitar o telefone de outra pessoa vê a conversa dela; em produção, o canal autenticado resolve isso.
 
 ### ADR-004: SQLite como armazenamento
 
@@ -193,6 +209,7 @@ Tabelas operacionais:
 │   ├── config.py           # Configurações
 │   ├── database.py         # Conexão com o banco
 │   ├── load_data.py        # Validação e carga dos dados
+│   ├── memory.py           # Histórico e estado da conversa por telefone
 │   └── policies.py         # Leitura das políticas
 ├── scripts/
 │   └── simulate_restock.py # Simula uma reposição de estoque

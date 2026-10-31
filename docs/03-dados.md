@@ -132,6 +132,8 @@ Com esse valor, nenhum pedido entregue está dentro dos 7 dias de arrependimento
 - E-mail e cidade não são necessários para as respostas do MVP e não são expostos ao agente.
 - Do cadastro, o modelo recebe apenas o primeiro nome. Sobrenome e telefone ficam no código.
 - Os dados versionados são fictícios. Telefones podem coincidir com números reais, então não devem ser usados para contato.
+- O histórico (`messages`) guarda o que o cliente digitou e o que o agente respondeu, incluindo os retornos das ferramentas do turno, como itens e totais de pedidos. Ele pode conter dados pessoais, como nomes, endereços ou números de pedido informados livremente, e é tratado como dado pessoal: fica no banco local, fora do Git, e é associado só ao telefone da conversa.
+- O estado da conversa guarda apenas ids (de pedido e de produto) por telefone.
 - Dados reais só podem ser usados após a revisão dos termos do provedor e a adequação à LGPD.
 
 ## 8. Validação de entrada
@@ -152,6 +154,16 @@ Qualquer violação interrompe a carga com `ErroDeCarga`, que informa a entidade
 | Item de pedido | Pedido e produto existentes; quantidade positiva |
 
 Valores monetários com mais de duas casas são recusados, e não arredondados, para que um erro na origem não passe despercebido.
+
+### 8.1.1 Tabelas operacionais
+
+As tabelas de conversa não vêm de arquivos, mas seguem o mesmo rigor na gravação. Elas são criadas com `CREATE TABLE IF NOT EXISTS` e nunca são recriadas pela carga, para não apagar conversas.
+
+| Tabela | Regras |
+|---|---|
+| `conversations` | Telefone normalizado com 10 ou 11 dígitos, único; telefone inválido não grava nada |
+| `messages` | Conversa existente; conteúdo é uma mensagem do Pydantic AI serializada pelo próprio adaptador. Na leitura, uma linha que não valida é descartada com tudo o que veio antes dela |
+| `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`) |
 
 ### 8.2 Argumentos das ferramentas
 

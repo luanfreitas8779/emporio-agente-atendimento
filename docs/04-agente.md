@@ -135,7 +135,8 @@ O sistema fornece ao agente:
 - Data de referência.
 - Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
 - Interesses pendentes.
-- Histórico recente, limitado para economizar cota.
+- Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014).
+- Histórico recente, limitado a 7 mensagens e cortado em turnos inteiros, para economizar cota.
 
 ## 10. Exemplos de resposta
 
