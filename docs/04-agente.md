@@ -50,9 +50,9 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 
 | Item | Definição |
 |---|---|
-| Entrada | `secao`: `sobre_a_loja`, `horarios`, `pagamentos`, `trocas_e_devolucoes`, `entregas`, `promocoes`, `atendimento`, `garantia` ou `privacidade` |
-| Saída | Texto da seção revisada |
-| Regras | Não cria regra ausente e encaminha casos ambíguos |
+| Entrada | `secao`: `sobre_a_loja`, `horarios`, `pagamentos`, `trocas_e_devolucoes`, `entregas`, `promocoes`, `atendimento`, `garantia` ou `privacidade`. Na seção `pagamentos`, aceita também `valor` e `parcelas` opcionais |
+| Saída | Texto da seção revisada. Com `valor`, a seção `pagamentos` inclui o parcelamento máximo sem juros e se as `parcelas` pedidas atendem à parcela mínima, calculados em código |
+| Regras | Não cria regra ausente e encaminha casos ambíguos. Seções fora da lista são recusadas |
 
 ### 4.3 `consultar_meus_pedidos`
 
