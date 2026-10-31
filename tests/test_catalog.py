@@ -10,18 +10,73 @@ def test_informa_o_preco_do_takamine_gd20(conexao):
     assert produtos[0].preco == "R$ 2.199,00"
 
 
-def test_mostra_preco_original_desconto_e_preco_final_da_promocao_ativa(conexao):
-    produtos = buscar_produtos(conexao, termo="Crafter HT-100")
+def test_crafter_ht_100_mostra_preco_original_desconto_e_preco_final(conexao):
+    (produto,) = buscar_produtos(conexao, termo="Crafter HT-100")
 
-    assert len(produtos) == 1
-    assert produtos[0].preco == "R$ 2.399,00"
-    assert produtos[0].desconto_percentual == 18
-    assert produtos[0].preco_final == "R$ 1.967,18"
+    assert produto.preco == "R$ 2.399,00"
+    assert produto.desconto_percentual == 18
+    assert produto.preco_final == "R$ 1.967,18"
 
 
-def test_busca_violoes_disponiveis_ate_1000_reais_retorna_12_sem_esgotados_ou_descontinuados(
-    conexao,
-):
+def test_promocao_inativa_nao_gera_desconto(conexao):
+    # A promoção "Black Friday" de 10% do Crafter CE-15 está inativa.
+    (produto,) = buscar_produtos(conexao, termo="Crafter CE-15")
+
+    assert produto.desconto_percentual is None
+    assert produto.preco_final == "R$ 3.899,00"
+
+
+def test_filtra_por_categoria(conexao):
+    produtos = buscar_produtos(conexao, categoria="violões")
+
+    assert len(produtos) == 35
+    assert {produto.categoria for produto in produtos} == {"Violões"}
+
+
+def test_busca_ignora_acentos_e_maiusculas(conexao):
+    assert len(buscar_produtos(conexao, categoria="VIOLOES")) == 35
+    assert len(buscar_produtos(conexao, termo="takamine gd20")) == 1
+
+
+def test_produto_ativo_sem_estoque_e_indisponivel(conexao):
+    (produto,) = buscar_produtos(conexao, termo="Giannini GF-3D")
+
+    assert produto.disponibilidade == "indisponivel"
+
+
+def test_produto_descontinuado_e_fora_de_catalogo(conexao):
+    (shelby,) = buscar_produtos(conexao, termo="Shelby SN-7C")
+
+    assert shelby.disponibilidade == "fora_de_catalogo"
+
+
+def test_descontinuado_com_estoque_continua_fora_de_catalogo(conexao):
+    (ibanez,) = buscar_produtos(conexao, termo="Ibanez Bass 2X")
+
+    assert ibanez.disponibilidade == "fora_de_catalogo"
+
+
+def test_produto_em_lancamento_nao_tem_disponibilidade_confirmada(conexao):
+    # O Kala tem estoque 2, mas o status é coming_soon.
+    (kala,) = buscar_produtos(conexao, termo="Kala KA-ABP-CTG")
+
+    assert kala.disponibilidade == "lancamento"
+
+
+def test_limita_a_busca_pelo_preco_maximo(conexao):
+    produtos = buscar_produtos(conexao, categoria="violões", preco_maximo=1000)
+
+    assert len(produtos) == 14
+
+
+def test_preco_maximo_considera_o_preco_final_da_promocao(conexao):
+    # O Ohana CK-20 custa R$ 549,00, mas está com 20% de desconto: R$ 439,20.
+    nomes = [p.nome for p in buscar_produtos(conexao, categoria="ukuleles", preco_maximo=450)]
+
+    assert "Ohana CK-20 Concert Natural" in nomes
+
+
+def test_violoes_disponiveis_ate_1000_reais_sao_12_sem_os_ids_96_e_113(conexao):
     produtos = buscar_produtos(
         conexao, categoria="violões", preco_maximo=1000, somente_disponiveis=True
     )
@@ -32,7 +87,7 @@ def test_busca_violoes_disponiveis_ate_1000_reais_retorna_12_sem_esgotados_ou_de
     assert 113 not in ids
 
 
-def test_pix_aplica_5_por_cento_sobre_o_preco_de_tabela_sem_promocao(conexao):
+def test_pix_aplica_5_por_cento_sobre_o_preco_de_tabela(conexao):
     (produto,) = buscar_produtos(conexao, termo="Takamine GD20")
 
     assert produto.preco_pix == "R$ 2.089,05"
@@ -44,34 +99,6 @@ def test_pix_nao_se_soma_a_uma_promocao_ativa(conexao):
     assert produto.preco_pix is None
 
 
-def test_produto_ativo_sem_estoque_e_indisponivel(conexao):
-    (produto,) = buscar_produtos(conexao, termo="Giannini GF-3D")
-
-    assert produto.disponibilidade == "indisponivel"
-
-
-def test_produto_descontinuado_e_fora_de_catalogo_mesmo_sem_estoque_zero(conexao):
-    (sem_estoque,) = buscar_produtos(conexao, termo="Shelby SN-7C")
-    (com_estoque,) = buscar_produtos(conexao, termo="Ibanez Bass 2X")
-
-    assert sem_estoque.disponibilidade == "fora_de_catalogo"
-    assert com_estoque.disponibilidade == "fora_de_catalogo"
-
-
-def test_produto_em_lancamento_nao_tem_disponibilidade_confirmada(conexao):
-    (produto,) = buscar_produtos(conexao, termo="Kala KA-ABP-CTG")
-
-    assert produto.disponibilidade == "lancamento"
-
-
-def test_promocao_inativa_nao_gera_desconto(conexao):
-    # A promoção 1 (Black Friday) do produto 102 está inativa.
-    produto = next(p for p in buscar_produtos(conexao) if p.id == 102)
-
-    assert produto.desconto_percentual is None
-    assert produto.preco_final == produto.preco
-
-
-def test_categoria_sem_produtos_retorna_lista_vazia(conexao):
+def test_categoria_sem_produtos_nao_retorna_resultados(conexao):
     assert buscar_produtos(conexao, termo="saxofone") == []
     assert buscar_produtos(conexao, categoria="Instrumentos de Sopro") == []
