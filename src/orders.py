@@ -2,6 +2,7 @@ import sqlite3
 from dataclasses import dataclass
 
 from src.catalog import formatar_preco
+from src.phone import normalizar_telefone
 
 FORMAS_DE_PAGAMENTO = {
     "pix": "PIX",
@@ -35,16 +36,26 @@ class Pedido:
 
 
 def identificar_cliente(conexao: sqlite3.Connection, telefone: str) -> Cliente | None:
-    digitos = "".join(c for c in telefone if c.isdigit())
+    digitos = normalizar_telefone(telefone)
+    if digitos is None:
+        return None
     linha = conexao.execute(
         "SELECT customer_id, name FROM customers WHERE phone = ?", (digitos,)
     ).fetchone()
     return Cliente(linha["customer_id"], linha["name"]) if linha else None
 
 
+PARCELAS_NO_CREDITO = {f"credit_{n}x": n for n in range(1, 13)}
+STATUS_DE_PEDIDO = {"pending", "confirmed", "shipped", "delivered", "cancelled"}
+
+
+def pagamento_valido(codigo: str) -> bool:
+    return codigo in FORMAS_DE_PAGAMENTO or codigo in PARCELAS_NO_CREDITO
+
+
 def descrever_pagamento(codigo: str) -> str:
-    if codigo.startswith("credit_"):
-        return f"cartão de crédito em {codigo.removeprefix('credit_')}"
+    if codigo in PARCELAS_NO_CREDITO:
+        return f"cartão de crédito em {PARCELAS_NO_CREDITO[codigo]}x"
     return FORMAS_DE_PAGAMENTO[codigo]
 
 

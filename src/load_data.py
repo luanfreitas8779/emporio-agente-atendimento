@@ -5,6 +5,8 @@ from pathlib import Path
 
 from src.config import CAMINHO_BANCO, PASTA_DADOS
 from src.database import conectar
+from src.orders import STATUS_DE_PEDIDO, pagamento_valido
+from src.phone import normalizar_telefone
 
 ESQUEMA_CATALOGO = """
 DROP TABLE IF EXISTS order_items;
@@ -119,12 +121,15 @@ def preparar_produto(
     return registro
 
 
-def preparar_promocao(promocao: dict[str, str], produtos: set[str]) -> tuple:
+def preparar_promocao(
+    promocao: dict[str, str], produtos: set[str], vistos: set[str]
+) -> tuple:
     identificador = promocao["promotion_id"]
+    rejeitar_duplicado("promoção", identificador, vistos)
     if promocao["product_id"] not in produtos:
         raise ErroDeCarga(f"promoção {identificador}: produto inexistente")
     try:
-        return (
+        registro = (
             int(identificador),
             int(promocao["product_id"]),
             int(promocao["discount_percent"]),
@@ -133,6 +138,9 @@ def preparar_promocao(promocao: dict[str, str], produtos: set[str]) -> tuple:
         )
     except ValueError as erro:
         raise ErroDeCarga(f"promoção {identificador}: valor inválido") from erro
+    if not 0 <= registro[2] <= 100 or registro[4] not in (0, 1):
+        raise ErroDeCarga(f"promoção {identificador}: valor inválido")
+    return registro
 
 
 def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
@@ -143,8 +151,9 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     vistos: set[str] = set()
     produtos = [preparar_produto(produto, ids_categorias, vistos) for produto in linhas_produtos]
     ids_produtos = {produto["product_id"] for produto in linhas_produtos}
+    vistas: set[str] = set()
     promocoes = [
-        preparar_promocao(promocao, ids_produtos)
+        preparar_promocao(promocao, ids_produtos, vistas)
         for promocao in ler_csv(pasta_dados / "promotions.csv")
     ]
 
@@ -168,14 +177,28 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.commit()
 
 
-def somente_digitos(telefone: str) -> str:
-    return "".join(c for c in telefone if c.isdigit())
+def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[str]) -> tuple:
+    identificador = cliente["customer_id"]
+    rejeitar_duplicado("cliente", identificador, vistos)
+    try:
+        numero = int(identificador)
+    except ValueError as erro:
+        raise ErroDeCarga(f"cliente {identificador}: valor inválido") from erro
+    telefone = normalizar_telefone(cliente["phone"])
+    if telefone is None or not cliente["name"].strip():
+        raise ErroDeCarga(f"cliente {identificador}: valor inválido")
+    if telefone in telefones:
+        raise ErroDeCarga(f"cliente {identificador}: telefone duplicado")
+    telefones.add(telefone)
+    # E-mail e cidade não são carregados: o agente não precisa deles (privacidade).
+    return (numero, cliente["name"].strip(), telefone)
 
 
 def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
-    # E-mail e cidade não são carregados: o agente não precisa deles (privacidade).
+    vistos: set[str] = set()
+    telefones: set[str] = set()
     clientes = [
-        (int(cliente["customer_id"]), cliente["name"], somente_digitos(cliente["phone"]))
+        preparar_cliente(cliente, vistos, telefones)
         for cliente in ler_csv(pasta_dados / "customers.csv")
     ]
     conexao.executescript(ESQUEMA_CLIENTES)
@@ -183,14 +206,17 @@ def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.commit()
 
 
-def preparar_pedido(pedido: dict[str, str], clientes: set[int]) -> tuple:
+def preparar_pedido(pedido: dict[str, str], clientes: set[int], vistos: set[str]) -> tuple:
     identificador = pedido["order_id"]
+    rejeitar_duplicado("pedido", identificador, vistos)
     try:
         cliente = int(pedido["customer_id"])
-        total = int(Decimal(pedido["total_brl"]) * 100)
+        total = para_centavos(pedido["total_brl"])
         numero = int(identificador)
     except (ValueError, ArithmeticError) as erro:
         raise ErroDeCarga(f"pedido {identificador}: valor inválido") from erro
+    if pedido["status"] not in STATUS_DE_PEDIDO or not pagamento_valido(pedido["payment_method"]):
+        raise ErroDeCarga(f"pedido {identificador}: valor inválido")
     if cliente not in clientes:
         raise ErroDeCarga(f"pedido {identificador}: cliente inexistente")
     return (
@@ -215,6 +241,8 @@ def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -
         )
     except ValueError as erro:
         raise ErroDeCarga(f"item do pedido {identificador}: valor inválido") from erro
+    if quantidade < 1:
+        raise ErroDeCarga(f"item do pedido {identificador}: valor inválido")
     if numero not in pedidos:
         raise ErroDeCarga(f"item do pedido {identificador}: pedido inexistente")
     if produto not in produtos:
@@ -226,8 +254,10 @@ def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     clientes = {linha[0] for linha in conexao.execute("SELECT customer_id FROM customers")}
     produtos = {linha[0] for linha in conexao.execute("SELECT product_id FROM products")}
     # A validação vem antes do esquema para uma falha não apagar o banco atual.
+    vistos: set[str] = set()
     pedidos = [
-        preparar_pedido(pedido, clientes) for pedido in ler_csv(pasta_dados / "orders.csv")
+        preparar_pedido(pedido, clientes, vistos)
+        for pedido in ler_csv(pasta_dados / "orders.csv")
     ]
     ids_pedidos = {pedido[0] for pedido in pedidos}
     itens = [
