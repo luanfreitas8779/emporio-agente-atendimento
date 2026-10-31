@@ -7,7 +7,13 @@ from typing import Annotated, Literal
 from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import UnexpectedModelBehavior
-from pydantic_ai.messages import ModelRequest, ToolReturnPart, UserPromptPart
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
 
 from src import catalog, guardrail, memory, orders, policies
 from src.config import MODELO_GEMINI
@@ -202,5 +208,14 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         return resultado.output
     except UnexpectedModelBehavior:
-        # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele.
+        # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
+        # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
+        memory.salvar_mensagens(
+            sessao.conexao,
+            sessao.telefone,
+            [
+                ModelRequest(parts=[UserPromptPart(mensagem)]),
+                ModelResponse(parts=[TextPart(RESPOSTA_SEGURA)]),
+            ],
+        )
         return RESPOSTA_SEGURA

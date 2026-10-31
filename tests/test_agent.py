@@ -404,3 +404,30 @@ def test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior(conexao):
 
     assert primeira == "Custa R$ 2.199,00"
     assert segunda == RESPOSTA_SEGURA
+
+
+def modelo_que_inventa_um_preco_ate_a_pergunta_seguinte(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    # A correção pedida pela guarda também chega como fala do cliente, por isso
+    # o modelo insiste enquanto a pergunta seguinte ainda não apareceu.
+    perguntas = [
+        parte.content
+        for mensagem in mensagens
+        for parte in mensagem.parts
+        if parte.part_kind == "user-prompt"
+    ]
+    if "Preço do violão?" in perguntas and "Oi" not in perguntas:
+        return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
+    return modelo_que_lista_as_perguntas_vistas(mensagens, info)
+
+
+def test_resposta_segura_tambem_entra_no_historico(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_inventa_um_preco_ate_a_pergunta_seguinte)):
+        segura = responder("Preço do violão?", sessao)
+        resposta = responder("Oi", sessao)
+
+    assert segura == RESPOSTA_SEGURA
+    assert resposta == "Preço do violão? | Oi"
