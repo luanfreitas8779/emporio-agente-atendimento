@@ -18,6 +18,15 @@ SEM_ENTREGA = {
     "cancelled": "O pedido foi cancelado, então não há produto para devolver.",
 }
 
+AVISO_DE_APROXIMACAO = (
+    "A loja não registra a data real de recebimento: os prazos usam a entrega estimada "
+    "como aproximação. Se o recebimento foi em outra data, a equipe confere."
+)
+AVISO_DE_ANALISE = (
+    "O resultado vale para o prazo. A troca ou a devolução depende da análise do produto "
+    "pela equipe, e não há aprovação garantida."
+)
+
 
 class Motivo(StrEnum):
     ARREPENDIMENTO = "arrependimento"
@@ -52,6 +61,9 @@ class Veredito:
     # O que o modelo deve perguntar ao cliente antes de haver veredito.
     faltando: list[str] = field(default_factory=list)
     avisos: list[str] = field(default_factory=list)
+    data_aproximada: bool = False
+    data_de_recebimento: str | None = None
+    data_de_referencia: str | None = None
 
 
 def avaliar_devolucao(
@@ -87,7 +99,14 @@ def avaliar_devolucao(
     else:
         regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, hoje)]
     dentro = any(r.resultado == Resultado.DENTRO_DO_PRAZO for r in regras)
-    return Veredito(Resultado.DENTRO_DO_PRAZO if dentro else Resultado.FORA_DO_PRAZO, regras)
+    return Veredito(
+        Resultado.DENTRO_DO_PRAZO if dentro else Resultado.FORA_DO_PRAZO,
+        regras,
+        avisos=[AVISO_DE_APROXIMACAO, AVISO_DE_ANALISE],
+        data_aproximada=True,
+        data_de_recebimento=formatar_data(recebimento),
+        data_de_referencia=formatar_data(hoje),
+    )
 
 
 def _regra(nome: str, inicio: date, dias: int, hoje: date) -> Regra:

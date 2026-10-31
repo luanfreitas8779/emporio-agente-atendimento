@@ -106,3 +106,16 @@ def test_troca_por_preferencia_vale_7_dias_a_partir_do_recebimento(conexao):
 
     assert [(r.nome, r.prazo_ate) for r in dentro.regras] == [("troca_por_preferencia", "24/02/2026")]
     assert (dentro.resultado, fora.resultado) == ("dentro_do_prazo", "fora_do_prazo")
+
+
+def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do_produto(conexao):
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
+        hoje=date(2026, 2, 20),
+    )
+
+    assert veredito.data_aproximada is True
+    assert veredito.data_de_recebimento == "17/02/2026"
+    assert any("entrega estimada" in a for a in veredito.avisos)
+    assert any("análise do produto" in a for a in veredito.avisos)
+    assert veredito.data_de_referencia == "20/02/2026"
