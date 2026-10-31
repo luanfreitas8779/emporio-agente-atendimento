@@ -1,3 +1,4 @@
+from functools import cache
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
@@ -21,6 +22,7 @@ SECOES = (
 MAXIMO_DE_PARCELAS = 12
 
 
+@cache
 def ler_secoes(arquivo: Path) -> dict[str, str]:
     secoes: dict[str, list[str]] = {}
     atual = None

@@ -171,7 +171,11 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         produtos,
     )
     conexao.executemany(
-        "INSERT INTO promotions VALUES (?, ?, ?, ?, ?)",
+        """
+        INSERT INTO promotions (
+            promotion_id, product_id, discount_percent, description, is_active
+        ) VALUES (?, ?, ?, ?, ?)
+        """,
         promocoes,
     )
     conexao.commit()
@@ -202,7 +206,7 @@ def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         for cliente in ler_csv(pasta_dados / "customers.csv")
     ]
     conexao.executescript(ESQUEMA_CLIENTES)
-    conexao.executemany("INSERT INTO customers VALUES (?, ?, ?)", clientes)
+    conexao.executemany("INSERT INTO customers (customer_id, name, phone) VALUES (?, ?, ?)", clientes)
     conexao.commit()
 
 
@@ -265,8 +269,18 @@ def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         for item in ler_csv(pasta_dados / "order_items.csv")
     ]
     conexao.executescript(ESQUEMA_PEDIDOS)
-    conexao.executemany("INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?, ?)", pedidos)
-    conexao.executemany("INSERT INTO order_items VALUES (?, ?, ?)", itens)
+    conexao.executemany(
+        """
+        INSERT INTO orders (
+            order_id, customer_id, order_date, status, total_cents,
+            payment_method, tracking_code, estimated_delivery
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        pedidos,
+    )
+    conexao.executemany(
+        "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)", itens
+    )
     conexao.commit()
 
 

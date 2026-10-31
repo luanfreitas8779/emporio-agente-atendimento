@@ -65,6 +65,10 @@ class Sessao:
     conexao: sqlite3.Connection
     telefone: str | None = None
 
+    @property
+    def cliente(self) -> orders.Cliente | None:
+        return orders.identificar_cliente(self.conexao, self.telefone)
+
 
 # O Streamlit pode rodar o script com outra mensagem em andamento, e o run_sync
 # falha se encontrar um loop em execução. Uma thread própria evita esse conflito.
@@ -81,11 +85,7 @@ agente = Agent(
 
 @agente.instructions
 def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
-    cliente = (
-        orders.identificar_cliente(ctx.deps.conexao, ctx.deps.telefone)
-        if ctx.deps.telefone
-        else None
-    )
+    cliente = ctx.deps.cliente
     if cliente is None:
         return "O cliente desta conversa está sem cadastro: não consulte pedidos."
     return f"O cliente desta conversa se chama {cliente.nome}. Chame-o de {cliente.primeiro_nome}."
@@ -115,17 +115,7 @@ def buscar_produtos(
 @agente.tool
 def consultar_politicas(
     ctx: RunContext[Sessao],
-    secao: Literal[
-        "sobre_a_loja",
-        "horarios",
-        "pagamentos",
-        "trocas_e_devolucoes",
-        "entregas",
-        "promocoes",
-        "atendimento",
-        "garantia",
-        "privacidade",
-    ],
+    secao: Literal[*policies.SECOES],
     valor: Annotated[float | None, Field(gt=0)] = None,
     parcelas: Annotated[int | None, Field(ge=1)] = None,
 ) -> str:
@@ -155,11 +145,7 @@ def consultar_meus_pedidos(
     Args:
         numero_pedido: Número do pedido. Sem ele, devolve todos os pedidos do cliente.
     """
-    cliente = (
-        orders.identificar_cliente(ctx.deps.conexao, ctx.deps.telefone)
-        if ctx.deps.telefone
-        else None
-    )
+    cliente = ctx.deps.cliente
     if cliente is None:
         return SEM_CADASTRO
     return orders.consultar_pedidos(ctx.deps.conexao, cliente.id, numero_pedido)

@@ -39,8 +39,8 @@ class Pedido:
     entrega_estimada: str | None
 
 
-def identificar_cliente(conexao: sqlite3.Connection, telefone: str) -> Cliente | None:
-    digitos = normalizar_telefone(telefone)
+def identificar_cliente(conexao: sqlite3.Connection, telefone: str | None) -> Cliente | None:
+    digitos = normalizar_telefone(telefone or "")
     if digitos is None:
         return None
     linha = conexao.execute(
@@ -73,7 +73,7 @@ def consultar_itens(conexao: sqlite3.Connection, numero: int) -> list[ItemPedido
         """,
         (numero,),
     ).fetchall()
-    return [ItemPedido(l["name"], l["quantity"]) for l in linhas]
+    return [ItemPedido(linha["name"], linha["quantity"]) for linha in linhas]
 
 
 def consultar_pedidos(
@@ -90,15 +90,15 @@ def consultar_pedidos(
     ).fetchall()
     return [
         Pedido(
-            l["order_id"],
-            l["order_date"],
-            l["status"],
-            consultar_itens(conexao, l["order_id"]),
+            linha["order_id"],
+            linha["order_date"],
+            linha["status"],
+            consultar_itens(conexao, linha["order_id"]),
             # O total registrado prevalece sobre a soma dos itens (DQ-11 e DQ-12).
-            formatar_preco(l["total_cents"]),
-            descrever_pagamento(l["payment_method"]),
-            l["tracking_code"],
-            l["estimated_delivery"],
+            formatar_preco(linha["total_cents"]),
+            descrever_pagamento(linha["payment_method"]),
+            linha["tracking_code"],
+            linha["estimated_delivery"],
         )
-        for l in linhas
+        for linha in linhas
     ]
