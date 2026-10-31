@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date
 
 import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
@@ -571,3 +572,24 @@ def test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda(conexao):
 
 def test_telefone_sem_conversa_exibe_lista_vazia(conexao):
     assert exibir_conversa(conexao, "(67) 90000-0000") == []
+
+
+LETICIA = "(67) 99789-0123"
+
+
+def chamar_ferramenta_na_data(conexao, telefone, hoje, ferramenta, argumentos):
+    capturados: list = []
+    modelo = FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))
+    with agente.override(model=modelo):
+        responder("Teste", Sessao(conexao, telefone=telefone, hoje=hoje))
+    return capturados[0]
+
+
+def test_ferramenta_de_devolucao_usa_o_pedido_do_cliente_e_a_data_da_sessao(conexao):
+    retorno = chamar_ferramenta_na_data(
+        conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
+        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+    )
+
+    assert retorno.content.resultado == "dentro_do_prazo"
+    assert retorno.content.regras[0].prazo_ate == "24/02/2026"

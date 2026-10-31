@@ -1,5 +1,6 @@
 import contextvars
 import sqlite3
+from datetime import date
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
@@ -15,8 +16,8 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src import catalog, guardrail, memory, orders, policies
-from src.config import MODELO_GEMINI
+from src import catalog, guardrail, memory, orders, policies, returns
+from src.config import MODELO_GEMINI, data_de_referencia
 
 INSTRUCOES = """\
 Você é o Tom, assistente virtual da Empório da Música, loja de instrumentos
@@ -79,6 +80,7 @@ class Sessao:
     conexao: sqlite3.Connection
     telefone: str | None = None
     estado: memory.Estado = field(default_factory=memory.Estado)
+    hoje: date = field(default_factory=data_de_referencia)
 
     @property
     def cliente(self) -> orders.Cliente | None:
@@ -211,6 +213,32 @@ def consultar_meus_pedidos(
     if len(pedidos) == 1:
         ctx.deps.estado.pedido_em_analise = pedidos[0].numero
     return pedidos
+
+
+@agente.tool
+def avaliar_devolucao(
+    ctx: RunContext[Sessao],
+    numero_pedido: Annotated[int, Field(ge=1)],
+    motivo: returns.Motivo,
+    canal: returns.Canal | None = None,
+) -> returns.Veredito | str:
+    """Avalia se um pedido do cliente ainda está no prazo de devolução ou troca.
+
+    Devolve o veredito já calculado, com os prazos e as datas formatadas. Repasse o
+    resultado sem recalcular. Se faltarem dados, o veredito diz o que perguntar.
+
+    Args:
+        numero_pedido: Número do pedido.
+        motivo: arrependimento, defeito ou preferencia.
+        canal: online ou presencial. Obrigatório para arrependimento: pergunte ao
+            cliente, porque o pedido não registra o canal de compra.
+    """
+    cliente = ctx.deps.cliente
+    if cliente is None:
+        return SEM_CADASTRO
+    return returns.avaliar_devolucao(
+        ctx.deps.conexao, cliente.id, numero_pedido, motivo, canal, ctx.deps.hoje
+    )
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
