@@ -344,3 +344,39 @@ def test_sessao_sem_telefone_valido_nao_guarda_conversa(conexao):
         resposta = responder("Oi", Sessao(conexao, telefone="123"))
 
     assert resposta == "Oi"
+
+
+def modelo_que_consulta_o_horario_e_lista_as_perguntas(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if mensagens[-1].parts[0].part_kind == "user-prompt":
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_politicas", {"secao": "horarios"})]
+        )
+    return modelo_que_lista_as_perguntas_vistas(mensagens, info)
+
+
+def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(
+        model=FunctionModel(modelo_que_consulta_o_horario_e_lista_as_perguntas)
+    ):
+        for pergunta in ("P1", "P2", "P3"):
+            responder(pergunta, sessao)
+        resposta = responder("P4", sessao)
+
+    # Cada turno com ferramenta tem 4 mensagens: caberia só um turno inteiro em 7.
+    assert resposta == "P3 | P4"
+
+
+def test_historico_enviado_ao_modelo_tem_no_maximo_7_mensagens(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        for pergunta in ("P1", "P2", "P3", "P4", "P5"):
+            responder(pergunta, sessao)
+        resposta = responder("P6", sessao)
+
+    # Cada turno simples tem 2 mensagens: 3 turnos cabem em 7, e o P2 não.
+    assert resposta == "P3 | P4 | P5 | P6"

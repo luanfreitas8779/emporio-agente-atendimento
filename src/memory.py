@@ -1,7 +1,13 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelMessagesTypeAdapter,
+    ModelRequest,
+    ToolReturnPart,
+    UserPromptPart,
+)
 
 from src.phone import normalizar_telefone
 
@@ -23,6 +29,8 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 """
 
+MAX_MENSAGENS_NO_HISTORICO = 7
+
 
 def criar_tabelas(conexao: sqlite3.Connection) -> None:
     conexao.executescript(ESQUEMA)
@@ -30,6 +38,28 @@ def criar_tabelas(conexao: sqlite3.Connection) -> None:
 
 def _agora() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _inicia_um_turno(mensagem: ModelMessage) -> bool:
+    # Um pedido com a fala do cliente e sem retorno de ferramenta não responde a
+    # nenhuma chamada anterior: é um ponto seguro para começar o histórico.
+    return isinstance(mensagem, ModelRequest) and (
+        any(isinstance(p, UserPromptPart) for p in mensagem.parts)
+        and not any(isinstance(p, ToolReturnPart) for p in mensagem.parts)
+    )
+
+
+def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
+    """Mantém as últimas mensagens sem separar uma chamada de ferramenta do retorno.
+
+    O corte começa no primeiro turno inteiro que cabe no limite; um turno que
+    estoura o limite é descartado por completo.
+    """
+    inicio = max(0, len(mensagens) - MAX_MENSAGENS_NO_HISTORICO)
+    for i in range(inicio, len(mensagens)):
+        if _inicia_um_turno(mensagens[i]):
+            return mensagens[i:]
+    return []
 
 
 def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> list[ModelMessage]:
@@ -44,7 +74,12 @@ def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> lis
         """,
         (chave,),
     ).fetchall()
-    return [mensagem for linha in linhas for mensagem in ModelMessagesTypeAdapter.validate_json(linha["content"])]
+    mensagens = [
+        mensagem
+        for linha in linhas
+        for mensagem in ModelMessagesTypeAdapter.validate_json(linha["content"])
+    ]
+    return limitar_historico(mensagens)
 
 
 def salvar_mensagens(
