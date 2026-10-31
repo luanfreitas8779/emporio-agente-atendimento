@@ -23,6 +23,7 @@ class Canal(StrEnum):
 class Resultado(StrEnum):
     DENTRO_DO_PRAZO = "dentro_do_prazo"
     FORA_DO_PRAZO = "fora_do_prazo"
+    NAO_SE_APLICA = "nao_se_aplica"
 
 
 @dataclass_pydantic(frozen=True)
@@ -46,6 +47,8 @@ def avaliar_devolucao(
     canal: Canal | None,
     hoje: date,
 ) -> Veredito:
+    if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
+        return Veredito(Resultado.NAO_SE_APLICA, [])
     linha = conexao.execute(
         "SELECT estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),

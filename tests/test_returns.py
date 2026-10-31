@@ -27,3 +27,14 @@ def test_pedido_7_com_a_data_padrao_esta_fora_do_prazo_de_arrependimento(conexao
 
     assert veredito.resultado == "fora_do_prazo"
     assert veredito.regras[0].prazo_ate == "24/02/2026"
+
+
+def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(conexao):
+    # Dentro de 7 dias da entrega, mas a compra foi na loja (DQ-24).
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="presencial",
+        hoje=date(2026, 2, 20),
+    )
+
+    assert veredito.resultado == "nao_se_aplica"
+    assert veredito.regras == []
