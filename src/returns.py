@@ -28,6 +28,7 @@ class Resultado(StrEnum):
     FORA_DO_PRAZO = "fora_do_prazo"
     NAO_SE_APLICA = "nao_se_aplica"
     FALTAM_DADOS = "faltam_dados"
+    PEDIDO_NAO_ENCONTRADO = "pedido_nao_encontrado"
 
 
 @dataclass_pydantic(frozen=True)
@@ -61,6 +62,8 @@ def avaliar_devolucao(
         "SELECT order_date, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),
     ).fetchone()
+    if linha is None:
+        return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
     compra = date.fromisoformat(linha["order_date"])
     # Sem data real de entrega nos dados (DQ-17), o recebimento é a entrega estimada.
     recebimento = date.fromisoformat(linha["estimated_delivery"])

@@ -63,3 +63,13 @@ def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(c
         ("troca_por_defeito", "fora_do_prazo", "05/03/2026"),
         ("garantia_legal", "dentro_do_prazo", "18/05/2026"),
     ]
+
+
+def test_pedido_de_outro_cliente_nao_e_avaliado(conexao):
+    # O pedido 7 pertence ao cliente 14.
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=2, numero=7, motivo="defeito", canal=None, hoje=date(2026, 3, 25),
+    )
+
+    assert veredito.resultado == "pedido_nao_encontrado"
+    assert veredito.regras == []
