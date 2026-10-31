@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from src.agent import SEM_CADASTRO, Sessao, agente, responder
+from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
 from src.load_data import ler_csv
 from tests.conftest import PASTA_DADOS
@@ -380,3 +380,27 @@ def test_historico_enviado_ao_modelo_tem_no_maximo_7_mensagens(conexao):
 
     # Cada turno simples tem 2 mensagens: 3 turnos cabem em 7, e o P2 não.
     assert resposta == "P3 | P4 | P5 | P6"
+
+
+def modelo_que_repete_um_preco_de_turno_anterior(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    ultima = mensagens[-1].parts[0]
+    if ultima.part_kind == "user-prompt" and ultima.content == "Quanto custa?":
+        return ModelResponse(
+            parts=[ToolCallPart("buscar_produtos", {"termo": "Takamine GD20"})]
+        )
+    if ultima.part_kind == "tool-return":
+        return ModelResponse(parts=[TextPart("Custa R$ 2.199,00")])
+    return ModelResponse(parts=[TextPart("Continua R$ 2.199,00")])
+
+
+def test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_repete_um_preco_de_turno_anterior)):
+        primeira = responder("Quanto custa?", sessao)
+        segunda = responder("E agora?", sessao)
+
+    assert primeira == "Custa R$ 2.199,00"
+    assert segunda == RESPOSTA_SEGURA
