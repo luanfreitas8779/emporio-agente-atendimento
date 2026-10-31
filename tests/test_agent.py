@@ -34,40 +34,6 @@ def test_responde_com_um_loop_assincrono_em_execucao(conexao):
     assert "R$ 2.199,00" in resposta
 
 
-def modelo_que_consulta_os_horarios(
-    mensagens: list[ModelMessage], info: AgentInfo
-) -> ModelResponse:
-    if len(mensagens) == 1:
-        return ModelResponse(
-            parts=[ToolCallPart("consultar_politicas", {"secao": "horarios"})]
-        )
-    return ModelResponse(parts=[TextPart(mensagens[-1].parts[0].content)])
-
-
-def test_agente_responde_o_horario_a_partir_da_politica(conexao):
-    with agente.override(model=FunctionModel(modelo_que_consulta_os_horarios)):
-        resposta = responder("Abre sábado?", Sessao(conexao))
-
-    assert "Sábado: 09:00 às 13:00" in resposta
-
-
-def modelo_que_pede_secao_inexistente(
-    mensagens: list[ModelMessage], info: AgentInfo
-) -> ModelResponse:
-    if len(mensagens) == 1:
-        return ModelResponse(
-            parts=[ToolCallPart("consultar_politicas", {"secao": "fofocas"})]
-        )
-    return ModelResponse(parts=[TextPart("tentou de novo")])
-
-
-def test_agente_recusa_secao_fora_da_lista_e_deixa_o_modelo_tentar_de_novo(conexao):
-    with agente.override(model=FunctionModel(modelo_que_pede_secao_inexistente)):
-        resposta = responder("Me conta uma fofoca", Sessao(conexao))
-
-    assert resposta == "tentou de novo"
-
-
 def modelo_que_busca_violoes_disponiveis_ate_1000(
     mensagens: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
@@ -121,3 +87,53 @@ def test_agente_encontra_alternativas_disponiveis_para_produto_sem_estoque(conex
 
     assert "Yamaha C40 Nylon Natural" in resposta
     assert "Giannini GF-3D" not in resposta
+
+
+def modelo_que_consulta_os_horarios(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_politicas", {"secao": "horarios"})]
+        )
+    return ModelResponse(parts=[TextPart(mensagens[-1].parts[0].content)])
+
+
+def test_agente_responde_o_horario_de_sabado_a_partir_da_politica(conexao):
+    with agente.override(model=FunctionModel(modelo_que_consulta_os_horarios)):
+        resposta = responder("Abre sábado?", Sessao(conexao))
+
+    assert "Sábado: 09:00 às 13:00" in resposta
+
+
+def modelo_que_calcula_o_parcelamento(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        argumentos = {"secao": "pagamentos", "valor": 349.90, "parcelas": 6}
+        return ModelResponse(parts=[ToolCallPart("consultar_politicas", argumentos)])
+    return ModelResponse(parts=[TextPart(mensagens[-1].parts[0].content)])
+
+
+def test_agente_informa_que_349_90_em_6x_nao_atende_a_parcela_minima(conexao):
+    with agente.override(model=FunctionModel(modelo_que_calcula_o_parcelamento)):
+        resposta = responder("Dá pra pagar R$ 349,90 em 6x?", Sessao(conexao))
+
+    assert "6x não atende" in resposta
+
+
+def modelo_que_pede_secao_inexistente(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_politicas", {"secao": "fofocas"})]
+        )
+    return ModelResponse(parts=[TextPart("tentou de novo")])
+
+
+def test_agente_recusa_secao_fora_da_lista_e_o_modelo_tenta_de_novo(conexao):
+    with agente.override(model=FunctionModel(modelo_que_pede_secao_inexistente)):
+        resposta = responder("Me conta uma fofoca", Sessao(conexao))
+
+    assert resposta == "tentou de novo"
