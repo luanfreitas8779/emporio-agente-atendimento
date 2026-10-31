@@ -1,3 +1,5 @@
+import asyncio
+
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
@@ -18,5 +20,15 @@ def modelo_que_consulta_o_preco(
 def test_responde_com_o_preco_vindo_do_catalogo(conexao):
     with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
         resposta = responder("Quanto custa o Takamine GD20?", Sessao(conexao))
+
+    assert "R$ 2.199,00" in resposta
+
+
+def test_responde_com_um_loop_assincrono_em_execucao(conexao):
+    async def responder_dentro_do_loop():
+        return responder("Quanto custa o Takamine GD20?", Sessao(conexao))
+
+    with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
+        resposta = asyncio.run(responder_dentro_do_loop())
 
     assert "R$ 2.199,00" in resposta

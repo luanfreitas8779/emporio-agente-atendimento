@@ -1,4 +1,6 @@
+import contextvars
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from pydantic_ai import Agent, RunContext
@@ -25,6 +27,11 @@ class Sessao:
     conexao: sqlite3.Connection
 
 
+# O Streamlit pode rodar o script com outra mensagem em andamento, e o run_sync
+# falha se encontrar um loop em execução. Uma thread própria evita esse conflito.
+_executor = ThreadPoolExecutor(max_workers=1)
+
+
 agente = Agent(
     f"google:{MODELO_GEMINI}",
     deps_type=Sessao,
@@ -44,4 +51,7 @@ def buscar_produtos(ctx: RunContext[Sessao], termo: str) -> list[catalog.Produto
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
-    return agente.run_sync(mensagem, deps=sessao).output
+    # O contexto copiado preserva o modelo simulado dos testes na outra thread.
+    contexto = contextvars.copy_context()
+    execucao = _executor.submit(contexto.run, agente.run_sync, mensagem, deps=sessao)
+    return execucao.result().output
