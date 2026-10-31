@@ -1,0 +1,9 @@
+[project]
+name = "emporio-agente-atendimento"
+version = "0.1.0"
+description = "Agente de atendimento por texto da Empório da Música"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
