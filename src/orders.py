@@ -1,5 +1,9 @@
 import sqlite3
 from dataclasses import dataclass
+from typing import Annotated
+
+from pydantic import Field
+from pydantic.dataclasses import dataclass as dataclass_pydantic
 
 from src.catalog import formatar_preco
 from src.phone import normalizar_telefone
@@ -27,11 +31,12 @@ class ItemPedido:
     quantidade: int
 
 
-@dataclass(frozen=True)
+@dataclass_pydantic(frozen=True)
 class Pedido:
     numero: int
     data: str
-    status: str
+    # O código original fica só para o código: o modelo recebe apenas a situação.
+    status: Annotated[str, Field(exclude=True)]
     situacao: str
     itens: list[ItemPedido]
     total: str

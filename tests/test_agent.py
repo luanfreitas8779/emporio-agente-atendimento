@@ -281,3 +281,11 @@ def test_ferramentas_recusam_argumentos_fora_da_faixa(conexao, ferramenta, argum
         resposta = responder("Teste", sessao)
 
     assert resposta == "argumento recusado"
+
+
+def test_modelo_recebe_a_situacao_traduzida_e_nao_o_status_cru(conexao):
+    retorno = chamar_ferramenta(conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 8})
+
+    visto_pelo_modelo = retorno.model_response_str()
+    assert "enviado" in visto_pelo_modelo
+    assert "shipped" not in visto_pelo_modelo
