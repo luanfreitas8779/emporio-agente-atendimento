@@ -5,6 +5,7 @@ from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import SEM_CADASTRO, Sessao, agente, responder
+from src.database import conectar
 from src.load_data import ler_csv
 from tests.conftest import PASTA_DADOS
 
@@ -313,3 +314,33 @@ def test_segunda_mensagem_chega_ao_modelo_junto_com_a_primeira(conexao):
         resposta = responder("E o mais barato?", sessao)
 
     assert resposta == "Quero um violão | E o mais barato?"
+
+
+def test_nova_sessao_com_o_mesmo_telefone_recupera_a_conversa(conexao, tmp_path):
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        responder("Quero um violão", Sessao(conexao, telefone=ANA))
+
+        # Outra conexão ao mesmo arquivo equivale a reiniciar a aplicação.
+        nova = conectar(tmp_path / "teste.db")
+        try:
+            resposta = responder("Chegou?", Sessao(nova, telefone="67996547821"))
+        finally:
+            nova.close()
+
+    assert resposta == "Quero um violão | Chegou?"
+
+
+def test_telefone_diferente_nao_recebe_o_historico_de_outra_pessoa(conexao):
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        responder("Quero um violão", Sessao(conexao, telefone=ANA))
+        resposta = responder("Oi", Sessao(conexao, telefone="(67) 90000-0000"))
+
+    assert resposta == "Oi"
+
+
+def test_sessao_sem_telefone_valido_nao_guarda_conversa(conexao):
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        responder("Quero um violão", Sessao(conexao, telefone="123"))
+        resposta = responder("Oi", Sessao(conexao, telefone="123"))
+
+    assert resposta == "Oi"
