@@ -1,3 +1,4 @@
+import pytest
 import asyncio
 
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
@@ -252,3 +253,37 @@ def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(conexao):
         instrucoes = responder("Oi!", sessao)
 
     assert "sem cadastro" in instrucoes
+
+
+def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
+    def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        pediu_correcao = any(
+            getattr(parte, "outcome", None) == "retried" or parte.part_kind == "retry-prompt"
+            for mensagem in mensagens
+            for parte in mensagem.parts
+        )
+        if pediu_correcao:
+            return ModelResponse(parts=[TextPart("argumento recusado")])
+        if len(mensagens) == 1:
+            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+        return ModelResponse(parts=[TextPart("argumento aceito")])
+
+    return modelo
+
+
+@pytest.mark.parametrize(
+    "ferramenta, argumentos",
+    [
+        ("consultar_politicas", {"secao": "pagamentos", "valor": -5}),
+        ("consultar_politicas", {"secao": "pagamentos", "valor": 100, "parcelas": 0}),
+        ("buscar_produtos", {"preco_maximo": -1}),
+        ("consultar_meus_pedidos", {"numero_pedido": 0}),
+    ],
+)
+def test_ferramentas_recusam_argumentos_fora_da_faixa(conexao, ferramenta, argumentos):
+    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+
+    with agente.override(model=FunctionModel(modelo_que_envia_argumentos(ferramenta, argumentos))):
+        resposta = responder("Teste", sessao)
+
+    assert resposta == "argumento recusado"

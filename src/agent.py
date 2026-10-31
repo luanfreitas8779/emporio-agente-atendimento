@@ -2,8 +2,9 @@ import contextvars
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Literal
+from typing import Annotated, Literal
 
+from pydantic import Field
 from pydantic_ai import Agent, RunContext
 
 from src import catalog, orders, policies
@@ -95,7 +96,7 @@ def buscar_produtos(
     ctx: RunContext[Sessao],
     termo: str | None = None,
     categoria: str | None = None,
-    preco_maximo: float | None = None,
+    preco_maximo: Annotated[float | None, Field(gt=0)] = None,
     somente_disponiveis: bool = False,
 ) -> list[catalog.Produto]:
     """Busca produtos do catálogo da loja, com preços e disponibilidade.
@@ -125,8 +126,8 @@ def consultar_politicas(
         "garantia",
         "privacidade",
     ],
-    valor: float | None = None,
-    parcelas: int | None = None,
+    valor: Annotated[float | None, Field(gt=0)] = None,
+    parcelas: Annotated[int | None, Field(ge=1)] = None,
 ) -> str:
     """Consulta uma seção das políticas da loja.
 
@@ -144,7 +145,7 @@ def consultar_politicas(
 
 @agente.tool
 def consultar_meus_pedidos(
-    ctx: RunContext[Sessao], numero_pedido: int | None = None
+    ctx: RunContext[Sessao], numero_pedido: Annotated[int | None, Field(ge=1)] = None
 ) -> list[orders.Pedido] | str:
     """Consulta os pedidos do cliente desta conversa.
 
