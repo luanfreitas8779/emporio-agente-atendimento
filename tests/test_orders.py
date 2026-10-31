@@ -38,3 +38,22 @@ def test_sem_numero_lista_apenas_os_pedidos_do_cliente(conexao):
     pedidos = consultar_pedidos(conexao, cliente_id=3)
 
     assert [p.numero for p in pedidos] == [1, 19]
+
+
+def test_pedido_mostra_itens_data_e_pagamento(conexao):
+    (pedido,) = consultar_pedidos(conexao, cliente_id=2, numero=8)
+
+    assert pedido.data == "2026-02-15"
+    assert pedido.pagamento == "débito"
+    assert [(i.nome, i.quantidade) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
+
+
+def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(conexao):
+    # Pedido 3: 2 x R$ 1.749,00 somam R$ 3.498,00, mas o total registrado é R$ 3.450,00.
+    (pedido,) = consultar_pedidos(conexao, cliente_id=12, numero=3)
+
+    assert pedido.total == "R$ 3.450,00"
+    assert pedido.pagamento == "cartão de crédito em 12x"
+    assert [(i.nome, i.quantidade) for i in pedido.itens] == [
+        ("Kala KA-ABP-CTG Barítono Cedar", 2)
+    ]

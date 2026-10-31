@@ -1,11 +1,37 @@
 import sqlite3
 from dataclasses import dataclass
 
+from src.catalog import formatar_preco
+
+FORMAS_DE_PAGAMENTO = {
+    "pix": "PIX",
+    "debit": "débito",
+    "boleto": "boleto",
+}
+
 
 @dataclass(frozen=True)
 class Cliente:
     id: int
     nome: str
+
+
+@dataclass(frozen=True)
+class ItemPedido:
+    nome: str
+    quantidade: int
+
+
+@dataclass(frozen=True)
+class Pedido:
+    numero: int
+    data: str
+    status: str
+    itens: list[ItemPedido]
+    total: str
+    pagamento: str
+    rastreio: str | None
+    entrega_estimada: str | None
 
 
 def identificar_cliente(conexao: sqlite3.Connection, telefone: str) -> Cliente | None:
@@ -16,12 +42,23 @@ def identificar_cliente(conexao: sqlite3.Connection, telefone: str) -> Cliente |
     return Cliente(linha["customer_id"], linha["name"]) if linha else None
 
 
-@dataclass(frozen=True)
-class Pedido:
-    numero: int
-    status: str
-    rastreio: str | None
-    entrega_estimada: str | None
+def descrever_pagamento(codigo: str) -> str:
+    if codigo.startswith("credit_"):
+        return f"cartão de crédito em {codigo.removeprefix('credit_')}"
+    return FORMAS_DE_PAGAMENTO[codigo]
+
+
+def consultar_itens(conexao: sqlite3.Connection, numero: int) -> list[ItemPedido]:
+    linhas = conexao.execute(
+        """
+        SELECT p.name, i.quantity
+        FROM order_items i JOIN products p ON p.product_id = i.product_id
+        WHERE i.order_id = ?
+        ORDER BY p.name
+        """,
+        (numero,),
+    ).fetchall()
+    return [ItemPedido(l["name"], l["quantity"]) for l in linhas]
 
 
 def consultar_pedidos(
@@ -29,7 +66,7 @@ def consultar_pedidos(
 ) -> list[Pedido]:
     linhas = conexao.execute(
         """
-        SELECT order_id, status, tracking_code, estimated_delivery
+        SELECT *
         FROM orders
         WHERE customer_id = ? AND (? IS NULL OR order_id = ?)
         ORDER BY order_id
@@ -37,6 +74,16 @@ def consultar_pedidos(
         (cliente_id, numero, numero),
     ).fetchall()
     return [
-        Pedido(l["order_id"], l["status"], l["tracking_code"], l["estimated_delivery"])
+        Pedido(
+            l["order_id"],
+            l["order_date"],
+            l["status"],
+            consultar_itens(conexao, l["order_id"]),
+            # O total registrado prevalece sobre a soma dos itens (DQ-11 e DQ-12).
+            formatar_preco(l["total_cents"]),
+            descrever_pagamento(l["payment_method"]),
+            l["tracking_code"],
+            l["estimated_delivery"],
+        )
         for l in linhas
     ]

@@ -7,6 +7,7 @@ from src.config import CAMINHO_BANCO, PASTA_DADOS
 from src.database import conectar
 
 ESQUEMA_CATALOGO = """
+DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS promotions;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
@@ -35,6 +36,8 @@ CREATE TABLE promotions (
 """
 
 ESQUEMA_CLIENTES = """
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS customers;
 
 CREATE TABLE customers (
@@ -45,6 +48,7 @@ CREATE TABLE customers (
 """
 
 ESQUEMA_PEDIDOS = """
+DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 
 CREATE TABLE orders (
@@ -56,6 +60,12 @@ CREATE TABLE orders (
     payment_method TEXT NOT NULL,
     tracking_code TEXT,
     estimated_delivery TEXT
+);
+
+CREATE TABLE order_items (
+    order_id INTEGER NOT NULL REFERENCES orders (order_id),
+    product_id INTEGER NOT NULL REFERENCES products (product_id),
+    quantity INTEGER NOT NULL
 );
 """
 
@@ -167,14 +177,24 @@ def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         for pedido in ler_csv(pasta_dados / "orders.csv")
     ]
     conexao.executescript(ESQUEMA_PEDIDOS)
+    itens = [
+        (int(item["order_id"]), int(item["product_id"]), int(item["quantity"]))
+        for item in ler_csv(pasta_dados / "order_items.csv")
+    ]
     conexao.executemany("INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?, ?)", pedidos)
+    conexao.executemany("INSERT INTO order_items VALUES (?, ?, ?)", itens)
     conexao.commit()
+
+
+def carregar_dados(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+    # A ordem respeita as chaves estrangeiras: pedidos dependem de clientes e produtos.
+    carregar_catalogo(conexao, pasta_dados)
+    carregar_clientes(conexao, pasta_dados)
+    carregar_pedidos(conexao, pasta_dados)
 
 
 if __name__ == "__main__":
     conexao = conectar(CAMINHO_BANCO)
-    carregar_catalogo(conexao, PASTA_DADOS)
-    carregar_clientes(conexao, PASTA_DADOS)
-    carregar_pedidos(conexao, PASTA_DADOS)
+    carregar_dados(conexao, PASTA_DADOS)
     conexao.close()
     print(f"Banco criado em {CAMINHO_BANCO}")

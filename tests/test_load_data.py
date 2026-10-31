@@ -2,7 +2,8 @@ import pytest
 
 from src.catalog import buscar_produtos
 from src.database import conectar
-from src.load_data import ErroDeCarga, carregar_catalogo
+from src.orders import consultar_pedidos
+from src.load_data import ErroDeCarga, carregar_catalogo, carregar_dados
 from tests.conftest import PASTA_DADOS
 
 
@@ -56,3 +57,9 @@ def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tm
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
+
+
+def test_recarregar_todos_os_dados_nao_duplica_pedidos(conexao):
+    carregar_dados(conexao, PASTA_DADOS)
+
+    assert len(consultar_pedidos(conexao, cliente_id=3)) == 2
