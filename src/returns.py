@@ -8,6 +8,8 @@ from pydantic.dataclasses import dataclass as dataclass_pydantic
 from src.datas import formatar_data
 
 PRAZO_DE_ARREPENDIMENTO_EM_DIAS = 7
+PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS = 30
+PRAZO_DA_GARANTIA_LEGAL_EM_DIAS = 90
 
 
 class Motivo(StrEnum):
@@ -56,11 +58,24 @@ def avaliar_devolucao(
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
         return Veredito(Resultado.NAO_SE_APLICA, [])
     linha = conexao.execute(
-        "SELECT estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
+        "SELECT order_date, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),
     ).fetchone()
+    compra = date.fromisoformat(linha["order_date"])
     # Sem data real de entrega nos dados (DQ-17), o recebimento é a entrega estimada.
     recebimento = date.fromisoformat(linha["estimated_delivery"])
-    limite = recebimento + timedelta(days=PRAZO_DE_ARREPENDIMENTO_EM_DIAS)
+    if motivo == Motivo.DEFEITO:
+        regras = [
+            _regra("troca_por_defeito", compra, PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS, hoje),
+            _regra("garantia_legal", recebimento, PRAZO_DA_GARANTIA_LEGAL_EM_DIAS, hoje),
+        ]
+    else:
+        regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, hoje)]
+    dentro = any(r.resultado == Resultado.DENTRO_DO_PRAZO for r in regras)
+    return Veredito(Resultado.DENTRO_DO_PRAZO if dentro else Resultado.FORA_DO_PRAZO, regras)
+
+
+def _regra(nome: str, inicio: date, dias: int, hoje: date) -> Regra:
+    limite = inicio + timedelta(days=dias)
     resultado = Resultado.DENTRO_DO_PRAZO if hoje <= limite else Resultado.FORA_DO_PRAZO
-    return Veredito(resultado, [Regra("arrependimento", resultado, formatar_data(limite))])
+    return Regra(nome, resultado, formatar_data(limite))

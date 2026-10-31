@@ -49,3 +49,17 @@ def test_arrependimento_sem_canal_pede_o_canal_de_compra(conexao):
     assert veredito.resultado == "faltam_dados"
     assert veredito.faltando == ["canal_de_compra"]
     assert veredito.regras == []
+
+
+def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(conexao):
+    # Compra em 03/02/2026 (30 dias até 05/03) e entrega estimada em 17/02/2026 (90 dias até 18/05).
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=14, numero=7, motivo="defeito", canal=None,
+        hoje=date(2026, 3, 25),
+    )
+
+    assert veredito.resultado == "dentro_do_prazo"
+    assert [(r.nome, r.resultado, r.prazo_ate) for r in veredito.regras] == [
+        ("troca_por_defeito", "fora_do_prazo", "05/03/2026"),
+        ("garantia_legal", "dentro_do_prazo", "18/05/2026"),
+    ]
