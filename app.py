@@ -3,6 +3,8 @@ import streamlit as st
 from src.agent import Sessao, responder
 from src.config import CAMINHO_BANCO
 from src.database import conectar
+from src.memory import exibir_conversa
+from src.phone import normalizar_telefone
 
 
 def exibir(papel: str, texto: str) -> None:
@@ -22,6 +24,20 @@ st.session_state.telefone = st.sidebar.text_input(
     "Seu telefone", value=st.session_state.get("telefone", ""), placeholder="(67) 99999-9999"
 )
 st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
+
+# Ao informar (ou trocar) o telefone, a tela mostra a conversa guardada para ele.
+# Um telefone inválido não tem conversa guardada, então a tela recomeça vazia.
+telefone_da_conversa = normalizar_telefone(st.session_state.telefone)
+if st.session_state.get("conversa_de") != telefone_da_conversa:
+    st.session_state.conversa_de = telefone_da_conversa
+    conexao = conectar(CAMINHO_BANCO)
+    try:
+        st.session_state.mensagens = [
+            {"papel": papel, "texto": texto}
+            for papel, texto in exibir_conversa(conexao, st.session_state.telefone)
+        ]
+    finally:
+        conexao.close()
 
 for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"])
