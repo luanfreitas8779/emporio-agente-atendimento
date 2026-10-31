@@ -41,3 +41,18 @@ def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
+
+
+def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tmp_path):
+    escrever_catalogo(tmp_path, '10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
+    (tmp_path / "promotions.csv").write_text(
+        "promotion_id,product_id,discount_percent,description,is_active\n"
+        "1,99,10,Oferta,1\n",
+        encoding="utf-8",
+    )
+    conexao = conectar(tmp_path / "teste.db")
+
+    with pytest.raises(ErroDeCarga, match="promoção 1"):
+        carregar_catalogo(conexao, tmp_path)
+
+    conexao.close()

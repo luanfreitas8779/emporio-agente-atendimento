@@ -7,6 +7,7 @@ from src.config import CAMINHO_BANCO, PASTA_DADOS
 from src.database import conectar
 
 ESQUEMA_CATALOGO = """
+DROP TABLE IF EXISTS promotions;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
 
@@ -22,6 +23,14 @@ CREATE TABLE products (
     price_cents INTEGER NOT NULL,
     stock_quantity INTEGER NOT NULL,
     status TEXT NOT NULL
+);
+
+CREATE TABLE promotions (
+    promotion_id INTEGER PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products (product_id),
+    discount_percent INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    is_active INTEGER NOT NULL
 );
 """
 
@@ -52,6 +61,22 @@ def preparar_produto(produto: dict[str, str], categorias: set[str]) -> tuple:
         raise ErroDeCarga(f"produto {identificador}: valor inválido") from erro
 
 
+def preparar_promocao(promocao: dict[str, str], produtos: set[str]) -> tuple:
+    identificador = promocao["promotion_id"]
+    if promocao["product_id"] not in produtos:
+        raise ErroDeCarga(f"promoção {identificador}: produto inexistente")
+    try:
+        return (
+            int(identificador),
+            int(promocao["product_id"]),
+            int(promocao["discount_percent"]),
+            promocao["description"],
+            int(promocao["is_active"]),
+        )
+    except ValueError as erro:
+        raise ErroDeCarga(f"promoção {identificador}: valor inválido") from erro
+
+
 def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     categorias = ler_csv(pasta_dados / "categories.csv")
     ids_categorias = {categoria["category_id"] for categoria in categorias}
@@ -59,6 +84,12 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     produtos = [
         preparar_produto(produto, ids_categorias)
         for produto in ler_csv(pasta_dados / "products.csv")
+    ]
+
+    ids_produtos = {produto["product_id"] for produto in ler_csv(pasta_dados / "products.csv")}
+    promocoes = [
+        preparar_promocao(promocao, ids_produtos)
+        for promocao in ler_csv(pasta_dados / "promotions.csv")
     ]
 
     conexao.executescript(ESQUEMA_CATALOGO)
@@ -73,6 +104,10 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         ) VALUES (?, ?, ?, ?, ?, ?)
         """,
         produtos,
+    )
+    conexao.executemany(
+        "INSERT INTO promotions VALUES (?, ?, ?, ?, ?)",
+        promocoes,
     )
     conexao.commit()
 
