@@ -160,7 +160,6 @@ Situação após as issues #3 (catálogo), #4 (políticas) e #5 (identificação
 | Divergências do manual | Os itens DQ-19 a DQ-24 aplicam interpretações que precisam ser confirmadas pela gestão da loja | Validar antes de qualquer uso em produção |
 | Cota do Gemini | Cada pergunta usa, em média, de 2 a 3 requisições ao modelo, por causa das chamadas de ferramenta. O limite considerado de 20 por dia foi atingido durante a validação das issues #3 e #4 e voltou a ser consumido quase por inteiro na issue #5 | Planejar os ciclos de avaliação por quantidade de requisições e registrar respostas 429 |
 | Conversas de referência | Ainda não há arquivos em `examples/` | Gerar a partir de execuções reais (issue #11) |
-| Status do pedido em inglês | O agente repete o status registrado (`shipped`, `confirmed`) na resposta ao cliente | Implementar o mapa de tradução em código, com teste, conforme o ADR-012 |
 | Redação da resposta de pedidos | O prompt de pedidos (data de entrega em formato brasileiro, recusa de terceiros, explicação sem cadastro) foi validado com 3 perguntas reais, sem teste automático | Revalidar com o Gemini a cada mudança do prompt |
 | Trocas e devoluções | A consulta de pedidos não informa canal de compra nem prazos | Tratar na issue #6 |
 | Data de referência configurável | A decisão da spec (padrão 2026-03-25) ainda não existe em `src/config.py`; só os prazos de troca dependem dela | Implementar na issue #6, com teste de prazo |

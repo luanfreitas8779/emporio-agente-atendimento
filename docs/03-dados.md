@@ -130,6 +130,7 @@ Com esse valor, nenhum pedido entregue está dentro dos 7 dias de arrependimento
 
 - Apenas o cliente da sessão pode consultar seus pedidos.
 - E-mail e cidade não são necessários para as respostas do MVP e não são expostos ao agente.
+- Do cadastro, o modelo recebe apenas o primeiro nome. Sobrenome e telefone ficam no código.
 - Os dados versionados são fictícios. Telefones podem coincidir com números reais, então não devem ser usados para contato.
 - Dados reais só podem ser usados após a revisão dos termos do provedor e a adequação à LGPD.
 

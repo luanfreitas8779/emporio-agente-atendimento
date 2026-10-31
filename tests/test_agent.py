@@ -216,7 +216,9 @@ def test_cliente_cadastrado_e_chamado_pelo_nome(conexao):
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Oi!", sessao)
 
-    assert "Ana Carolina Ferreira" in instrucoes
+    assert "Ana" in instrucoes
+    assert "Carolina" not in instrucoes
+    assert "Ferreira" not in instrucoes
 
 
 def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(conexao):

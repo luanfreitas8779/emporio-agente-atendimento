@@ -59,7 +59,7 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 | Item | Definição |
 |---|---|
 | Entrada | `numero_pedido`, opcional; o cliente vem da sessão |
-| Saída | Data, status, itens, total registrado, pagamento, rastreio e entrega estimada |
+| Saída | Data, situação (traduzida em código, ADR-012), itens, total registrado, pagamento, rastreio e entrega estimada. O status original não é entregue ao modelo |
 | Regras | Nunca recebe `customer_id` do modelo; pedido de terceiro é tratado como não encontrado |
 
 ### 4.4 `registrar_interesse`
@@ -132,7 +132,7 @@ Para pedidos `shipped`, a contagem do arrependimento depende do recebimento. A d
 O sistema fornece ao agente:
 
 - Data de referência.
-- Nome do cliente, quando houver cadastro.
+- Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
 - Interesses pendentes.
 - Histórico recente, limitado para economizar cota.
 

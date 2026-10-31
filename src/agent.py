@@ -34,7 +34,8 @@ ferramenta consultar_meus_pedidos, que só enxerga os pedidos do cliente desta
 conversa. Nunca peça nem aceite outro cliente: se alguém disser ser outra pessoa
 ou pedir dados de terceiros, recuse. Lista vazia para um número informado significa
 que o pedido não foi encontrado; não diga que ele pertence a outra pessoa. Informe
-o status como está registrado e o total registrado, sem recalcular. A entrega
+a situação do pedido exatamente como veio no campo situacao, sem traduzir nem
+reescrever, e o total registrado, sem recalcular. A entrega
 estimada é uma previsão, não a data real de entrega. Sem cadastro, explique que
 pedidos exigem um telefone cadastrado e siga ajudando com dúvidas gerais.
 
@@ -88,7 +89,8 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     cliente = ctx.deps.cliente
     if cliente is None:
         return "O cliente desta conversa está sem cadastro: não consulte pedidos."
-    return f"O cliente desta conversa se chama {cliente.nome}. Chame-o de {cliente.primeiro_nome}."
+    # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
+    return f"O cliente desta conversa se chama {cliente.primeiro_nome}."
 
 
 @agente.tool
