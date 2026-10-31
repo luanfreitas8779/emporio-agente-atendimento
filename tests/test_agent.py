@@ -648,3 +648,33 @@ def test_canal_nao_informado_vira_pergunta_pendente_na_mensagem_seguinte(conexao
         instrucoes = responder("Foi online", sessao)
 
     assert "Pergunta pendente: o canal de compra do pedido 7" in instrucoes
+
+
+def modelo_que_avalia_conforme_a_mensagem(chamadas: dict[str, dict]):
+    def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        ultima = mensagens[-1].parts[0]
+        if ultima.part_kind == "user-prompt" and ultima.content in chamadas:
+            return ModelResponse(parts=[ToolCallPart("avaliar_devolucao", chamadas[ultima.content])])
+        if ultima.part_kind == "tool-return":
+            return ModelResponse(parts=[TextPart("ok")])
+        return ModelResponse(parts=[TextPart(info.instructions or "")])
+
+    return modelo
+
+
+def test_pergunta_pendente_some_quando_o_canal_e_informado_e_o_veredito_sai(conexao):
+    sessao = Sessao(conexao, telefone=LETICIA, hoje=date(2026, 2, 20))
+    modelo = modelo_que_avalia_conforme_a_mensagem(
+        {
+            "Quero devolver": {"numero_pedido": 7, "motivo": "arrependimento"},
+            "Foi online": {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        }
+    )
+
+    with agente.override(model=FunctionModel(modelo)):
+        responder("Quero devolver", sessao)
+        responder("Foi online", sessao)
+        instrucoes = responder("Mostra o contexto", sessao)
+
+    assert "Pergunta pendente" not in instrucoes
+    assert "Pedido em análise: 7" in instrucoes
