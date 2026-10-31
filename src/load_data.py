@@ -162,10 +162,17 @@ def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.commit()
 
 
+def validar_cliente_do_pedido(pedido: dict[str, str], clientes: set[int]) -> int:
+    if int(pedido["customer_id"]) not in clientes:
+        raise ErroDeCarga(f"pedido {pedido['order_id']}: cliente inexistente")
+    return int(pedido["order_id"])
+
+
 def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+    clientes = {linha[0] for linha in conexao.execute("SELECT customer_id FROM customers")}
     pedidos = [
         (
-            int(pedido["order_id"]),
+            validar_cliente_do_pedido(pedido, clientes),
             int(pedido["customer_id"]),
             pedido["order_date"],
             pedido["status"],
