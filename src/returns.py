@@ -11,6 +11,12 @@ PRAZO_DE_ARREPENDIMENTO_EM_DIAS = 7
 PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS = 30
 PRAZO_DA_GARANTIA_LEGAL_EM_DIAS = 90
 
+SEM_ENTREGA = {
+    "pending": "O pedido ainda não foi enviado, então não há produto recebido para devolver.",
+    "confirmed": "O pedido ainda não foi enviado, então não há produto recebido para devolver.",
+    "cancelled": "O pedido foi cancelado, então não há produto para devolver.",
+}
+
 
 class Motivo(StrEnum):
     ARREPENDIMENTO = "arrependimento"
@@ -44,6 +50,7 @@ class Veredito:
     regras: list[Regra]
     # O que o modelo deve perguntar ao cliente antes de haver veredito.
     faltando: list[str] = field(default_factory=list)
+    avisos: list[str] = field(default_factory=list)
 
 
 def avaliar_devolucao(
@@ -59,11 +66,13 @@ def avaliar_devolucao(
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
         return Veredito(Resultado.NAO_SE_APLICA, [])
     linha = conexao.execute(
-        "SELECT order_date, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
+        "SELECT order_date, status, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),
     ).fetchone()
     if linha is None:
         return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
+    if linha["status"] in SEM_ENTREGA:
+        return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[SEM_ENTREGA[linha["status"]]])
     compra = date.fromisoformat(linha["order_date"])
     # Sem data real de entrega nos dados (DQ-17), o recebimento é a entrega estimada.
     recebimento = date.fromisoformat(linha["estimated_delivery"])

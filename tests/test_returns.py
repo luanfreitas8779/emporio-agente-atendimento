@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from src.config import data_de_referencia
 from src.returns import avaliar_devolucao
 
@@ -73,3 +75,22 @@ def test_pedido_de_outro_cliente_nao_e_avaliado(conexao):
 
     assert veredito.resultado == "pedido_nao_encontrado"
     assert veredito.regras == []
+
+
+@pytest.mark.parametrize(
+    "cliente, numero, aviso",
+    [
+        (8, 13, "ainda não foi enviado"),
+        (6, 9, "ainda não foi enviado"),
+        (15, 17, "foi cancelado"),
+    ],
+)
+def test_pedido_sem_entrega_nao_tem_o_que_devolver(conexao, cliente, numero, aviso):
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=cliente, numero=numero, motivo="defeito", canal=None,
+        hoje=date(2026, 3, 25),
+    )
+
+    assert veredito.resultado == "nao_se_aplica"
+    assert veredito.regras == []
+    assert any(aviso in a for a in veredito.avisos)
