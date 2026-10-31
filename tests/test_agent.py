@@ -431,3 +431,14 @@ def test_resposta_segura_tambem_entra_no_historico(conexao):
 
     assert segura == RESPOSTA_SEGURA
     assert resposta == "Preço do violão? | Oi"
+
+
+def test_historico_corrompido_e_ignorado_e_o_atendimento_continua(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        responder("Quero um violão", sessao)
+        conexao.execute("UPDATE messages SET content = 'não é json'")
+        resposta = responder("Oi", sessao)
+
+    assert resposta == "Oi"

@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime, timezone
 
+from pydantic import ValidationError
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -74,11 +75,14 @@ def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> lis
         """,
         (chave,),
     ).fetchall()
-    mensagens = [
-        mensagem
-        for linha in linhas
-        for mensagem in ModelMessagesTypeAdapter.validate_json(linha["content"])
-    ]
+    mensagens: list[ModelMessage] = []
+    for linha in linhas:
+        try:
+            mensagens.extend(ModelMessagesTypeAdapter.validate_json(linha["content"]))
+        except ValidationError:
+            # Uma linha ilegível não pode travar o atendimento nem deixar um turno
+            # pela metade: o histórico recomeça depois dela.
+            mensagens = []
     return limitar_historico(mensagens)
 
 
