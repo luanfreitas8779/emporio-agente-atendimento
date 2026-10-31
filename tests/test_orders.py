@@ -27,3 +27,14 @@ def test_cliente_2_consulta_o_pedido_8_com_status_e_rastreio(conexao):
     assert pedido.status == "shipped"
     assert pedido.rastreio == "BRJL5544332BR"
     assert pedido.entrega_estimada == "2026-02-28"
+
+
+def test_pedido_de_outro_cliente_e_tratado_como_nao_encontrado(conexao):
+    # O pedido 5 pertence ao cliente 5.
+    assert consultar_pedidos(conexao, cliente_id=2, numero=5) == []
+
+
+def test_sem_numero_lista_apenas_os_pedidos_do_cliente(conexao):
+    pedidos = consultar_pedidos(conexao, cliente_id=3)
+
+    assert [p.numero for p in pedidos] == [1, 19]
