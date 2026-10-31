@@ -34,6 +34,16 @@ CREATE TABLE promotions (
 );
 """
 
+ESQUEMA_CLIENTES = """
+DROP TABLE IF EXISTS customers;
+
+CREATE TABLE customers (
+    customer_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE
+);
+"""
+
 
 class ErroDeCarga(Exception):
     pass
@@ -112,8 +122,24 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.commit()
 
 
+def somente_digitos(telefone: str) -> str:
+    return "".join(c for c in telefone if c.isdigit())
+
+
+def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+    # E-mail e cidade não são carregados: o agente não precisa deles (privacidade).
+    clientes = [
+        (int(cliente["customer_id"]), cliente["name"], somente_digitos(cliente["phone"]))
+        for cliente in ler_csv(pasta_dados / "customers.csv")
+    ]
+    conexao.executescript(ESQUEMA_CLIENTES)
+    conexao.executemany("INSERT INTO customers VALUES (?, ?, ?)", clientes)
+    conexao.commit()
+
+
 if __name__ == "__main__":
     conexao = conectar(CAMINHO_BANCO)
     carregar_catalogo(conexao, PASTA_DADOS)
+    carregar_clientes(conexao, PASTA_DADOS)
     conexao.close()
     print(f"Banco criado em {CAMINHO_BANCO}")
