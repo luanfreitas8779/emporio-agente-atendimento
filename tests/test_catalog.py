@@ -102,3 +102,38 @@ def test_pix_nao_se_soma_a_uma_promocao_ativa(conexao):
 def test_categoria_sem_produtos_nao_retorna_resultados(conexao):
     assert buscar_produtos(conexao, termo="saxofone") == []
     assert buscar_produtos(conexao, categoria="Instrumentos de Sopro") == []
+
+
+def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(conexao):
+    # 4.35 * 100 vale 434.99999999999994 em ponto flutuante.
+    conexao.execute(
+        "INSERT INTO products VALUES (9001, 'Produto Limite', 5, 435, 1, 'active')"
+    )
+
+    produtos = buscar_produtos(conexao, termo="Produto Limite", preco_maximo=4.35)
+
+    assert [p.nome for p in produtos] == ["Produto Limite"]
+
+
+def test_categoria_no_singular_encontra_a_categoria_no_plural(conexao):
+    plural = buscar_produtos(conexao, categoria="Violões")
+
+    assert len(plural) > 0
+    for singular in ("violão", "violao", "Violao"):
+        assert buscar_produtos(conexao, categoria=singular) == plural
+
+
+def test_categorias_no_singular_de_outros_plurais(conexao):
+    assert buscar_produtos(conexao, categoria="guitarra") == buscar_produtos(
+        conexao, categoria="Guitarras"
+    )
+    assert buscar_produtos(conexao, categoria="ukulele") == buscar_produtos(
+        conexao, categoria="Ukuleles"
+    )
+    assert buscar_produtos(conexao, categoria="baixo") == buscar_produtos(
+        conexao, categoria="Baixos"
+    )
+
+
+def test_categoria_inexistente_nao_encontra_produtos(conexao):
+    assert buscar_produtos(conexao, categoria="saxofone") == []

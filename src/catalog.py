@@ -32,6 +32,19 @@ def normalizar(texto: str) -> str:
     return "".join(c for c in sem_acento if not unicodedata.combining(c))
 
 
+def singularizar(texto: str) -> str:
+    """Reduz cada palavra normalizada ao singular, para "violão" casar com "Violões"."""
+    palavras = []
+    for palavra in texto.split():
+        if len(palavra) > 3:
+            for plural, singular in (("oes", "ao"), ("aes", "ao"), ("ns", "m"), ("s", "")):
+                if palavra.endswith(plural):
+                    palavra = palavra.removesuffix(plural) + singular
+                    break
+        palavras.append(palavra)
+    return " ".join(palavras)
+
+
 def classificar(status: str, estoque: int) -> str:
     # O status tem prioridade sobre o estoque.
     if status == "discontinued":
@@ -86,15 +99,15 @@ def buscar_produtos(
     ).fetchall()
 
     palavras = normalizar(termo or "").split()
-    categoria_normalizada = normalizar(categoria or "")
+    categoria_normalizada = singularizar(normalizar(categoria or ""))
     produtos = []
     for linha in linhas:
         nome = normalizar(linha["name"])
         if not all(palavra in nome for palavra in palavras):
             continue
-        if categoria_normalizada not in normalizar(linha["categoria"]):
+        if categoria_normalizada not in singularizar(normalizar(linha["categoria"])):
             continue
-        if preco_maximo is not None and calcular_preco_final(linha) > preco_maximo * 100:
+        if preco_maximo is not None and calcular_preco_final(linha) > Decimal(str(preco_maximo)) * 100:
             continue
         produto = montar_produto(linha)
         if somente_disponiveis and produto.disponibilidade != DISPONIVEL:
