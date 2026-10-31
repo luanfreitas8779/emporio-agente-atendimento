@@ -43,8 +43,8 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 | Item | Definição |
 |---|---|
 | Entrada | `termo`, `categoria`, `preco_maximo` e `somente_disponiveis`, todos opcionais |
-| Saída | Nome, categoria, preço original, promoção ativa, preço final e disponibilidade |
-| Regras | Aceita correspondência parcial e aplica as regras de disponibilidade em código |
+| Saída | Id, nome, categoria, preço original, desconto da promoção ativa, preço final, preço com PIX e disponibilidade (`disponivel`, `indisponivel`, `fora_de_catalogo` ou `lancamento`) |
+| Regras | Aceita correspondência parcial, sem diferenciar maiúsculas e acentos. O preço máximo considera o preço final. O preço com PIX é nulo em produtos com promoção ativa. Disponibilidade e preços são calculados em código |
 
 ### 4.2 `consultar_politicas`
 
