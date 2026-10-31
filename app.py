@@ -17,6 +17,12 @@ st.caption("Sua música começa aqui.")
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
+# O telefone identifica a sessão. Digitá-lo não prova identidade (ADR-009).
+st.session_state.telefone = st.sidebar.text_input(
+    "Seu telefone", value=st.session_state.get("telefone", ""), placeholder="(67) 99999-9999"
+)
+st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
+
 for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"])
 
@@ -27,7 +33,7 @@ if pergunta := st.chat_input("Escreva sua mensagem"):
     conexao = conectar(CAMINHO_BANCO)
     try:
         with st.spinner("O Tom está consultando..."):
-            resposta = responder(pergunta, Sessao(conexao))
+            resposta = responder(pergunta, Sessao(conexao, st.session_state.telefone))
     finally:
         conexao.close()
 
