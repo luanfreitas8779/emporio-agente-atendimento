@@ -593,3 +593,30 @@ def test_ferramenta_de_devolucao_usa_o_pedido_do_cliente_e_a_data_da_sessao(cone
 
     assert retorno.content.resultado == "dentro_do_prazo"
     assert retorno.content.regras[0].prazo_ate == "24/02/2026"
+
+
+def test_devolucao_de_pedido_de_outro_cliente_volta_como_nao_encontrado(conexao):
+    # O pedido 7 é da cliente 14; a sessão é da cliente 2.
+    retorno = chamar_ferramenta(
+        conexao, ANA, "avaliar_devolucao", {"numero_pedido": 7, "motivo": "defeito"}
+    )
+
+    assert retorno.content.resultado == "pedido_nao_encontrado"
+
+
+def test_devolucao_sem_cadastro_explica_que_pedidos_exigem_telefone_cadastrado(conexao):
+    retorno = chamar_ferramenta(
+        conexao, "(67) 90000-0000", "avaliar_devolucao", {"numero_pedido": 7, "motivo": "defeito"}
+    )
+
+    assert retorno.content == SEM_CADASTRO
+
+
+def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(conexao):
+    for argumentos in (
+        {"numero_pedido": 7, "motivo": "fiquei com dó"},
+        {"numero_pedido": 7, "motivo": "defeito", "customer_id": 14},
+    ):
+        retorno = chamar_ferramenta(conexao, ANA, "avaliar_devolucao", argumentos)
+
+        assert retorno.outcome == "retried"
