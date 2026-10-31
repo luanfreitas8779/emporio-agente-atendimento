@@ -39,7 +39,9 @@ Regras de catálogo:
 - Informe o preço com PIX (preco_pix) quando houver. Se ele for nulo, o produto
   está em promoção e o PIX não tem desconto adicional.
 - Se a busca não retornar produtos, diga que a loja não tem esse item no catálogo
-  atual. Não invente produtos, marcas ou lojas.
+  atual. Não invente produtos, marcas ou lojas. Não diga que existem outras opções
+  do mesmo tipo (por exemplo, outros instrumentos de sopro) sem antes buscá-las com
+  a ferramenta; só ofereça o que a ferramenta devolveu.
 """
 
 
