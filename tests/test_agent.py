@@ -467,3 +467,28 @@ def test_produto_unico_encontrado_fica_em_foco_nas_mensagens_seguintes(conexao):
         instrucoes = responder("E o preço?", sessao)
 
     assert "Produto em foco: Giannini GF-3D" in instrucoes
+
+
+def modelo_que_consulta_o_pedido_8_e_depois_mostra_as_instrucoes(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    ultima = mensagens[-1].parts[0]
+    if ultima.part_kind == "user-prompt" and ultima.content == "Cadê meu pedido?":
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_meus_pedidos", {"numero_pedido": 8})]
+        )
+    if ultima.part_kind == "tool-return":
+        return ModelResponse(parts=[TextPart("ok")])
+    return ModelResponse(parts=[TextPart(info.instructions or "")])
+
+
+def test_pedido_consultado_fica_em_analise_nas_mensagens_seguintes(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(
+        model=FunctionModel(modelo_que_consulta_o_pedido_8_e_depois_mostra_as_instrucoes)
+    ):
+        responder("Cadê meu pedido?", sessao)
+        instrucoes = responder("E o rastreio?", sessao)
+
+    assert "Pedido em análise: 8" in instrucoes

@@ -136,6 +136,9 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     else:
         # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
         texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
+    pedido = ctx.deps.estado.pedido_em_analise
+    if pedido is not None:
+        texto += f"\nPedido em análise: {pedido}."
     foco = ctx.deps.estado.produto_em_foco
     if foco is not None:
         nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
@@ -204,7 +207,10 @@ def consultar_meus_pedidos(
     cliente = ctx.deps.cliente
     if cliente is None:
         return SEM_CADASTRO
-    return orders.consultar_pedidos(ctx.deps.conexao, cliente.id, numero_pedido)
+    pedidos = orders.consultar_pedidos(ctx.deps.conexao, cliente.id, numero_pedido)
+    if len(pedidos) == 1:
+        ctx.deps.estado.pedido_em_analise = pedidos[0].numero
+    return pedidos
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
