@@ -5,9 +5,11 @@ from dataclasses import dataclass
 from typing import Annotated, Literal
 
 from pydantic import Field
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.messages import ModelRequest, ToolReturnPart, UserPromptPart
 
-from src import catalog, orders, policies
+from src import catalog, guardrail, orders, policies
 from src.config import MODELO_GEMINI
 
 INSTRUCOES = """\
@@ -60,6 +62,11 @@ SEM_CADASTRO = (
     "O cliente ainda pode tirar dúvidas gerais."
 )
 
+RESPOSTA_SEGURA = (
+    "Não consegui confirmar essa informação com segurança agora. "
+    "Pode reformular a pergunta ou falar com a nossa equipe?"
+)
+
 
 @dataclass
 class Sessao:
@@ -82,6 +89,36 @@ agente = Agent(
     instructions=INSTRUCOES,
     defer_model_check=True,
 )
+
+
+def fontes_do_turno(mensagens: list) -> list[str]:
+    """Textos que podem sustentar a resposta: a pergunta do cliente e o retorno das ferramentas."""
+    inicio = max(
+        (i for i, m in enumerate(mensagens)
+         if isinstance(m, ModelRequest) and any(isinstance(p, UserPromptPart) for p in m.parts)),
+        default=0,
+    )
+    fontes = []
+    for mensagem in mensagens[inicio:]:
+        for parte in mensagem.parts:
+            if isinstance(parte, UserPromptPart):
+                fontes.append(str(parte.content))
+            elif isinstance(parte, ToolReturnPart) and parte.outcome != "retried":
+                fontes.append(parte.model_response_str())
+    return fontes
+
+
+@agente.output_validator
+def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
+    # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
+    inventados = guardrail.valores_nao_confirmados(resposta, fontes_do_turno(ctx.messages))
+    if inventados:
+        raise ModelRetry(
+            "A resposta cita valores que não vieram das ferramentas: "
+            + ", ".join(inventados)
+            + ". Reescreva usando apenas os dados retornados pelas ferramentas."
+        )
+    return resposta
 
 
 @agente.instructions
@@ -157,4 +194,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     # O contexto copiado preserva o modelo simulado dos testes na outra thread.
     contexto = contextvars.copy_context()
     execucao = _executor.submit(contexto.run, agente.run_sync, mensagem, deps=sessao)
-    return execucao.result().output
+    try:
+        return execucao.result().output
+    except UnexpectedModelBehavior:
+        # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele.
+        return RESPOSTA_SEGURA
