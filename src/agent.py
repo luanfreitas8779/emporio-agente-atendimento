@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic_ai import Agent, RunContext
 
-from src import catalog, policies
+from src import catalog, orders, policies
 from src.config import MODELO_GEMINI
 
 INSTRUCOES = """\
@@ -48,6 +48,7 @@ Regras de catálogo:
 @dataclass
 class Sessao:
     conexao: sqlite3.Connection
+    telefone: str | None = None
 
 
 # O Streamlit pode rodar o script com outra mensagem em andamento, e o run_sync
@@ -113,6 +114,22 @@ def consultar_politicas(
         parcelas: Só para a seção pagamentos: número de parcelas que o cliente quer.
     """
     return policies.consultar_politicas(secao, valor, parcelas)
+
+
+@agente.tool
+def consultar_meus_pedidos(
+    ctx: RunContext[Sessao], numero_pedido: int | None = None
+) -> list[orders.Pedido]:
+    """Consulta os pedidos do cliente desta conversa.
+
+    Devolve data, status, itens, total registrado, pagamento, rastreio e entrega
+    estimada. Uma lista vazia para um número informado significa pedido não encontrado.
+
+    Args:
+        numero_pedido: Número do pedido. Sem ele, devolve todos os pedidos do cliente.
+    """
+    cliente = orders.identificar_cliente(ctx.deps.conexao, ctx.deps.telefone)
+    return orders.consultar_pedidos(ctx.deps.conexao, cliente.id, numero_pedido)
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:

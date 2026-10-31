@@ -137,3 +137,23 @@ def test_agente_recusa_secao_fora_da_lista_e_o_modelo_tenta_de_novo(conexao):
         resposta = responder("Me conta uma fofoca", Sessao(conexao))
 
     assert resposta == "tentou de novo"
+
+
+def modelo_que_consulta_o_pedido_8(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_meus_pedidos", {"numero_pedido": 8})]
+        )
+    return ModelResponse(parts=[TextPart(str(mensagens[-1].parts[0].content))])
+
+
+def test_cliente_identificado_consulta_o_status_e_o_rastreio_do_pedido_8(conexao):
+    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+
+    with agente.override(model=FunctionModel(modelo_que_consulta_o_pedido_8)):
+        resposta = responder("Onde está meu pedido 8?", sessao)
+
+    assert "shipped" in resposta
+    assert "BRJL5544332BR" in resposta
