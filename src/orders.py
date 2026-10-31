@@ -16,6 +16,10 @@ class Cliente:
     id: int
     nome: str
 
+    @property
+    def primeiro_nome(self) -> str:
+        return self.nome.split()[0]
+
 
 @dataclass(frozen=True)
 class ItemPedido:

@@ -88,7 +88,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     )
     if cliente is None:
         return "O cliente desta conversa está sem cadastro: não consulte pedidos."
-    return f"O cliente desta conversa se chama {cliente.nome}. Chame-o pelo primeiro nome."
+    return f"O cliente desta conversa se chama {cliente.nome}. Chame-o de {cliente.primeiro_nome}."
 
 
 @agente.tool
