@@ -69,6 +69,18 @@ agente = Agent(
 )
 
 
+@agente.instructions
+def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
+    cliente = (
+        orders.identificar_cliente(ctx.deps.conexao, ctx.deps.telefone)
+        if ctx.deps.telefone
+        else None
+    )
+    if cliente is None:
+        return "O cliente desta conversa está sem cadastro: não consulte pedidos."
+    return f"O cliente desta conversa se chama {cliente.nome}. Chame-o pelo primeiro nome."
+
+
 @agente.tool
 def buscar_produtos(
     ctx: RunContext[Sessao],

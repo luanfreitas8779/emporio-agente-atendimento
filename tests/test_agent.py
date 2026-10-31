@@ -219,3 +219,36 @@ def test_mensagem_nao_consegue_trocar_o_cliente_consultado(conexao):
 
     assert "BRQM7890123BR" not in resposta
     assert "799" not in resposta
+
+
+def modelo_que_devolve_as_instrucoes(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    return ModelResponse(parts=[TextPart(info.instructions or "")])
+
+
+def test_cliente_cadastrado_e_chamado_pelo_nome(conexao):
+    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        instrucoes = responder("Oi!", sessao)
+
+    assert "Ana Carolina Ferreira" in instrucoes
+
+
+def test_instrucoes_nao_expoem_email_nem_cidade_do_cliente(conexao):
+    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        instrucoes = responder("Oi!", sessao)
+
+    assert "coldmail" not in instrucoes
+
+
+def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(conexao):
+    sessao = Sessao(conexao, telefone="(67) 90000-0000")
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        instrucoes = responder("Oi!", sessao)
+
+    assert "sem cadastro" in instrucoes
