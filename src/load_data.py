@@ -70,8 +70,25 @@ CREATE TABLE order_items (
 """
 
 
+STATUS_DE_PRODUTO = {"active", "coming_soon", "discontinued"}
+
+
 class ErroDeCarga(Exception):
     pass
+
+
+def para_centavos(valor: str) -> int:
+    """Converte reais em centavos, recusando negativos e frações de centavo."""
+    centavos = Decimal(valor) * 100
+    if centavos < 0 or centavos != centavos.to_integral_value():
+        raise ValueError(valor)
+    return int(centavos)
+
+
+def rejeitar_duplicado(rotulo: str, identificador: str, vistos: set[str]) -> None:
+    if identificador in vistos:
+        raise ErroDeCarga(f"{rotulo} {identificador}: id duplicado")
+    vistos.add(identificador)
 
 
 def ler_csv(caminho: Path) -> list[dict[str, str]]:
@@ -79,21 +96,27 @@ def ler_csv(caminho: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(arquivo))
 
 
-def preparar_produto(produto: dict[str, str], categorias: set[str]) -> tuple:
+def preparar_produto(
+    produto: dict[str, str], categorias: set[str], vistos: set[str]
+) -> tuple:
     identificador = produto["product_id"]
+    rejeitar_duplicado("produto", identificador, vistos)
     if produto["category_id"] not in categorias:
         raise ErroDeCarga(f"produto {identificador}: categoria inexistente")
     try:
-        return (
+        registro = (
             int(identificador),
             produto["name"],
             int(produto["category_id"]),
-            int(Decimal(produto["price_brl"]) * 100),
+            para_centavos(produto["price_brl"]),
             int(produto["stock_quantity"]),
             produto["status"],
         )
     except (ValueError, ArithmeticError) as erro:
         raise ErroDeCarga(f"produto {identificador}: valor inválido") from erro
+    if registro[4] < 0 or registro[5] not in STATUS_DE_PRODUTO:
+        raise ErroDeCarga(f"produto {identificador}: valor inválido")
+    return registro
 
 
 def preparar_promocao(promocao: dict[str, str], produtos: set[str]) -> tuple:
@@ -116,12 +139,10 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     categorias = ler_csv(pasta_dados / "categories.csv")
     ids_categorias = {categoria["category_id"] for categoria in categorias}
     # A validação vem antes do esquema para uma falha não apagar o banco atual.
-    produtos = [
-        preparar_produto(produto, ids_categorias)
-        for produto in ler_csv(pasta_dados / "products.csv")
-    ]
-
-    ids_produtos = {produto["product_id"] for produto in ler_csv(pasta_dados / "products.csv")}
+    linhas_produtos = ler_csv(pasta_dados / "products.csv")
+    vistos: set[str] = set()
+    produtos = [preparar_produto(produto, ids_categorias, vistos) for produto in linhas_produtos]
+    ids_produtos = {produto["product_id"] for produto in linhas_produtos}
     promocoes = [
         preparar_promocao(promocao, ids_produtos)
         for promocao in ler_csv(pasta_dados / "promotions.csv")

@@ -119,3 +119,56 @@ def test_interrompe_a_carga_quando_o_total_do_pedido_e_invalido(tmp_path):
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,1,2026-01-01,delivered,abc,pix,,,", "1,1,93"
         )
+
+
+def carregar_produtos_de(pasta, produtos):
+    escrever_catalogo(pasta, produtos)
+    (pasta / "promotions.csv").write_text(
+        "promotion_id,product_id,discount_percent,description,is_active\n", encoding="utf-8"
+    )
+    conexao = conectar(pasta / "teste.db")
+    try:
+        carregar_catalogo(conexao, pasta)
+    finally:
+        conexao.close()
+
+
+def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
+    with pytest.raises(ErroDeCarga, match="produto 10"):
+        carregar_produtos_de(
+            tmp_path, "10,100,Guitarra Teste,1,Descricao,1,vendida,{},2024-01-01"
+        )
+
+
+def test_interrompe_a_carga_quando_o_id_do_produto_esta_duplicado(tmp_path):
+    linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
+
+    with pytest.raises(ErroDeCarga, match="produto 10: id duplicado"):
+        carregar_produtos_de(tmp_path, f"{linha}\n{linha}")
+
+
+def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
+    with pytest.raises(ErroDeCarga, match="produto 10"):
+        carregar_produtos_de(
+            tmp_path, "10,100.005,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
+        )
+
+
+def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
+    with pytest.raises(ErroDeCarga, match="produto 10"):
+        carregar_produtos_de(
+            tmp_path, "10,100,Guitarra Teste,1,Descricao,-1,active,{},2024-01-01"
+        )
+
+
+def test_falha_na_carga_preserva_o_banco_anterior(conexao, tmp_path):
+    linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
+    escrever_catalogo(tmp_path, f"{linha}\n{linha}")
+    (tmp_path / "promotions.csv").write_text(
+        "promotion_id,product_id,discount_percent,description,is_active\n", encoding="utf-8"
+    )
+
+    with pytest.raises(ErroDeCarga):
+        carregar_catalogo(conexao, tmp_path)
+
+    assert len(buscar_produtos(conexao, termo="Takamine GD20")) == 1
