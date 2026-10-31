@@ -84,11 +84,12 @@ Tabelas operacionais:
 - **Alternativas:** `google-genai`, que exigiria mais código de integração; LangGraph, mais adequado a fluxos com vários estados.
 - **Consequências:** há menos código de integração e tipos explícitos. O projeto passa a depender da evolução do framework.
 
-### ADR-003: Gemini Flash como modelo
+### ADR-003: Gemini 3.5 Flash-Lite como modelo
 
-- **Status:** Aceita, com versão a definir.
-- **Contexto:** o MVP precisa de function calling e deve operar sem custo.
-- **Decisão:** usar um modelo Gemini Flash no plano gratuito, com nome definido em configuração.
+- **Status:** Aceita.
+- **Contexto:** o MVP precisa de function calling, baixa latência e operação sem custo.
+- **Decisão:** usar `gemini-3.5-flash-lite` no plano gratuito, com nome definido em configuração.
+- **Validação:** em 31/10/2026, o modelo respondeu um pedido mínimo em 1,0 s e concluiu a consulta de preço com ferramenta em 3,2 s. No mesmo teste, `gemini-flash-latest` e `gemini-3.8-flash` não responderam em 40 s, `gemini-3.5-flash` levou 8,1 s e `gemini-2.5-flash` não estava disponível para a conta.
 - **Alternativas:** modelos pagos, sem necessidade neste estágio; modelos locais, com maior esforço de instalação.
 - **Consequências:** não há custo inicial. A cota limita testes e uso simultâneo, e os termos de uso de dados do plano devem ser revisados antes de qualquer dado real.
 
@@ -159,11 +160,11 @@ Tabelas operacionais:
 ├── app.py                  # Interface Streamlit
 ├── src/
 │   ├── agent.py            # Agente, prompt e ferramentas
+│   ├── catalog.py          # Busca, disponibilidade e preços
 │   ├── config.py           # Configurações
-│   ├── database.py         # Conexão e consultas
+│   ├── database.py         # Conexão com o banco
 │   ├── load_data.py        # Validação e carga dos dados
-│   ├── policies.py         # Leitura das políticas
-│   └── pricing.py          # Regras de preço
+│   └── policies.py         # Leitura das políticas
 ├── scripts/
 │   └── simulate_restock.py # Simula uma reposição de estoque
 ├── data/

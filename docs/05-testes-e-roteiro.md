@@ -136,7 +136,7 @@ Se o prazo apertar, serão reduzidos primeiro o acabamento visual e as avaliaç�
 
 ## 7. Checklist de release
 
-- [ ] Confirmar a compatibilidade das dependências com a versão de Python usada.
+- [x] Confirmar a compatibilidade das dependências com Python 3.12 e 3.14.
 - [ ] Registrar o limite efetivo do modelo escolhido.
 - [ ] Revisar os termos atuais do Gemini sobre uso de dados.
 - [ ] Executar a suíte automática.

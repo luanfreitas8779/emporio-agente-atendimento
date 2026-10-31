@@ -2,7 +2,7 @@
 
 Agente de atendimento por texto para a Empório da Música, loja de instrumentos musicais em Campo Grande/MS. O sistema responde perguntas recorrentes sobre produtos, pedidos e políticas, e encaminha para a equipe os casos que exigem análise humana.
 
-> **Status:** em desenvolvimento. As instruções de execução serão publicadas junto com a primeira versão funcional.
+> **Status:** em desenvolvimento. O chat já responde preços do catálogo, e as demais funcionalidades estão em implementação.
 
 ## Funcionalidades
 
@@ -34,14 +34,42 @@ flowchart LR
 |---|---|
 | Linguagem | Python |
 | Framework de agente | Pydantic AI |
-| Modelo | Gemini Flash |
+| Modelo | Gemini 3.5 Flash-Lite |
 | Dados e persistência | SQLite |
 | Interface | Streamlit |
 | Testes | pytest |
 
 ## Como executar
 
-*Em implementação.*
+Requer Python 3.12 ou superior e uma chave do [Google AI Studio](https://aistudio.google.com/apikey).
+
+No Windows, crie o ambiente e instale as dependências:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+No Linux ou macOS, use `source .venv/bin/activate` no lugar da segunda linha.
+
+Copie `.env.example` para `.env`, preencha `GOOGLE_API_KEY` e crie o banco local:
+
+```bash
+python -m src.load_data
+```
+
+Inicie o chat:
+
+```bash
+streamlit run app.py
+```
+
+Execute os testes, que não exigem chave de API:
+
+```bash
+python -m pytest
+```
 
 ## Decisões técnicas
 
@@ -49,7 +77,7 @@ flowchart LR
 |---|---|---|
 | Abordagem | Function calling com ferramentas especializadas | O modelo decide a ação, e o código garante dados e cálculos |
 | Framework | Pydantic AI | Ferramentas tipadas e pouca estrutura para um único agente |
-| Modelo | Gemini Flash, no plano gratuito | Atende ao function calling sem custo inicial |
+| Modelo | Gemini 3.5 Flash-Lite, no plano gratuito | Atende ao function calling com baixa latência e sem custo inicial |
 | Dados | CSVs validados e carregados em SQLite | Consultas confiáveis, sem servidor |
 | Retrieval | Políticas revisadas em Markdown, consultadas por seção | Recuperação previsível para um manual curto |
 | Prompt | Instruções fixas e contexto dinâmico | Comportamento estável, com menor consumo de tokens |
