@@ -291,3 +291,25 @@ def test_modelo_recebe_a_situacao_traduzida_e_nao_o_status_cru(conexao):
     visto_pelo_modelo = retorno.model_response_str()
     assert "enviado" in visto_pelo_modelo
     assert "shipped" not in visto_pelo_modelo
+
+
+def modelo_que_lista_as_perguntas_vistas(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    perguntas = [
+        parte.content
+        for mensagem in mensagens
+        for parte in mensagem.parts
+        if parte.part_kind == "user-prompt"
+    ]
+    return ModelResponse(parts=[TextPart(" | ".join(perguntas))])
+
+
+def test_segunda_mensagem_chega_ao_modelo_junto_com_a_primeira(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        responder("Quero um violão", sessao)
+        resposta = responder("E o mais barato?", sessao)
+
+    assert resposta == "Quero um violão | E o mais barato?"

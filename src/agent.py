@@ -9,7 +9,7 @@ from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelRequest, ToolReturnPart, UserPromptPart
 
-from src import catalog, guardrail, orders, policies
+from src import catalog, guardrail, memory, orders, policies
 from src.config import MODELO_GEMINI
 
 INSTRUCOES = """\
@@ -193,9 +193,14 @@ def consultar_meus_pedidos(
 def responder(mensagem: str, sessao: Sessao) -> str:
     # O contexto copiado preserva o modelo simulado dos testes na outra thread.
     contexto = contextvars.copy_context()
-    execucao = _executor.submit(contexto.run, agente.run_sync, mensagem, deps=sessao)
+    historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
+    execucao = _executor.submit(
+        contexto.run, agente.run_sync, mensagem, deps=sessao, message_history=historico
+    )
     try:
-        return execucao.result().output
+        resultado = execucao.result()
+        memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
+        return resultado.output
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele.
         return RESPOSTA_SEGURA
