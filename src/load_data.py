@@ -44,6 +44,21 @@ CREATE TABLE customers (
 );
 """
 
+ESQUEMA_PEDIDOS = """
+DROP TABLE IF EXISTS orders;
+
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers (customer_id),
+    order_date TEXT NOT NULL,
+    status TEXT NOT NULL,
+    total_cents INTEGER NOT NULL,
+    payment_method TEXT NOT NULL,
+    tracking_code TEXT,
+    estimated_delivery TEXT
+);
+"""
+
 
 class ErroDeCarga(Exception):
     pass
@@ -137,9 +152,29 @@ def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.commit()
 
 
+def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+    pedidos = [
+        (
+            int(pedido["order_id"]),
+            int(pedido["customer_id"]),
+            pedido["order_date"],
+            pedido["status"],
+            int(Decimal(pedido["total_brl"]) * 100),
+            pedido["payment_method"],
+            pedido["tracking_code"] or None,
+            pedido["estimated_delivery"] or None,
+        )
+        for pedido in ler_csv(pasta_dados / "orders.csv")
+    ]
+    conexao.executescript(ESQUEMA_PEDIDOS)
+    conexao.executemany("INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?, ?)", pedidos)
+    conexao.commit()
+
+
 if __name__ == "__main__":
     conexao = conectar(CAMINHO_BANCO)
     carregar_catalogo(conexao, PASTA_DADOS)
     carregar_clientes(conexao, PASTA_DADOS)
+    carregar_pedidos(conexao, PASTA_DADOS)
     conexao.close()
     print(f"Banco criado em {CAMINHO_BANCO}")
