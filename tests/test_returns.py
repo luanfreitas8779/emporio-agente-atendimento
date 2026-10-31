@@ -94,3 +94,15 @@ def test_pedido_sem_entrega_nao_tem_o_que_devolver(conexao, cliente, numero, avi
     assert veredito.resultado == "nao_se_aplica"
     assert veredito.regras == []
     assert any(aviso in a for a in veredito.avisos)
+
+
+def test_troca_por_preferencia_vale_7_dias_a_partir_do_recebimento(conexao):
+    dentro = avaliar_devolucao(
+        conexao, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 24),
+    )
+    fora = avaliar_devolucao(
+        conexao, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 25),
+    )
+
+    assert [(r.nome, r.prazo_ate) for r in dentro.regras] == [("troca_por_preferencia", "24/02/2026")]
+    assert (dentro.resultado, fora.resultado) == ("dentro_do_prazo", "fora_do_prazo")

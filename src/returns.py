@@ -9,6 +9,7 @@ from src.datas import formatar_data
 
 PRAZO_DE_ARREPENDIMENTO_EM_DIAS = 7
 PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS = 30
+PRAZO_DE_TROCA_POR_PREFERENCIA_EM_DIAS = 7
 PRAZO_DA_GARANTIA_LEGAL_EM_DIAS = 90
 
 SEM_ENTREGA = {
@@ -81,6 +82,8 @@ def avaliar_devolucao(
             _regra("troca_por_defeito", compra, PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS, hoje),
             _regra("garantia_legal", recebimento, PRAZO_DA_GARANTIA_LEGAL_EM_DIAS, hoje),
         ]
+    elif motivo == Motivo.PREFERENCIA:
+        regras = [_regra("troca_por_preferencia", recebimento, PRAZO_DE_TROCA_POR_PREFERENCIA_EM_DIAS, hoje)]
     else:
         regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, hoje)]
     dentro = any(r.resultado == Resultado.DENTRO_DO_PRAZO for r in regras)
