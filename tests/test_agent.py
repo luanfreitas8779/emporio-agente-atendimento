@@ -53,3 +53,37 @@ def test_agente_busca_por_categoria_e_preco_maximo(conexao):
         resposta = responder("Violões disponíveis até R$ 1000?", Sessao(conexao))
 
     assert resposta == "12 opções"
+
+
+def modelo_que_consulta_os_horarios(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_politicas", {"secao": "horarios"})]
+        )
+    return ModelResponse(parts=[TextPart(mensagens[-1].parts[0].content)])
+
+
+def test_agente_responde_o_horario_a_partir_da_politica(conexao):
+    with agente.override(model=FunctionModel(modelo_que_consulta_os_horarios)):
+        resposta = responder("Abre sábado?", Sessao(conexao))
+
+    assert "Sábado: 09:00 às 13:00" in resposta
+
+
+def modelo_que_pede_secao_inexistente(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(
+            parts=[ToolCallPart("consultar_politicas", {"secao": "fofocas"})]
+        )
+    return ModelResponse(parts=[TextPart("tentou de novo")])
+
+
+def test_agente_recusa_secao_fora_da_lista_e_deixa_o_modelo_tentar_de_novo(conexao):
+    with agente.override(model=FunctionModel(modelo_que_pede_secao_inexistente)):
+        resposta = responder("Me conta uma fofoca", Sessao(conexao))
+
+    assert resposta == "tentou de novo"

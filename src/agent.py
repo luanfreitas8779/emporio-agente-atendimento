@@ -2,10 +2,11 @@ import contextvars
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from typing import Literal
 
 from pydantic_ai import Agent, RunContext
 
-from src import catalog
+from src import catalog, policies
 from src.config import MODELO_GEMINI
 
 INSTRUCOES = """\
@@ -19,6 +20,13 @@ emoji por mensagem. Não finja ser uma pessoa.
 Antes de informar preço, estoque ou qualquer dado de produto, use a ferramenta
 buscar_produtos. Nunca informe preço de memória e nunca calcule valores: use
 exatamente os campos devolvidos pela ferramenta.
+
+Para horários, endereço, contatos, pagamento, parcelamento, entrega, troca,
+devolução, garantia, promoções e privacidade, use a ferramenta
+consultar_politicas e responda só com o que ela devolver. Não invente regras,
+prazos nem lojas parceiras. Para parcelamento, informe o valor e as parcelas na
+ferramenta e use o resultado. Se a política não cobrir a dúvida, diga que não tem
+essa informação.
 
 Regras de catálogo:
 - Só confirme disponibilidade quando a disponibilidade for "disponivel".
@@ -72,6 +80,37 @@ def buscar_produtos(
     return catalog.buscar_produtos(
         ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis
     )
+
+
+@agente.tool
+def consultar_politicas(
+    ctx: RunContext[Sessao],
+    secao: Literal[
+        "sobre_a_loja",
+        "horarios",
+        "pagamentos",
+        "trocas_e_devolucoes",
+        "entregas",
+        "promocoes",
+        "atendimento",
+        "garantia",
+        "privacidade",
+    ],
+    valor: float | None = None,
+    parcelas: int | None = None,
+) -> str:
+    """Consulta uma seção das políticas da loja.
+
+    Use para endereço e contatos (sobre_a_loja), horários, pagamentos, trocas e
+    devoluções, entregas, promoções, atendimento, garantia e privacidade.
+
+    Args:
+        secao: Seção do manual a consultar.
+        valor: Só para a seção pagamentos: valor da compra em reais, para calcular o
+            parcelamento.
+        parcelas: Só para a seção pagamentos: número de parcelas que o cliente quer.
+    """
+    return policies.consultar_politicas(secao, valor, parcelas)
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
