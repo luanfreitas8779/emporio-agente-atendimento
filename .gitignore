@@ -1,0 +1,31 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Banco local (recriado a partir dos CSVs)
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuração local do Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
