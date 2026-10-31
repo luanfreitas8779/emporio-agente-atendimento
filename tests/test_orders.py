@@ -1,3 +1,5 @@
+import pytest
+
 from src.orders import consultar_pedidos, identificar_cliente
 
 
@@ -76,3 +78,19 @@ def test_o_cliente_informa_o_primeiro_nome(conexao):
     cliente = identificar_cliente(conexao, "(67) 99654-7821")
 
     assert cliente.primeiro_nome == "Ana"
+
+
+@pytest.mark.parametrize(
+    "cliente, numero, situacao",
+    [
+        (3, 1, "entregue"),
+        (6, 9, "confirmado"),
+        (8, 13, "pendente"),
+        (2, 8, "enviado"),
+        (15, 17, "cancelado"),
+    ],
+)
+def test_pedido_traz_a_situacao_traduzida_em_codigo(conexao, cliente, numero, situacao):
+    (pedido,) = consultar_pedidos(conexao, cliente_id=cliente, numero=numero)
+
+    assert pedido.situacao == situacao

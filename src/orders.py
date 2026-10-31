@@ -32,6 +32,7 @@ class Pedido:
     numero: int
     data: str
     status: str
+    situacao: str
     itens: list[ItemPedido]
     total: str
     pagamento: str
@@ -50,7 +51,14 @@ def identificar_cliente(conexao: sqlite3.Connection, telefone: str | None) -> Cl
 
 
 PARCELAS_NO_CREDITO = {f"credit_{n}x": n for n in range(1, 13)}
-STATUS_DE_PEDIDO = {"pending", "confirmed", "shipped", "delivered", "cancelled"}
+# Tradução fixa e literal (ADR-012): não acrescenta significado que os dados não têm.
+STATUS_DE_PEDIDO = {
+    "pending": "pendente",
+    "confirmed": "confirmado",
+    "shipped": "enviado",
+    "delivered": "entregue",
+    "cancelled": "cancelado",
+}
 
 
 def pagamento_valido(codigo: str) -> bool:
@@ -93,6 +101,7 @@ def consultar_pedidos(
             linha["order_id"],
             linha["order_date"],
             linha["status"],
+            STATUS_DE_PEDIDO[linha["status"]],
             consultar_itens(conexao, linha["order_id"]),
             # O total registrado prevalece sobre a soma dos itens (DQ-11 e DQ-12).
             formatar_preco(linha["total_cents"]),
