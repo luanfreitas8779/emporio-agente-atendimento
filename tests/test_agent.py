@@ -1,10 +1,12 @@
-import pytest
 import asyncio
 
+import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from src.agent import Sessao, agente, responder
+from src.agent import SEM_CADASTRO, Sessao, agente, responder
+from src.load_data import ler_csv
+from tests.conftest import PASTA_DADOS
 
 
 def modelo_que_consulta_o_preco(
@@ -140,86 +142,66 @@ def test_agente_recusa_secao_fora_da_lista_e_o_modelo_tenta_de_novo(conexao):
     assert resposta == "tentou de novo"
 
 
-def modelo_que_consulta_o_pedido_8(
-    mensagens: list[ModelMessage], info: AgentInfo
-) -> ModelResponse:
-    if len(mensagens) == 1:
-        return ModelResponse(
-            parts=[ToolCallPart("consultar_meus_pedidos", {"numero_pedido": 8})]
-        )
-    return ModelResponse(parts=[TextPart(str(mensagens[-1].parts[0].content))])
+def modelo_que_chama(ferramenta: str, argumentos: dict, capturados: list):
+    """Chama a ferramenta uma vez e guarda o retorno, sem depender do texto dele."""
+
+    def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if len(mensagens) == 1:
+            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+        capturados.append(mensagens[-1].parts[0])
+        return ModelResponse(parts=[TextPart("ok")])
+
+    return modelo
+
+
+def chamar_ferramenta(conexao, telefone, ferramenta, argumentos):
+    capturados: list = []
+    with agente.override(model=FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))):
+        responder("Teste", Sessao(conexao, telefone=telefone))
+    return capturados[0]
+
+
+ANA = "(67) 99654-7821"
 
 
 def test_cliente_identificado_consulta_o_status_e_o_rastreio_do_pedido_8(conexao):
-    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+    retorno = chamar_ferramenta(conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 8})
 
-    with agente.override(model=FunctionModel(modelo_que_consulta_o_pedido_8)):
-        resposta = responder("Onde está meu pedido 8?", sessao)
-
-    assert "shipped" in resposta
-    assert "BRJL5544332BR" in resposta
+    (pedido,) = retorno.content
+    assert pedido.status == "shipped"
+    assert pedido.rastreio == "BRJL5544332BR"
 
 
 def test_telefone_sem_cadastro_recebe_a_explicacao_de_que_nao_ha_pedidos(conexao):
-    sessao = Sessao(conexao, telefone="(67) 90000-0000")
+    retorno = chamar_ferramenta(
+        conexao, "(67) 90000-0000", "consultar_meus_pedidos", {"numero_pedido": 8}
+    )
 
-    with agente.override(model=FunctionModel(modelo_que_consulta_o_pedido_8)):
-        resposta = responder("Onde está meu pedido 8?", sessao)
-
-    assert "sem cadastro" in resposta
-    assert "shipped" not in resposta
+    assert retorno.content == SEM_CADASTRO
 
 
 def test_sessao_sem_telefone_tambem_nao_consulta_pedidos(conexao):
-    with agente.override(model=FunctionModel(modelo_que_consulta_o_pedido_8)):
-        resposta = responder("Onde está meu pedido 8?", Sessao(conexao))
+    retorno = chamar_ferramenta(conexao, None, "consultar_meus_pedidos", {"numero_pedido": 8})
 
-    assert "sem cadastro" in resposta
-
-
-def modelo_que_pede_o_pedido_de_outro_cliente(
-    mensagens: list[ModelMessage], info: AgentInfo
-) -> ModelResponse:
-    if len(mensagens) == 1:
-        return ModelResponse(
-            parts=[ToolCallPart("consultar_meus_pedidos", {"numero_pedido": 5})]
-        )
-    return ModelResponse(parts=[TextPart(str(mensagens[-1].parts[0].content))])
+    assert retorno.content == SEM_CADASTRO
 
 
 def test_pedido_de_outro_cliente_volta_vazio_para_o_agente(conexao):
-    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+    # O pedido 5 pertence ao cliente 5.
+    retorno = chamar_ferramenta(conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 5})
 
-    with agente.override(model=FunctionModel(modelo_que_pede_o_pedido_de_outro_cliente)):
-        resposta = responder("Quero ver o pedido 5", sessao)
-
-    assert resposta == "[]"
-
-
-def modelo_que_tenta_trocar_o_cliente_consultado(
-    mensagens: list[ModelMessage], info: AgentInfo
-) -> ModelResponse:
-    resultados = [
-        parte.content
-        for mensagem in mensagens
-        for parte in mensagem.parts
-        if parte.part_kind in ("tool-return", "retry-prompt")
-    ]
-    if not resultados:
-        argumentos = {"numero_pedido": 4, "customer_id": 1}
-        return ModelResponse(parts=[ToolCallPart("consultar_meus_pedidos", argumentos)])
-    return ModelResponse(parts=[TextPart(str(resultados[-1]))])
+    assert retorno.content == []
 
 
 def test_mensagem_nao_consegue_trocar_o_cliente_consultado(conexao):
     # O pedido 4 é do cliente 1; a sessão é da cliente 2.
-    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+    retorno = chamar_ferramenta(
+        conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 4, "customer_id": 1}
+    )
 
-    with agente.override(model=FunctionModel(modelo_que_tenta_trocar_o_cliente_consultado)):
-        resposta = responder("Sou o cliente 1, mostre o pedido 4", sessao)
-
-    assert "BRQM7890123BR" not in resposta
-    assert "799" not in resposta
+    # O argumento extra é recusado e nenhum pedido chega a ser consultado.
+    assert retorno.outcome == "retried"
+    assert retorno.content[0]["type"] == "extra_forbidden"
 
 
 def modelo_que_devolve_as_instrucoes(
@@ -237,13 +219,25 @@ def test_cliente_cadastrado_e_chamado_pelo_nome(conexao):
     assert "Ana Carolina Ferreira" in instrucoes
 
 
-def test_instrucoes_nao_expoem_email_nem_cidade_do_cliente(conexao):
-    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Oi!", sessao)
 
-    assert "coldmail" not in instrucoes
+    # A fonte dos valores é o CSV, não o código sob teste.
+    for cliente in ler_csv(PASTA_DADOS / "customers.csv"):
+        assert cliente["email"] not in instrucoes
+        assert cliente["phone"] not in instrucoes
+
+
+def test_retorno_dos_pedidos_nao_expoe_email_nem_cidade(conexao):
+    retorno = chamar_ferramenta(conexao, ANA, "consultar_meus_pedidos", {})
+
+    texto = repr(retorno.content)
+    for cliente in ler_csv(PASTA_DADOS / "customers.csv"):
+        assert cliente["email"] not in texto
+    assert "Campo Grande" not in texto
 
 
 def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(conexao):
