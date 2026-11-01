@@ -1018,3 +1018,51 @@ def test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida(conexao):
     (produto,) = retornos[0].content
     assert produto.atende_quantidade is True
     assert not hasattr(produto, "estoque")
+
+
+def modelo_que_responde_em_sequencia(*textos: str):
+    def modelo(mensagens, info):
+        indice = sum(1 for m in mensagens if isinstance(m, ModelResponse))
+        return ModelResponse(parts=[TextPart(textos[min(indice, len(textos) - 1)])])
+
+    return modelo
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "promessa",
+    [
+        "Assim que ele voltar, você já fica sabendo por aqui!",
+        "Anotado! Eu te aviso se ele voltar.",
+        "Pode deixar, avisaremos você quando chegar.",
+        "Quando chegar, você será avisada.",
+    ],
+)
+def test_promessa_de_aviso_pede_nova_resposta_ao_modelo(conexao, promessa):
+    honesta = "Anotei o seu interesse. Isso não reserva o produto e não garante aviso."
+    modelo = modelo_que_responde_em_sequencia(promessa, honesta)
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == honesta
+
+
+def test_aviso_de_que_nao_ha_garantia_de_aviso_passa_sem_nova_tentativa(conexao):
+    honesta = "Anotei o seu interesse. Isso não reserva o produto e não garante aviso nem data."
+    modelo = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == honesta
+
+
+def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(conexao):
+    honesta = "Anotei o interesse, mas não posso te avisar quando ele chegar. Consulte a loja."
+    modelo = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == honesta

@@ -280,6 +280,11 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     if not resposta or "<system>" in resposta or "</system>" in resposta:
         raise ModelRetry("A resposta contém texto interno. Escreva só a mensagem para o cliente.")
     # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
+    if guardrail.promete_aviso(resposta):
+        raise ModelRetry(
+            "A resposta promete avisar o cliente, mas o sistema não envia avisos. "
+            "Diga que o interesse foi anotado e que isso não reserva o produto nem garante aviso."
+        )
     inventados = guardrail.valores_nao_confirmados(resposta, fontes_do_turno(ctx.messages))
     if inventados:
         raise ModelRetry(

@@ -2,12 +2,31 @@ import re
 from datetime import date
 from decimal import Decimal
 
+from src.catalog import normalizar
+
 PADRAO_DINHEIRO = re.compile(r"R\$\s*(\d[\d.]*(?:,\d+)?)")
 PADRAO_PERCENTUAL = re.compile(r"(\d+(?:[.,]\d+)?)\s*%")
 PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+
+# Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
+PADRAO_PROMESSA_DE_AVISO = re.compile(
+    r"\bte avis\w*|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b"
+    r"|\bfica(?:ra|r)?\s+sabendo\b|\bvoce\s+(?:sera|vai ser)\s+avisad\w+"
+    r"|\bentra(?:remos|mos)\s+em\s+contato\b"
+)
+
+
+def promete_aviso(resposta: str) -> bool:
+    """Diz se a resposta promete avisar o cliente, sem contar quando nega a promessa."""
+    texto = normalizar(resposta)
+    for achado in PADRAO_PROMESSA_DE_AVISO.finditer(texto):
+        antes = texto[max(0, achado.start() - 25) : achado.start()]
+        if not re.search(r"\b(?:nao|sem)\b", antes):
+            return True
+    return False
 
 
 def numero(texto: str) -> Decimal:
