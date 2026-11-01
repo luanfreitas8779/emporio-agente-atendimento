@@ -33,6 +33,7 @@ def test_responde_com_o_preco_vindo_do_catalogo(conexao):
     assert "R$ 2.199,00" in resposta
 
 
+@pytest.mark.regressao
 def test_responde_com_um_loop_assincrono_em_execucao(conexao):
     async def responder_dentro_do_loop():
         return responder("Quanto custa o Takamine GD20?", Sessao(conexao))
@@ -199,6 +200,7 @@ def test_pedido_de_outro_cliente_volta_vazio_para_o_agente(conexao):
     assert retorno.content == []
 
 
+@pytest.mark.regressao
 def test_mensagem_nao_consegue_trocar_o_cliente_consultado(conexao):
     # O pedido 4 é do cliente 1; a sessão é da cliente 2.
     retorno = chamar_ferramenta(
@@ -282,6 +284,7 @@ def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
         ("consultar_meus_pedidos", {"numero_pedido": 0}),
     ],
 )
+@pytest.mark.regressao
 def test_ferramentas_recusam_argumentos_fora_da_faixa(conexao, ferramenta, argumentos):
     sessao = Sessao(conexao, telefone="(67) 99654-7821")
 
@@ -291,6 +294,7 @@ def test_ferramentas_recusam_argumentos_fora_da_faixa(conexao, ferramenta, argum
     assert resposta == "argumento recusado"
 
 
+@pytest.mark.regressao
 def test_modelo_recebe_a_situacao_traduzida_e_nao_o_status_cru(conexao):
     retorno = chamar_ferramenta(conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 8})
 
@@ -361,6 +365,7 @@ def modelo_que_consulta_o_horario_e_lista_as_perguntas(
     return modelo_que_lista_as_perguntas_vistas(mensagens, info)
 
 
+@pytest.mark.regressao
 def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(conexao):
     sessao = Sessao(conexao, telefone=ANA)
 
@@ -400,6 +405,7 @@ def modelo_que_repete_um_preco_de_turno_anterior(
     return ModelResponse(parts=[TextPart("Continua R$ 2.199,00")])
 
 
+@pytest.mark.regressao
 def test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior(conexao):
     sessao = Sessao(conexao, telefone=ANA)
 
@@ -438,6 +444,7 @@ def test_resposta_segura_tambem_entra_no_historico(conexao):
     assert resposta == "Preço do violão? | Oi"
 
 
+@pytest.mark.regressao
 def test_historico_corrompido_e_ignorado_e_o_atendimento_continua(conexao):
     sessao = Sessao(conexao, telefone=ANA)
 
@@ -563,6 +570,7 @@ def modelo_que_inventa_um_preco_e_depois_se_corrige(
     return ModelResponse(parts=[TextPart("Não tenho esse valor")])
 
 
+@pytest.mark.regressao
 def test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda(conexao):
     with agente.override(model=FunctionModel(modelo_que_inventa_um_preco_e_depois_se_corrige)):
         responder("Preço?", Sessao(conexao, telefone=ANA))
@@ -640,6 +648,7 @@ def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos: dict
     return modelo
 
 
+@pytest.mark.regressao
 def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(conexao):
     sessao = Sessao(conexao, telefone=LETICIA)
     modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(
@@ -660,6 +669,7 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
     {"numero_pedido": 7, "motivo": "arrependimento", "canal": "presencial"},
     {"numero_pedido": 999, "motivo": "arrependimento"},
 ])
+@pytest.mark.regressao
 def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(conexao, argumentos):
     # O pedido 7 é da cliente 14; a sessão é da cliente 2 (Ana). O 999 não existe.
     sessao = Sessao(conexao, telefone=ANA)
@@ -700,6 +710,7 @@ def test_ferramenta_registra_o_interesse_do_telefone_da_sessao_e_define_o_foco(c
     assert "não reserva o produto" in capturados[0].content
 
 
+@pytest.mark.regressao
 def test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone(conexao):
     retorno = chamar_ferramenta(
         conexao, ANA, "registrar_interesse", {"product_id": 96, "phone": "67911112222"}

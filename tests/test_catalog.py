@@ -1,3 +1,5 @@
+import pytest
+
 from src.catalog import buscar_produtos
 
 
@@ -104,6 +106,7 @@ def test_categoria_sem_produtos_nao_retorna_resultados(conexao):
     assert buscar_produtos(conexao, categoria="Instrumentos de Sopro") == []
 
 
+@pytest.mark.regressao
 def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(conexao):
     # 4.35 * 100 vale 434.99999999999994 em ponto flutuante.
     conexao.execute(
@@ -115,6 +118,7 @@ def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(conexao):
     assert [p.nome for p in produtos] == ["Produto Limite"]
 
 
+@pytest.mark.regressao
 def test_categoria_no_singular_encontra_a_categoria_no_plural(conexao):
     plural = buscar_produtos(conexao, categoria="Violões")
 
@@ -123,6 +127,7 @@ def test_categoria_no_singular_encontra_a_categoria_no_plural(conexao):
         assert buscar_produtos(conexao, categoria=singular) == plural
 
 
+@pytest.mark.regressao
 def test_categorias_no_singular_de_outros_plurais(conexao):
     assert buscar_produtos(conexao, categoria="guitarra") == buscar_produtos(
         conexao, categoria="Guitarras"

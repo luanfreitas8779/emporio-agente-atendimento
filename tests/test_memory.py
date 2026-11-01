@@ -31,6 +31,7 @@ INSERT INTO conversation_state VALUES ('67996547821', 8, 96, '2026-03-01T00:00:0
 
 
 @pytest.mark.parametrize("esquema", [ESQUEMA_COM_COLUNA_ANTIGA, ESQUEMA_SEM_COLUNA])
+@pytest.mark.regressao
 def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
     conexao = conectar(tmp_path / "antigo.db")
     conexao.executescript(esquema)

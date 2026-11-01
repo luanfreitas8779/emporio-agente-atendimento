@@ -136,6 +136,7 @@ def test_toda_secao_da_especificacao_tem_conteudo():
         assert consultar_politicas(secao).strip()
 
 
+@pytest.mark.regressao
 def test_mais_de_12_parcelas_nao_sao_oferecidas():
     texto = consultar_politicas("pagamentos", valor=5000, parcelas=13)
 
@@ -145,6 +146,7 @@ def test_mais_de_12_parcelas_nao_sao_oferecidas():
 
 
 @pytest.mark.parametrize("valor, parcelas", [(0, 3), (-10, 3), (100, 0), (100, -2)])
+@pytest.mark.regressao
 def test_recusa_valor_ou_parcelas_nao_positivos(valor, parcelas):
     with pytest.raises(ValueError):
         consultar_politicas("pagamentos", valor=valor, parcelas=parcelas)

@@ -215,3 +215,52 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Reposição acumulativa | `simulate_restock.py` soma ao estoque, então rodar duas vezes acumula quantidades | Aceito: `python -m src.load_data` restaura o estoque original |
 | Data de reposição sem teste automático | Que o agente não prometa data de reposição (RA-03) depende do prompt e da guarda de valores; não há teste automático para uma data inventada | Cobrir na avaliação manual da issue #11 |
 | Mudança de comportamento da #7 | O foco passou a ser limpo em busca de produtos com vários resultados ou nenhum (ADR-014, item 6, e ADR-016) | Registrado nos ADRs |
+
+
+## 9. Regressões
+
+Cada bug corrigido deve deixar um teste que o reproduz. Os automáticos levam o marcador `regressao` do pytest, e `python -m pytest -m regressao` lista só eles. Os que dependem do texto do prompt ou do comportamento do Gemini não podem ser automáticos sem chamar o modelo, então têm um roteiro manual fixo (9.2).
+
+### 9.1 Automáticas
+
+| Bug | Teste |
+|---|---|
+| O Streamlit falhava ao rodar o agente com um loop assíncrono em execução | `test_responde_com_um_loop_assincrono_em_execucao` |
+| Argumentos numéricos fora da faixa chegavam às ferramentas | `test_ferramentas_recusam_argumentos_fora_da_faixa` |
+| Valor e parcelas inválidos geravam resposta enganosa; parcelas acima de 12 | `test_recusa_valor_ou_parcelas_nao_positivos`, `test_mais_de_12_parcelas_nao_sao_oferecidas` |
+| Preço máximo comparado em ponto flutuante; categoria no singular não era encontrada | `test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto`, `test_categoria_no_singular_encontra_a_categoria_no_plural`, `test_categorias_no_singular_de_outros_plurais` |
+| O modelo repassava o código `shipped` ao cliente (ADR-012) | `test_modelo_recebe_a_situacao_traduzida_e_nao_o_status_cru` |
+| Valor citado só em turno anterior sustentava uma resposta nova | `test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior` |
+| A tela exibia a resposta rejeitada pela guarda | `test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda` |
+| O histórico separava a chamada de ferramenta do retorno e a API recusava a conversa | `test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno` |
+| Uma linha ilegível do histórico travava o atendimento | `test_historico_corrompido_e_ignorado_e_o_atendimento_continua` |
+| A pergunta pendente do canal fazia o agente insistir após a mudança de assunto (ADR-015) | `test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto` |
+| Pedido de outro cliente virava pedido em análise ou recebia pergunta de canal | `test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise`, `test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com_qualquer_canal` |
+| O modelo podia trocar o cliente ou o telefone por argumento | `test_mensagem_nao_consegue_trocar_o_cliente_consultado`, `test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone` |
+| Banco de uma versão anterior quebrava a leitura do estado | `test_banco_anterior_continua_funcionando_sem_migracao` |
+| Uma carga com erro apagava o banco anterior | `test_falha_na_carga_preserva_o_banco_anterior` |
+| O comando de reposição criava um banco vazio quando ele não existia | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
+
+As validações da carga (`tests/test_load_data.py`, testes `test_interrompe_a_carga_*`) cobrem os erros de origem corrigidos na issue #2 a #3.
+
+### 9.2 Roteiro manual com o Gemini
+
+Rodar a cada mudança do prompt ou do modelo, com o telefone da cliente 2 (Ana) e um banco temporário. Cada pergunta usa de 2 a 3 requisições. Registrar o resultado e as requisições gastas.
+
+| Caso | Pergunta | A resposta deve | A resposta não deve |
+|---|---|---|---|
+| Canal suposto | "Me arrependi do pedido 7, posso devolver?" | Perguntar se a compra foi online ou presencial | Afirmar prazo antes de saber o canal |
+| Busca vazia | "Vocês têm saxofone?" | Dizer que não há esse item no catálogo atual | Oferecer outros instrumentos de sopro sem buscar |
+| PIX em promoção (TC-107) | "Quanto fica o Crafter HT-100 no PIX?" | Informar R$ 1.967,18 e que o PIX não soma à promoção | Aplicar 5% sobre o preço promocional |
+| Promoção encerrada (TC-207) | Perguntar por uma promoção inativa de `promotions.csv` | Dizer que não há desconto e informar o preço atual | Prometer o desconto ou citar "estoque ativo no sistema" |
+| Preço do produto citado | "Tem o Giannini GF-3D?" e depois "E qual o preço dele?" | Informar R$ 799,90, ou R$ 759,91 no PIX, e que está sem estoque | Cair na resposta segura |
+| Mudança de assunto | Após a pergunta do canal: "Qual o horário de sábado?" | Responder 09:00 às 13:00 | Repetir a pergunta do canal |
+| Situação do pedido | "Qual o status do pedido 8?" | Dizer "enviado" e o rastreio | Mostrar `shipped` |
+| Retomada (TC-403/404) | Registrar interesse no GF-3D, voltar em nova sessão e perguntar "chegou o violão?" | Informar a disponibilidade atual, sem data | Prometer data de reposição |
+
+### 9.3 Bugs conhecidos, sem correção
+
+| Bug | Previsto |
+|---|---|
+| A busca não tolera erro de digitação ("gianini gf 3d") | Issue #11, com teste do nome escrito errado |
+| Gírias e regionalismos não são tratados | Issue #11, com casos no roteiro 9.2 |

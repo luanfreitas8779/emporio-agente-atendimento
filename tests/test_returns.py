@@ -123,6 +123,7 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
 
 
 @pytest.mark.parametrize("canal", [None, "presencial", "online"])
+@pytest.mark.regressao
 def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com_qualquer_canal(
     conexao, canal
 ):

@@ -167,6 +167,7 @@ def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
         )
 
 
+@pytest.mark.regressao
 def test_falha_na_carga_preserva_o_banco_anterior(conexao, tmp_path):
     linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
     escrever_catalogo(tmp_path, f"{linha}\n{linha}")
