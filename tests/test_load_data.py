@@ -303,3 +303,10 @@ def test_banco_so_com_a_memoria_nao_esta_carregado(tmp_path):
 
 def test_banco_com_os_dados_carregados_esta_pronto(conexao):
     assert banco_carregado(conexao)
+
+
+@pytest.mark.regressao
+def test_banco_carregado_antes_das_especificacoes_pede_nova_carga(conexao):
+    conexao.executescript("ALTER TABLE products DROP COLUMN specs;")
+
+    assert not banco_carregado(conexao)

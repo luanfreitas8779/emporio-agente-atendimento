@@ -301,7 +301,11 @@ def banco_carregado(conexao: sqlite3.Connection) -> bool:
     existentes = {
         linha[0] for linha in conexao.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
     }
-    return set(TABELAS_DA_CARGA) <= existentes
+    if not set(TABELAS_DA_CARGA) <= existentes:
+        return False
+    # Uma carga anterior às especificações não tem a coluna e exige nova carga.
+    colunas = {linha[1] for linha in conexao.execute("PRAGMA table_info(products)")}
+    return "specs" in colunas
 
 
 if __name__ == "__main__":
