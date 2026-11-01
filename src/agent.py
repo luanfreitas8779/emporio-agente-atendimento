@@ -11,9 +11,11 @@ from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import (
     ModelAPIError,
+    ModelOverloadedError,
     ModelRateLimitError,
     ModelRequestTimeout,
     ModelTimeoutError,
+    ModelUnavailableError,
     UnexpectedModelBehavior,
 )
 from pydantic_ai.messages import (
@@ -164,7 +166,7 @@ RESPOSTA_SEGURA_SEM_TELEFONE = (
 )
 
 MENSAGEM_DE_LIMITE = (
-    "O serviço de IA atingiu o limite de uso agora. Tente novamente em alguns minutos."
+    "O serviço de IA está no limite de uso ou sobrecarregado agora. Tente novamente em alguns minutos."
 )
 
 MENSAGEM_DE_TIMEOUT = "O serviço demorou para responder. Tente novamente."
@@ -395,6 +397,8 @@ def encaminhar_para_atendente(
     return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
 
 
+# Limite de uso e indisponibilidade temporária: esperar pode resolver.
+ERROS_TEMPORARIOS = (ModelRateLimitError, ModelUnavailableError, ModelOverloadedError)
 ESPERAS_ENTRE_TENTATIVAS = (2, 5)
 ESPERA_MAXIMA = 15
 _aguardar = time.sleep
@@ -410,7 +414,7 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
         )
         try:
             return execucao.result()
-        except ModelRateLimitError as erro:
+        except ERROS_TEMPORARIOS as erro:
             if espera is None:
                 raise
             # O provedor pode indicar quando tentar de novo; um teto evita travar o chat.
@@ -438,7 +442,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
-    except ModelRateLimitError:
+    except ERROS_TEMPORARIOS:
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
     except (ModelTimeoutError, ModelRequestTimeout):
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_TIMEOUT)
