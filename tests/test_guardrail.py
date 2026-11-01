@@ -131,3 +131,32 @@ def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
     # "18.5%" virava 185 ao tirar o ponto como se fosse separador de milhar.
     assert valores_nao_confirmados("São 185% de desconto.", ["Desconto de 18.5%."]) == ["185"]
     assert valores_nao_confirmados("São 18.5% de desconto.", ["Desconto de 18,5%."]) == []
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("resposta", "fonte", "esperado"),
+    [
+        ("Custa 2.199 reais.", "Preço: R$ 2.199,00", []),
+        ("Custa 2.199 reais.", "Preço: R$ 599,90", ["2199"]),
+        ("Custa 2 mil reais.", "Preço: R$ 2.000,00", []),
+        ("Custa 2 mil reais.", "Preço: R$ 599,90", ["2000"]),
+        ("Custa 599,90 reais.", "Preço: R$ 599,90", []),
+    ],
+)
+def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, esperado):
+    assert valores_nao_confirmados(resposta, [fonte]) == esperado
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("resposta", "fonte", "esperado"),
+    [
+        ("O prazo vai até 15 de dezembro.", "Prazo até 15/12/2026.", []),
+        ("O prazo vai até 15 de dezembro.", "Prazo até 16/12/2026.", ["15/12"]),
+        ("O prazo vai até 1º de março.", "Prazo até 01/03/2026.", []),
+        ("O prazo vai até 15 de dezembro.", "Sem datas.", ["15/12"]),
+    ],
+)
+def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(resposta, fonte, esperado):
+    assert valores_nao_confirmados(resposta, [fonte]) == esperado

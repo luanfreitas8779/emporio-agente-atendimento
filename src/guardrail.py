@@ -5,6 +5,14 @@ from decimal import Decimal
 from src.catalog import normalizar
 
 PADRAO_DINHEIRO = re.compile(r"R\$\s*(\d[\d.]*(?:,\d+)?)")
+# Valores escritos com a palavra "reais" ("2.199 reais", "2 mil reais") também são dinheiro.
+PADRAO_REAIS = re.compile(r"(\d[\d.]*(?:,\d+)?)\s*reais\b")
+PADRAO_MIL_REAIS = re.compile(r"(\d+(?:,\d+)?)\s*mil\s*reais\b")
+MESES = {
+    "janeiro": 1, "fevereiro": 2, "marco": 3, "abril": 4, "maio": 5, "junho": 6,
+    "julho": 7, "agosto": 8, "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12,
+}
+PADRAO_DATA_EXTENSO = re.compile(r"\b(\d{1,2})º?\s+de\s+(" + "|".join(MESES) + r")\b")
 PADRAO_PERCENTUAL = re.compile(r"(\d+(?:[.,]\d+)?)\s*%")
 PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
@@ -47,8 +55,17 @@ def valores(texto: str) -> dict[str, set]:
         datas.add(_data(ano, mes, dia))
     for ano, mes, dia in PADRAO_DATA_ISO.findall(texto):
         datas.add(_data(ano, mes, dia))
+    dinheiro = {numero(v) for v in PADRAO_DINHEIRO.findall(texto)}
+    dinheiro |= {numero(v) for v in PADRAO_REAIS.findall(texto)}
+    dinheiro |= {numero(v) * 1000 for v in PADRAO_MIL_REAIS.findall(texto)}
+    # "15 de dezembro" não traz o ano: conferimos só o dia e o mês ("DD/MM").
+    por_extenso = {
+        f"{int(dia):02d}/{MESES[mes]:02d}"
+        for dia, mes in PADRAO_DATA_EXTENSO.findall(normalizar(texto))
+    }
     return {
-        "dinheiro": {numero(v) for v in PADRAO_DINHEIRO.findall(texto)},
+        "dinheiro": dinheiro,
+        "dia_mes": por_extenso,
         "percentual": percentuais,
         "data": datas - {None},
         "rastreio": set(PADRAO_RASTREIO.findall(texto)),
@@ -73,7 +90,8 @@ def valores_nao_confirmados(
 
     As fontes do cliente confirmam datas e rastreios, mas nunca dinheiro nem percentual.
     """
-    confirmados: dict[str, set] = {tipo: set() for tipo in ("dinheiro", "percentual", "data", "rastreio")}
+    tipos = ("dinheiro", "percentual", "data", "rastreio", "dia_mes")
+    confirmados: dict[str, set] = {tipo: set() for tipo in tipos}
     for fonte in fontes:
         for tipo, encontrados in valores(fonte).items():
             confirmados[tipo] |= encontrados
@@ -81,6 +99,7 @@ def valores_nao_confirmados(
         for tipo, encontrados in valores(fonte).items():
             if tipo not in TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA:
                 confirmados[tipo] |= encontrados
+    confirmados["dia_mes"] |= {data.strftime("%d/%m") for data in confirmados["data"]}
     citados = valores(resposta)
     return [
         str(valor)
