@@ -7,7 +7,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
-from src.interests import registrar
+from src.interests import listar_pendentes, registrar
 from src.load_data import ler_csv
 from src.memory import exibir_conversa
 from tests.conftest import PASTA_DADOS
@@ -682,3 +682,17 @@ def test_instrucoes_trazem_os_interesses_pendentes_so_do_telefone_da_sessao(cone
     assert "Crafter HT-100" not in da_ana
     assert "Giannini GF-3D" not in de_outro
     assert "Crafter HT-100" not in de_outro
+
+
+def test_ferramenta_registra_o_interesse_do_telefone_da_sessao_e_define_o_foco(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+    capturados: list = []
+
+    with agente.override(
+        model=FunctionModel(modelo_que_chama("registrar_interesse", {"product_id": 96}, capturados))
+    ):
+        responder("Quero acompanhar esse violão", sessao)
+
+    assert listar_pendentes(conexao, ANA) == ["Giannini GF-3D Dreadnought Sunburst"]
+    assert sessao.estado.produto_em_foco == 96
+    assert "não reserva o produto" in capturados[0].content

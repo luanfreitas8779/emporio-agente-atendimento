@@ -86,6 +86,17 @@ SEM_CADASTRO = (
     "O cliente ainda pode tirar dúvidas gerais."
 )
 
+AVISO_DE_INTERESSE = "Isso não reserva o produto e não garante aviso nem data de reposição."
+
+MENSAGENS_DE_INTERESSE = {
+    interests.Resultado.REGISTRADO: f"Interesse registrado. {AVISO_DE_INTERESSE}",
+    interests.Resultado.JA_REGISTRADO: f"Esse interesse já estava registrado. {AVISO_DE_INTERESSE}",
+    interests.Resultado.PRODUTO_INEXISTENTE: "Produto não encontrado: nenhum interesse foi registrado.",
+    interests.Resultado.TELEFONE_INVALIDO: (
+        "Sem um telefone válido nesta conversa não é possível guardar o interesse."
+    ),
+}
+
 RESPOSTA_SEGURA = (
     "Não consegui confirmar essa informação com segurança agora. "
     "Pode reformular a pergunta ou falar com a nossa equipe?"
@@ -263,6 +274,22 @@ def avaliar_devolucao(
     if veredito.resultado != returns.Resultado.PEDIDO_NAO_ENCONTRADO:
         ctx.deps.estado.pedido_em_analise = numero_pedido
     return veredito
+
+
+@agente.tool
+def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Field(ge=1)]) -> str:
+    """Registra o interesse do cliente em um produto, para retomar o assunto depois.
+
+    Use quando o cliente quiser acompanhar um produto indisponível. Não reserva o
+    produto nem garante aviso ou data de reposição.
+
+    Args:
+        product_id: Id do produto, como devolvido por buscar_produtos.
+    """
+    resultado = interests.registrar(ctx.deps.conexao, ctx.deps.telefone or "", product_id)
+    if resultado in (interests.Resultado.REGISTRADO, interests.Resultado.JA_REGISTRADO):
+        ctx.deps.estado.produto_em_foco = product_id
+    return MENSAGENS_DE_INTERESSE[resultado]
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
