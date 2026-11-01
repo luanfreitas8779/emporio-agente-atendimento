@@ -59,3 +59,17 @@ def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, produto, status
             (produto, status),
         )
     conexao.close()
+
+
+@pytest.mark.parametrize("motivo, resumo", [("outro", "Resumo."), ("reclamacao", "")])
+def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp_path, motivo, resumo):
+    conexao = conectar(tmp_path / "novo.db")
+    criar_tabelas(conexao)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        conexao.execute(
+            "INSERT INTO handoffs (phone, reason, summary, created_at) "
+            "VALUES ('67996547821', ?, ?, '2026-03-25')",
+            (motivo, resumo),
+        )
+    conexao.close()
