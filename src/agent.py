@@ -29,7 +29,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src import catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
+from src import calculos, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
 from src.datas import dia_da_semana, formatar_data
 
@@ -417,6 +417,22 @@ def consultar_politicas(
             return "Para calcular o parcelamento, informe o produto ou o valor da compra."
         valor = centavos / 100
     return policies.consultar_politicas(secao, valor, parcelas)
+
+
+@agente.tool
+def calcular_compra(
+    ctx: RunContext[Sessao],
+    itens: Annotated[list[calculos.ItemDaCompra], Field(min_length=1, max_length=10)],
+) -> calculos.CalculoDaCompra:
+    """Calcula o total de uma compra de um ou mais produtos, em código.
+
+    Use para toda conta: "quanto fica 2 deste", "quanto dá a soma destes", diferença de
+    preço e economia no PIX. Nunca faça a conta você mesmo. Repasse os valores como vieram.
+
+    Args:
+        itens: Produtos (id devolvido por buscar_produtos) e quantidade de cada um.
+    """
+    return calculos.calcular_compra(ctx.deps.conexao, itens)
 
 
 @agente.tool

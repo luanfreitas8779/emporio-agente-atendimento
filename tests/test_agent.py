@@ -1214,3 +1214,28 @@ def test_parcelas_sem_valor_e_sem_produto_em_foco_pedem_o_produto(conexao):
 
     assert "informe o produto ou o valor" in retorno.content
     assert "atende" not in retorno.content
+
+
+def id_do_produto(conexao, termo: str) -> int:
+    (produto,) = catalog.buscar_produtos(conexao, termo=termo)
+    return produto.id
+
+
+def calcular_compra(conexao, *itens: tuple[str, int]):
+    argumentos = {
+        "itens": [
+            {"product_id": id_do_produto(conexao, termo), "quantidade": quantidade}
+            for termo, quantidade in itens
+        ]
+    }
+    return chamar_ferramenta(conexao, ANA, "calcular_compra", argumentos).content
+
+
+@pytest.mark.regressao
+def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(conexao):
+    resultado = calcular_compra(conexao, ("Takamine GD20", 2))
+
+    assert resultado.total == "R$ 4.398,00"
+    assert [(i.nome, i.quantidade, i.subtotal) for i in resultado.itens] == [
+        ("Takamine GD20 Dreadnought Natural", 2, "R$ 4.398,00")
+    ]
