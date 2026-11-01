@@ -25,6 +25,8 @@ class Produto:
     preco_pix: str | None
     disponibilidade: str
     especificacoes: dict[str, str]
+    # Só existe quando o cliente pediu uma quantidade; o estoque exato nunca é exposto.
+    atende_quantidade: bool | None = None
 
 
 def formatar_preco(centavos: int) -> str:
@@ -92,11 +94,15 @@ def calcular_preco_final(linha: sqlite3.Row) -> int:
     return aplicar_desconto(linha["price_cents"], desconto) if desconto else linha["price_cents"]
 
 
-def montar_produto(linha: sqlite3.Row) -> Produto:
+def montar_produto(linha: sqlite3.Row, quantidade: int | None = None) -> Produto:
     desconto = linha["discount_percent"]
     centavos = linha["price_cents"]
     # O PIX incide sobre o preço de tabela e não se soma a promoções.
     pix = None if desconto else formatar_preco(aplicar_desconto(centavos, PERCENTUAL_PIX))
+    disponibilidade = classificar(linha["status"], linha["stock_quantity"])
+    atende = None
+    if quantidade is not None:
+        atende = disponibilidade == DISPONIVEL and linha["stock_quantity"] >= quantidade
     return Produto(
         linha["product_id"],
         linha["name"],
@@ -105,12 +111,13 @@ def montar_produto(linha: sqlite3.Row) -> Produto:
         desconto,
         formatar_preco(calcular_preco_final(linha)),
         pix,
-        classificar(linha["status"], linha["stock_quantity"]),
+        disponibilidade,
         {
             chave: valor
             for chave, valor in json.loads(linha["specs"]).items()
             if chave not in CAMPOS_DIVERGENTES.get(linha["product_id"], ())
         },
+        atende,
     )
 
 
@@ -120,6 +127,7 @@ def buscar_produtos(
     categoria: str | None = None,
     preco_maximo: float | None = None,
     somente_disponiveis: bool = False,
+    quantidade: int | None = None,
 ) -> list[Produto]:
     linhas = conexao.execute(
         """
@@ -134,15 +142,19 @@ def buscar_produtos(
 
     palavras = normalizar(termo or "").split()
     categoria_normalizada = singularizar(normalizar(categoria or ""))
-    produtos = _filtrar(linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis)
+    produtos = _filtrar(
+        linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade
+    )
     if not produtos and palavras:
         produtos = _filtrar(
-            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, True
+            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, True
         )
     return produtos
 
 
-def _filtrar(linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, aproximado=False):
+def _filtrar(
+    linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, aproximado=False
+):
     produtos = []
     for linha in linhas:
         nome = normalizar(linha["name"])
@@ -153,7 +165,7 @@ def _filtrar(linhas, palavras, categoria_normalizada, preco_maximo, somente_disp
             continue
         if preco_maximo is not None and calcular_preco_final(linha) > Decimal(str(preco_maximo)) * 100:
             continue
-        produto = montar_produto(linha)
+        produto = montar_produto(linha, quantidade)
         if somente_disponiveis and produto.disponibilidade != DISPONIVEL:
             continue
         produtos.append(produto)

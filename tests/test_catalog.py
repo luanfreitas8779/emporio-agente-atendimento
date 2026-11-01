@@ -173,3 +173,22 @@ def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conex
 
     assert "strings" not in produto.especificacoes
     assert produto.especificacoes["neck"] == "Maple"
+
+
+def test_informa_se_o_estoque_atende_a_quantidade_sem_revelar_o_numero(conexao):
+    # Yamaha C40 tem 12 unidades em estoque.
+    atende = buscar_produtos(conexao, termo="Yamaha C40", quantidade=10)[0]
+    nao_atende = buscar_produtos(conexao, termo="Yamaha C40", quantidade=13)[0]
+    sem_pedido = buscar_produtos(conexao, termo="Yamaha C40")[0]
+
+    assert atende.atende_quantidade is True
+    assert nao_atende.atende_quantidade is False
+    assert sem_pedido.atende_quantidade is None
+    assert "12" not in str(atende)
+
+
+def test_produto_fora_de_catalogo_nunca_atende_a_quantidade_mesmo_com_estoque(conexao):
+    # Ibanez Bass 2X (id 136) está descontinuado e tem 13 unidades (DQ-02).
+    produto = buscar_produtos(conexao, termo="Ibanez Bass 2X", quantidade=2)[0]
+
+    assert produto.atende_quantidade is False

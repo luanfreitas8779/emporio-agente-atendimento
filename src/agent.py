@@ -323,6 +323,7 @@ def buscar_produtos(
     categoria: str | None = None,
     preco_maximo: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
     somente_disponiveis: bool = False,
+    quantidade: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None,
 ) -> list[catalog.Produto]:
     """Busca produtos do catálogo da loja, com preços e disponibilidade.
 
@@ -331,9 +332,11 @@ def buscar_produtos(
         categoria: Nome da categoria, por exemplo "Violões" ou "Guitarras".
         preco_maximo: Preço máximo em reais, considerando o preço final.
         somente_disponiveis: Use true quando o cliente pedir apenas opções disponíveis.
+        quantidade: Número de unidades que o cliente quer comprar, se ele disse. O resultado
+            traz atende_quantidade (true ou false); a loja não informa o estoque exato.
     """
     produtos = catalog.buscar_produtos(
-        ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis
+        ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis, quantidade
     )
     # Com vários resultados "ele" fica ambíguo, e sem resultados o foco anterior seria enganoso.
     ctx.deps.estado.produto_em_foco = produtos[0].id if len(produtos) == 1 else None

@@ -980,3 +980,17 @@ def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(conexao, ferramenta, ar
 
     assert resposta == "Não consegui calcular esse valor."
     assert retornos[0].outcome == "retried"
+
+
+def test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida(conexao):
+    retornos: list = []
+    modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
+        "buscar_produtos", {"termo": "Yamaha C40", "quantidade": 10}, retornos
+    )
+
+    with agente.override(model=modelo):
+        responder("Preciso de 10 Yamaha C40", Sessao(conexao, telefone=ANA))
+
+    (produto,) = retornos[0].content
+    assert produto.atende_quantidade is True
+    assert not hasattr(produto, "estoque")
