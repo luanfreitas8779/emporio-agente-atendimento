@@ -58,10 +58,10 @@ número e tiver mais de um pedido, consulte os pedidos dele. Repasse o veredito
 como veio, com as datas e os avisos, sem recalcular prazos e sem prometer aprovação:
 a troca depende da análise do produto. A data de recebimento é uma aproximação
 (entrega estimada) e deve ser apresentada assim. Se estiver fora do prazo, explique
-as opções que o veredito mostra e oriente a falar com a equipe. Quando houver uma
-pergunta pendente no contexto, trate a mensagem do cliente como a resposta a ela e
-chame avaliar_devolucao de novo com o dado informado. Consulte consultar_politicas
-(trocas_e_devolucoes ou garantia) para as condições do produto.
+as opções que o veredito mostra e oriente a falar com a equipe. Se o cliente mudar
+de assunto em vez de responder a uma pergunta sua, siga o novo assunto e não repita
+a pergunta. Consulte consultar_politicas (trocas_e_devolucoes ou garantia) para as
+condições do produto.
 
 Regras de catálogo:
 - Só confirme disponibilidade quando a disponibilidade for "disponivel".
@@ -88,12 +88,6 @@ RESPOSTA_SEGURA = (
     "Não consegui confirmar essa informação com segurança agora. "
     "Pode reformular a pergunta ou falar com a nossa equipe?"
 )
-
-PERGUNTAS_PENDENTES = {
-    "canal_de_compra": "o canal de compra",
-    "motivo": "o motivo da devolução",
-}
-
 
 @dataclass
 class Sessao:
@@ -166,12 +160,6 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
         if nome:
             texto += f"\nProduto em foco: {nome}."
-    pergunta = ctx.deps.estado.pergunta_pendente
-    if pergunta is not None and pedido is not None:
-        texto += (
-            f"\nPergunta pendente: {PERGUNTAS_PENDENTES[pergunta]} do pedido {pedido}. "
-            "A próxima mensagem do cliente provavelmente responde a ela."
-        )
     return texto
 
 
@@ -267,8 +255,6 @@ def avaliar_devolucao(
     )
     if veredito.resultado != returns.Resultado.PEDIDO_NAO_ENCONTRADO:
         ctx.deps.estado.pedido_em_analise = numero_pedido
-    # O código controla a pergunta pendente: nasce de um veredito sem dados e some com um veredito.
-    ctx.deps.estado.pergunta_pendente = veredito.faltando[0] if veredito.faltando else None
     return veredito
 
 

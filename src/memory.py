@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS conversation_state (
     phone TEXT PRIMARY KEY,
     pedido_em_analise INTEGER CHECK (pedido_em_analise > 0),
     produto_em_foco INTEGER CHECK (produto_em_foco > 0),
-    pergunta_pendente TEXT CHECK (pergunta_pendente IN ('canal_de_compra', 'motivo')),
     updated_at TEXT NOT NULL
 );
 """
@@ -50,21 +49,10 @@ class Estado:
 
     pedido_em_analise: int | None = None
     produto_em_foco: int | None = None
-    # Pergunta feita ao cliente que a próxima mensagem deve responder.
-    pergunta_pendente: str | None = None
 
 
 def criar_tabelas(conexao: sqlite3.Connection) -> None:
     conexao.executescript(ESQUEMA)
-    # CREATE TABLE IF NOT EXISTS não altera uma tabela existente: bancos criados antes
-    # da pergunta pendente (issue #6) recebem a coluna aqui, sem perder as conversas.
-    colunas = {linha["name"] for linha in conexao.execute("PRAGMA table_info(conversation_state)")}
-    if "pergunta_pendente" not in colunas:
-        conexao.execute(
-            "ALTER TABLE conversation_state ADD COLUMN pergunta_pendente TEXT "
-            "CHECK (pergunta_pendente IN ('canal_de_compra', 'motivo'))"
-        )
-        conexao.commit()
 
 
 def _agora() -> str:
@@ -169,13 +157,10 @@ def salvar_mensagens(
 def carregar_estado(conexao: sqlite3.Connection, telefone: str | None) -> Estado:
     chave = normalizar_telefone(telefone or "")
     linha = conexao.execute(
-        "SELECT pedido_em_analise, produto_em_foco, pergunta_pendente "
-        "FROM conversation_state WHERE phone = ?",
+        "SELECT pedido_em_analise, produto_em_foco FROM conversation_state WHERE phone = ?",
         (chave,),
     ).fetchone()
-    return Estado(
-        linha["pedido_em_analise"], linha["produto_em_foco"], linha["pergunta_pendente"]
-    ) if linha else Estado()
+    return Estado(linha["pedido_em_analise"], linha["produto_em_foco"]) if linha else Estado()
 
 
 def salvar_estado(conexao: sqlite3.Connection, telefone: str | None, estado: Estado) -> None:
@@ -184,15 +169,13 @@ def salvar_estado(conexao: sqlite3.Connection, telefone: str | None, estado: Est
         return
     conexao.execute(
         """
-        INSERT INTO conversation_state (
-            phone, pedido_em_analise, produto_em_foco, pergunta_pendente, updated_at
-        ) VALUES (?, ?, ?, ?, ?)
+        INSERT INTO conversation_state (phone, pedido_em_analise, produto_em_foco, updated_at)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT (phone) DO UPDATE SET
             pedido_em_analise = excluded.pedido_em_analise,
             produto_em_foco = excluded.produto_em_foco,
-            pergunta_pendente = excluded.pergunta_pendente,
             updated_at = excluded.updated_at
         """,
-        (chave, estado.pedido_em_analise, estado.produto_em_foco, estado.pergunta_pendente, _agora()),
+        (chave, estado.pedido_em_analise, estado.produto_em_foco, _agora()),
     )
     conexao.commit()
