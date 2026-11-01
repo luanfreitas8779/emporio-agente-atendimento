@@ -1,3 +1,5 @@
+import pytest
+
 from src.interests import Resultado, listar_pendentes, registrar
 
 TELEFONE = "(67) 99654-7821"
@@ -16,6 +18,14 @@ def test_produto_inexistente_nao_grava_interesse(conexao):
 
     assert resultado == Resultado.PRODUTO_INEXISTENTE
     assert listar_pendentes(conexao, TELEFONE) == []
+    assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("telefone", ["", "12345", "abc"])
+def test_telefone_invalido_nao_grava_interesse(conexao, telefone):
+    resultado = registrar(conexao, telefone, GIANNINI_GF_3D)
+
+    assert resultado == Resultado.TELEFONE_INVALIDO
     assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
 
 

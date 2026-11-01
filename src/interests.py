@@ -10,10 +10,13 @@ class Resultado(StrEnum):
     REGISTRADO = "registrado"
     JA_REGISTRADO = "ja_registrado"
     PRODUTO_INEXISTENTE = "produto_inexistente"
+    TELEFONE_INVALIDO = "telefone_invalido"
 
 
 def registrar(conexao: sqlite3.Connection, telefone: str, product_id: int) -> Resultado:
     chave = normalizar_telefone(telefone)
+    if chave is None:
+        return Resultado.TELEFONE_INVALIDO
     if nome_do_produto(conexao, product_id) is None:
         return Resultado.PRODUTO_INEXISTENTE
     cursor = conexao.execute(
