@@ -856,3 +856,13 @@ def test_resposta_segura_registra_o_encaminhamento_e_informa_o_prazo(conexao):
     assert linhas == [("67996547821", "sem_resposta_segura", "Preço do violão?")]
     assert resposta == RESPOSTA_SEGURA
     assert "24 horas úteis" in resposta
+
+
+def test_resposta_segura_sem_telefone_valido_explica_que_nao_foi_possivel_encaminhar(conexao):
+    with agente.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
+        resposta = responder("Preço do violão?", Sessao(conexao))
+
+    assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
+    assert "não consegui identificar o seu telefone" in resposta.lower()
+    assert "Registrei" not in resposta
+    assert "24 horas" not in resposta

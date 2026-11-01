@@ -124,6 +124,12 @@ MENSAGENS_DE_ENCAMINHAMENTO = {
     ),
 }
 
+RESPOSTA_SEGURA_SEM_TELEFONE = (
+    "Não consegui confirmar essa informação com segurança agora. "
+    "Também não consegui identificar o seu telefone para encaminhar o caso à nossa equipe. "
+    "Pode reformular a pergunta ou falar com a loja pelos contatos de atendimento."
+)
+
 RESPOSTA_SEGURA = (
     "Não consegui confirmar essa informação com segurança agora. "
     f"Registrei o seu caso para a nossa equipe. {PRAZO_DE_RETORNO} "
@@ -364,10 +370,12 @@ def responder(mensagem: str, sessao: Sessao) -> str:
                 ModelResponse(parts=[TextPart(RESPOSTA_SEGURA)]),
             ],
         )
-        handoffs.registrar(
+        resultado = handoffs.registrar(
             sessao.conexao,
             sessao.telefone or "",
             handoffs.Motivo.SEM_RESPOSTA_SEGURA,
             mensagem,
         )
+        if resultado == handoffs.Resultado.TELEFONE_INVALIDO:
+            return RESPOSTA_SEGURA_SEM_TELEFONE
         return RESPOSTA_SEGURA
