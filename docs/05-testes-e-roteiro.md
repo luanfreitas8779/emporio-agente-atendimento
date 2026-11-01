@@ -71,12 +71,12 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-307 | Pedido 7 com defeito | Fora dos 30 dias de troca e dentro da garantia legal de 90 dias | CA-04 |
 | TC-308 | Compra presencial com arrependimento | Não aplica a regra de compra online | CA-04 |
 | TC-309 | Arrependimento sem o canal de compra | Veredito `faltam_dados`, com o canal a perguntar | CA-04 |
-| TC-310 | Cliente responde "foi online" na mensagem seguinte | A pergunta pendente chega ao contexto; ao sair o veredito, é limpa | CA-04 |
+| TC-310 | Tom pergunta o canal e o cliente muda de assunto | O contexto da mensagem seguinte não traz pergunta gravada, e o pedido em análise continua | CA-04 |
 | TC-311 | Cliente 2 pede a devolução do pedido 7 (cliente 14) | Pedido não encontrado | CA-05 |
 | TC-312 | Devolução de pedido pendente, confirmado ou cancelado | Não se aplica, com aviso | CA-04 |
 | TC-313 | Troca por preferência no 7º e no 8º dia após o recebimento | Dentro do prazo e fora do prazo | CA-04 |
 | TC-314 | Veredito de qualquer pedido enviado ou entregue | Informa que o recebimento é a entrega estimada e que depende da análise do produto | CA-04 |
-| TC-315 | Banco anterior à issue #6 | A coluna `pergunta_pendente` é acrescentada sem perder o estado | RNF-01 |
+| TC-315 | Banco com `conversation_state` de versão anterior, com ou sem a coluna `pergunta_pendente` | O estado é lido e gravado sem migração | RNF-01 |
 
 ### 3.5 Memória
 
@@ -190,10 +190,10 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Aviso do cliente do Gemini ao encerrar | Ao final de um script que chama o Gemini real aparece `Task was destroyed but it is pending` (`BaseApiClient.aclose`). As respostas não foram afetadas; o chat usa uma thread própria por mensagem | Observar no chat (issue #11) e, se persistir, fechar o cliente explicitamente |
 | Erros técnicos sem mensagem amigável | Só a guarda na saída tem resposta segura. Falha de rede, chave ausente, erro 429 e banco desatualizado ou ausente chegam ao Streamlit como traceback. Os critérios da #10 cobrem o limite de uso e o tempo limite, mas não rede, chave nem banco | Tratar na issue #10: capturar essas falhas na interface e em `responder`, com mensagem em português e sem expor detalhes técnicos, e acrescentar casos de teste |
 | Mensagem perdida em erro no meio do turno | Se o provedor falha durante um turno, a fala do cliente não é salva no histórico, e o retorno da conversa não a mostra | Tratar na issue #10: guardar a fala do cliente junto com a mensagem de erro, para a conversa não ser perdida |
+| Mudança de assunto sem teste real | O prompt manda seguir o novo assunto sem repetir a pergunta, e o código não guarda mais a pergunta. Isso foi testado só com modelo simulado; o fluxo do canal foi validado com o Gemini antes da remoção do campo | Revalidar com poucas requisições (pergunta do canal, mudança de assunto e retorno) |
 | Validação real da devolução | Na issue #6, o pedido 7 foi validado com o Gemini em duas conversas curtas (arrependimento, pergunta do canal, resposta "foi online" e defeito). A primeira versão do prompt deixou o modelo supor o canal online sem perguntar; a regra "nunca suponha o canal" corrigiu o caso. A redação continua dependendo do prompt | Revalidar com poucas requisições a cada mudança do prompt e no roteiro da issue #11 |
-| Interpretação do motivo e do canal | O modelo escolhe o motivo e lê respostas curtas como "foi online". O código só impede valores inválidos e guarda a pergunta pendente; ele não detecta um canal suposto pelo modelo | Cobrir com a avaliação manual; se reincidir, exigir confirmação explícita em código |
+| Interpretação do motivo e do canal | O modelo escolhe o motivo e lê respostas curtas como "foi online". O código só impede valores inválidos; ele não detecta um canal suposto pelo modelo | Cobrir com a avaliação manual; se reincidir, aceitar o canal só se uma fala do cliente o citar |
 | Recebimento aproximado | O recebimento usa a entrega estimada, inclusive em pedidos `delivered` (DQ-17). O prazo pode errar em alguns dias; o veredito avisa e orienta falar com a equipe | Substituir pela data real quando a origem a fornecer |
 | Troca por preferência (DQ-26) | O manual não diz a partir de quando contam os 7 dias; o código conta do recebimento | Validar com a gestão da loja |
 | Itens não elegíveis para troca | Boquilha, personalização e venda final não são avaliados em código, porque o pedido não traz esse dado. O prompt manda consultar a política | Avaliar um campo no catálogo se o caso aparecer |
 | Encaminhamento da devolução | Fora do prazo ou em caso ambíguo, o agente orienta a falar com a equipe, mas ainda não registra o encaminhamento | Tratar na issue #9 (`encaminhar_para_atendente`) |
-| Pergunta pendente de motivo | O estado aceita `motivo`, mas só o canal de compra é preenchido pelo código; a pergunta do motivo depende do prompt | Preencher em código se a validação mostrar necessidade |

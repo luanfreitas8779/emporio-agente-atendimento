@@ -179,9 +179,9 @@ As tabelas de conversa não vêm de arquivos, mas seguem o mesmo rigor na grava�
 |---|---|
 | `conversations` | Telefone normalizado com 10 ou 11 dígitos, único; telefone inválido não grava nada |
 | `messages` | Conversa existente; conteúdo é uma mensagem do Pydantic AI serializada pelo próprio adaptador. Na leitura, uma linha que não valida é descartada com tudo o que veio antes dela |
-| `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`); `pergunta_pendente` opcional, restrita por `CHECK` a `canal_de_compra` ou `motivo` |
+| `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`) |
 
-**Migração.** `CREATE TABLE IF NOT EXISTS` não altera tabelas existentes. Por isso `criar_tabelas` confere as colunas de `conversation_state` e acrescenta `pergunta_pendente` com `ALTER TABLE` quando ela falta. A operação é idempotente e preserva conversas e estado. Um banco anterior à issue #6 é atualizado ao rodar `python -m src.load_data`.
+**Evolução do esquema.** `CREATE TABLE IF NOT EXISTS` não altera tabelas existentes. Se uma tabela operacional ganhar uma coluna que o código lê, a evolução precisa de um `ALTER TABLE` idempotente em `criar_tabelas`. A issue #6 não mudou o esquema, então não há migração pendente.
 
 ### 8.2 Argumentos das ferramentas
 

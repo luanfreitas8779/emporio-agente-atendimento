@@ -69,7 +69,7 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 |---|---|
 | Entrada | `numero_pedido`, `motivo` (`arrependimento`, `defeito` ou `preferencia`) e `canal` (`online` ou `presencial`), opcional; o cliente vem da sessão |
 | Saída | Veredito: `resultado` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados` ou `pedido_nao_encontrado`), `regras` com o prazo final de cada uma, `faltando`, `avisos`, `data_aproximada`, `data_de_recebimento` e `data_de_referencia`, com as datas em `dd/mm/aaaa` |
-| Regras | Prazos calculados em código (`docs/03-dados.md`, 5.4). O modelo repassa o veredito sem recalcular. Arrependimento sem canal devolve `faltam_dados`, e o código guarda a `pergunta_pendente`. Nunca recebe `customer_id` |
+| Regras | Prazos calculados em código (`docs/03-dados.md`, 5.4). O modelo repassa o veredito sem recalcular. Arrependimento sem canal devolve `faltam_dados`, com o que perguntar em `faltando`. Nunca recebe `customer_id` |
 
 ### 4.4 `registrar_interesse`
 
@@ -119,7 +119,7 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 
 1. Identificar o pedido; se o cliente não o informar e tiver vários, consultar os pedidos dele.
 2. Identificar o motivo: arrependimento, defeito ou preferência. Se faltar, perguntar.
-3. Em arrependimento, perguntar se a compra foi online ou presencial, porque o pedido não registra o canal (DQ-17). A pergunta fica registrada como pergunta pendente, e a mensagem seguinte é lida como a resposta.
+3. Em arrependimento, perguntar se a compra foi online ou presencial, porque o pedido não registra o canal (DQ-17). A pergunta fica no histórico. Se o cliente mudar de assunto em vez de responder, o agente segue o novo assunto e não repete a pergunta.
 4. Chamar `avaliar_devolucao`, que compara as datas com a data de referência e devolve o veredito.
 5. Explicar o resultado e as condições da política, sem prometer aprovação: a troca depende da análise do produto.
 6. Fora do prazo, explicar as regras que ainda valem (por exemplo, a garantia legal em caso de defeito) e orientar o cliente a falar com a equipe pelos contatos da loja.
@@ -143,7 +143,7 @@ O sistema fornece ao agente:
 - Data de referência.
 - Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
 - Interesses pendentes.
-- Estado da conversa: pedido em análise, produto em foco e pergunta pendente, quando houver (ADR-014 e ADR-015).
+- Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014).
 - Histórico recente, limitado a 7 mensagens e cortado em turnos inteiros, para economizar cota.
 
 ## 10. Exemplos de resposta
