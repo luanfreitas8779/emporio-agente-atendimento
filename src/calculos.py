@@ -48,29 +48,35 @@ AVISO_DA_DISPONIBILIDADE = {
 def calcular_compra(
     conexao: sqlite3.Connection, itens: list[ItemDaCompra]
 ) -> CalculoDaCompra | str:
-    dados = []
+    # O mesmo produto citado duas vezes vira uma linha só, com a quantidade somada.
+    quantidades: dict[int, int] = {}
     for item in itens:
-        produto = catalog.dados_para_conta(conexao, item.product_id)
+        quantidades[item.product_id] = quantidades.get(item.product_id, 0) + item.quantidade
+
+    produtos = {}
+    for product_id in quantidades:
+        produto = catalog.dados_para_conta(conexao, product_id)
         if produto is None:
-            return f"Produto {item.product_id} não encontrado: nenhuma conta foi feita."
-        dados.append(produto)
+            return f"Produto {product_id} não encontrado: nenhuma conta foi feita."
+        produtos[product_id] = produto
 
     linhas = []
     subtotais = []
     avisos = []
     total = 0
     total_no_pix = 0
-    for item, produto in zip(itens, dados):
-        subtotal = produto.preco_final * item.quantidade
+    for product_id, quantidade in quantidades.items():
+        produto = produtos[product_id]
+        subtotal = produto.preco_final * quantidade
         subtotais.append(subtotal)
         total += subtotal
-        total_no_pix += produto.preco_no_pix * item.quantidade
+        total_no_pix += produto.preco_no_pix * quantidade
         if produto.disponibilidade in AVISO_DA_DISPONIBILIDADE:
             avisos.append(f"{produto.nome}: {AVISO_DA_DISPONIBILIDADE[produto.disponibilidade]}")
         linhas.append(
             LinhaDaCompra(
                 produto.nome,
-                item.quantidade,
+                quantidade,
                 catalog.formatar_preco(produto.preco_final),
                 catalog.formatar_preco(subtotal),
             )

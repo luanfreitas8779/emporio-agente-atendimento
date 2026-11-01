@@ -1353,3 +1353,14 @@ def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(conexao, termo, si
 
 def test_conta_de_produto_disponivel_nao_traz_aviso(conexao):
     assert calcular_compra(conexao, ("Yamaha C40", 1)).aviso is None
+
+
+@pytest.mark.regressao
+def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(conexao):
+    resultado = calcular_compra(conexao, ("Yamaha C40", 1), ("Yamaha C40", 2))
+
+    assert [(i.nome, i.quantidade, i.subtotal) for i in resultado.itens] == [
+        ("Yamaha C40 Nylon Natural", 3, "R$ 1.799,70")
+    ]
+    assert resultado.total == "R$ 1.799,70"
+    assert resultado.diferenca is None
