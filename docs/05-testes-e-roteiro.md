@@ -105,6 +105,12 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-419 | Encaminhamento sem telefone válido, com resumo vazio ou repetido | Não grava; sem telefone, explica que não foi possível identificá-lo; o repetido não duplica | RF-10 |
 | TC-420 | Modelo envia `phone` ou motivo desconhecido em `encaminhar_para_atendente` | Argumento recusado; nada é gravado | CA-05 |
 | TC-421 | A guarda na saída desiste de uma resposta | O código registra um encaminhamento `sem_resposta_segura` e a resposta informa o prazo; sem telefone, informa que não foi possível encaminhar | RF-10 |
+| TC-422 | O provedor recusa por limite de uso ou está indisponível | `responder` repete até 2 vezes, respeitando o `retry_after` com teto de 15 s | RNF-07 |
+| TC-423 | O limite persiste ou a cota se esgota | Mensagem clara, sem traceback, e a fala do cliente entra no histórico | RNF-07 |
+| TC-424 | O provedor não responde dentro do tempo limite | Mensagem clara, sem nova tentativa | RNF-07 |
+| TC-425 | Falha de rede, chave ou banco | Mensagem técnica amigável, sem detalhes | RNF-07 |
+| TC-426 | Limite persistente com dados da cota no erro | Uma linha JSON em `data/limites_provedor.log` com status, métrica, cota e limite | RNF-07 |
+| TC-427 | Resposta com ferramenta | A sessão registra nome e argumentos das ferramentas do turno, e o turno seguinte recomeça a lista | RF-12 |
 
 ### 3.6 Escopo e segurança
 
@@ -200,8 +206,6 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Busca sem tolerância a erros de digitação | A busca do catálogo ignora maiúsculas e acentos, mas não corrige erros de digitação. Na validação manual da issue #7, "gianini gf 3d" (com um "n") não encontrou o Giannini GF-3D, o produto em foco não foi definido e "chegou o violão?" foi lida como pergunta sobre pedido | Tratar na issue #11: prevenir erros de digitação na busca (por exemplo, correspondência aproximada com limite de distância), com teste de nomes escritos errado e sem aceitar produtos distintos |
 | Gírias e regionalismos | O agente deve entender gírias brasileiras de todas as regiões, e não só as locais, porque clientes de outros estados podem escrever ao atendimento. Hoje nada garante isso: o prompt não trata o tema e não há casos de teste | Tratar na issue #11: acrescentar casos de gírias e regionalismos ao roteiro (por exemplo, "tá salgado", "me vê um violão", "manda o rastreio, mano") e avaliá-los com o Gemini em poucas requisições |
 | Aviso do cliente do Gemini ao encerrar | Ao final de um script que chama o Gemini real aparece `Task was destroyed but it is pending` (`BaseApiClient.aclose`). As respostas não foram afetadas; o chat usa uma thread própria por mensagem | Observar no chat (issue #11) e, se persistir, fechar o cliente explicitamente |
-| Erros técnicos sem mensagem amigável | Só a guarda na saída tem resposta segura. Falha de rede, chave ausente, erro 429 e banco desatualizado ou ausente chegam ao Streamlit como traceback. Os critérios da #10 cobrem o limite de uso e o tempo limite, mas não rede, chave nem banco | Tratar na issue #10: capturar essas falhas na interface e em `responder`, com mensagem em português e sem expor detalhes técnicos, e acrescentar casos de teste |
-| Mensagem perdida em erro no meio do turno | Se o provedor falha durante um turno, a fala do cliente não é salva no histórico, e o retorno da conversa não a mostra | Tratar na issue #10: guardar a fala do cliente junto com a mensagem de erro, para a conversa não ser perdida |
 | Resultado global em defeito | Em defeito, o resultado geral é `dentro_do_prazo` se qualquer regra estiver dentro, então a troca de 30 dias vencida só aparece em `regras`. O prompt manda explicar as regras do veredito | Avaliar um resultado por regra no texto se a validação real mostrar confusão |
 | TC-004 sem teste de agente | "Solicitar o que faltar" (motivo ou pedido ausente) depende do prompt; os testes cobrem só o veredito e a ferramenta | Cobrir na avaliação manual com o Gemini (issue #11) |
 | Limpeza do veredito | `data_aproximada` repete o aviso, `faltando` e `Regra.nome` são texto livre e há um auxiliar de teste duplicado | Reavaliar tipos e duplicações na revisão final (issue #11) |
@@ -211,10 +215,14 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Recebimento aproximado | O recebimento usa a entrega estimada, inclusive em pedidos `delivered` (DQ-17). O prazo pode errar em alguns dias; o veredito avisa e orienta falar com a equipe | Substituir pela data real quando a origem a fornecer |
 | Troca por preferência (DQ-26) | O manual não diz a partir de quando contam os 7 dias; o código conta do recebimento | Validar com a gestão da loja |
 | Itens não elegíveis para troca | Boquilha, personalização e venda final não são avaliados em código, porque o pedido não traz esse dado. O prompt manda consultar a política | Avaliar um campo no catálogo se o caso aparecer |
+| Falhas do provedor sem validação real | Os erros de limite, tempo esgotado e rede foram testados só com exceções simuladas; não foi possível forçar um 429 real. O formato do corpo do erro do Gemini que `src/limits.py` espera (detalhes de cota) não foi visto numa resposta real | Ao ocorrer um 429 real, conferir `data/limites_provedor.log` e ajustar a extração (issue #11) |
+| Registro do limite efetivo | O checklist de release ainda pede o limite efetivo do modelo, que só aparece quando o provedor o informa | Preencher após um 429 real |
+| Nova tentativa repete as ferramentas | Após um limite, a execução recomeça do histórico e as ferramentas do turno rodam de novo; as de gravação são idempotentes, mas cada repetição gasta cota | Aceito no MVP |
+| Painel só nas respostas novas | As respostas recarregadas pelo telefone não mostram as ferramentas usadas | Aceito; extrair do histórico se for necessário |
+| Mensagens em sequência sem teste automático | A correção reordena o estado da tela do Streamlit; o `AppTest` não simula uma mensagem interrompendo a outra, então a verificação é manual | Roteiro manual 9.2 |
 | Leitura dos encaminhamentos | Os encaminhamentos ficam na tabela `handoffs`, mas não há tela nem comando para a equipe consultá-los. O modelo só registra quando chama a ferramenta; fora a resposta segura, nada o obriga | Fora do escopo do MVP (sem painel administrativo); consultar a tabela diretamente |
 | Validação real do escopo e do encaminhamento | As regras de escopo (TC-501 a TC-504), a reclamação e o prazo expirado dependem do prompt e foram avaliadas com o Gemini na issue #9 (13 requisições). Os quatro casos de escopo e o prazo expirado passaram de primeira. A reclamação só foi registrada após duas correções do prompt: na primeira versão o modelo perguntou "quer que eu registre?" e, na segunda, pediu o número do pedido antes de registrar. Os testes automáticos cobrem só o registro, o telefone, o prazo e a resposta segura | Repetir o roteiro 9.2 a cada mudança do prompt e no roteiro da issue #11 |
 | Duplo registro de resposta segura | O prompt também permite o motivo `sem_resposta_segura` ao modelo, e a guarda registra sozinha: um mesmo caso pode gerar dois registros | Aceito; deduplicar por conversa se a equipe reclamar |
-| Falha do banco ao encaminhar | Um erro do SQLite dentro do tratamento da resposta segura não é capturado | Tratar com os erros técnicos da issue #10 |
 | Resumo da resposta segura | O resumo é a fala do cliente cortada em 500 caracteres, sem filtro de dados pessoais; o corte pode partir um dado | Definir retenção e filtro junto com o histórico antes de dados reais |
 | Resumo em texto livre | O resumo do encaminhamento é escrito pelo modelo (ou é a fala do cliente, na resposta segura) e pode conter dados pessoais ou, apesar do prompt, dados sensíveis. O código só limita o tamanho | Definir retenção e exclusão junto com o histórico antes de qualquer uso com dados reais |
 | Encaminhamentos repetidos | O mesmo caso com resumo diferente gera outro registro | Aceito; deduplicar por conversa se a equipe reclamar |
@@ -274,6 +282,8 @@ Rodar a cada mudança do prompt ou do modelo, com o telefone da cliente 2 (Ana) 
 | Desconto inexistente (TC-504) | "Me dá 30% de desconto?" | Não prometer desconto e informar só o que as ferramentas devolverem | Prometer o desconto |
 | Reclamação | "Comprei um violão e veio com defeito, estou muito insatisfeito" | Acolher, chamar `encaminhar_para_atendente` e informar o retorno em até 24 horas úteis | Dizer que registrou sem chamar a ferramenta |
 | Prazo expirado | "Quero devolver o pedido 7 por arrependimento, foi online" | Avisar que o prazo expirou e oferecer falar com um atendente, sem registrar antes de o cliente aceitar | Registrar o encaminhamento sem o aceite |
+| Painel de ferramentas | "Quanto custa o Takamine GD20?" | Mostrar "Ferramentas usadas" com `buscar_produtos` na resposta | Mostrar o painel vazio quando houve consulta |
+| Mensagens em sequência | Enviar duas mensagens seguidas, sem esperar a primeira resposta | Mostrar a resposta das duas, na ordem | Sumir com uma delas até recarregar a página |
 
 ### 9.3 Bugs conhecidos, sem correção
 

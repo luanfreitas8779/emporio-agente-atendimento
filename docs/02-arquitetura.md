@@ -183,6 +183,21 @@ Tabelas operacionais:
 - **Alternativas:** deixar o modelo registrar também a resposta segura, o que depende de ele cumprir o prompt justamente quando a resposta falhou; registrar sem telefone, o que gera casos sem retorno possível.
 - **Consequências:** o registro da resposta segura é garantido em código, e os demais dependem de o modelo chamar a ferramenta. O resumo guarda texto livre do cliente e é tratado como dado pessoal (`docs/03-dados.md`, seção 7). Não há painel nem leitura dos encaminhamentos: a equipe consulta a tabela (fora do escopo do MVP). Um encaminhamento repetido com resumo diferente gera outro registro.
 
+### ADR-018: Resiliência a falhas do provedor e painel de ferramentas
+
+- **Status:** Aceita.
+- **Contexto:** o plano gratuito do Gemini tem limite de uso baixo (20 requisições por dia consideradas), e o provedor pode ficar lento ou fora do ar. Sem tratamento, o cliente via um traceback e a fala dele se perdia. A equipe de desenvolvimento também precisa ver quais ferramentas o agente usou em cada resposta.
+- **Decisão:**
+  1. **Nova tentativa em código.** `responder` repete a execução quando o provedor recusa por limite de uso (`ModelRateLimitError`) ou está indisponível ou sobrecarregado (`ModelUnavailableError`, `ModelOverloadedError`): no máximo 2 repetições, esperando o `retry_after` do provedor com teto de 15 s, ou 2 s e 5 s sem ele. O laço fica no código e não no `max_retries` do SDK, para ser visível e testável sem a API. Cada repetição consome uma requisição da cota. Como a execução recomeça do histórico, as ferramentas do turno rodam de novo; as de gravação são idempotentes (interesses e encaminhamentos não duplicam).
+  2. **Sem repetição.** Cota esgotada (`ModelQuotaExceededError`) e tempo esgotado não se resolvem esperando.
+  3. **Tempo limite.** `model_settings` do agente define `timeout=20` por tentativa e `request_timeout=40` por requisição. `ModelTimeoutError` e `ModelRequestTimeout` geram `MENSAGEM_DE_TIMEOUT`.
+  4. **Mensagens ao cliente.** Limite persistente, cota esgotada e indisponibilidade geram `MENSAGEM_DE_LIMITE`. Qualquer outra falha do provedor (rede, chave, 5xx) ou do banco gera `MENSAGEM_DE_ERRO_TECNICO`, sem detalhes técnicos, que vão para o log (`logging`). Em todos os casos a fala do cliente e a mensagem enviada entram no histórico, no mesmo molde da resposta segura, e uma falha ao gravar não derruba o atendimento. A resposta segura (ADR-013) também tolera falha do banco ao registrar o encaminhamento.
+  5. **Limite efetivo.** `src/limits.py` acrescenta uma linha JSON a `data/limites_provedor.log` (fora do Git) quando um erro de limite persiste: data, modelo, status, `retry_after` e, quando o corpo do erro do Gemini traz, a métrica, a cota e o valor do limite. Não há telefone nem texto do cliente. Uma falha ao gravar o arquivo não impede a mensagem.
+  6. **Painel de ferramentas.** `responder` preenche `Sessao.ferramentas` com as chamadas do turno (nome e argumentos), reiniciada a cada turno. A interface mostra um bloco "Ferramentas usadas" em cada resposta recebida na tela aberta; as respostas recarregadas pelo telefone não têm o painel.
+  7. **Mensagens em sequência.** A interface anexa a fala e a resposta ao estado da tela antes de qualquer chamada de desenho e desenha sempre a partir do estado. Se uma nova mensagem interromper a execução, a seguinte ainda mostra tudo.
+- **Alternativas:** `max_retries` do SDK, escondido e não testável offline; tabela para o registro de limites, descartada pela simplicidade; persistir as ferramentas no histórico para o painel também aparecer nas respostas antigas.
+- **Consequências:** o cliente nunca vê um traceback nas falhas previstas, e a conversa não se perde. Cada repetição gasta cota, e uma espera de até 22 s soma-se ao tempo de resposta. O registro de limites depende de o provedor informar os dados. Uma requisição interrompida no provedor ainda pode ter sido processada, o que aceitamos no MVP.
+
 ### ADR-004: SQLite como armazenamento
 
 - **Status:** Aceita.
@@ -255,6 +270,7 @@ Tabelas operacionais:
 │   ├── database.py         # Conexão com o banco
 │   ├── load_data.py        # Validação e carga dos dados
 │   ├── memory.py           # Histórico e estado da conversa por telefone
+│   ├── limits.py           # Registro dos limites informados pelo provedor
 │   ├── returns.py          # Veredito de prazos de troca e devolução
 │   ├── datas.py            # Formatação de datas para o cliente
 │   └── policies.py         # Leitura das políticas

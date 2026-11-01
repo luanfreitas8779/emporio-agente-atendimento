@@ -7,9 +7,18 @@ from src.memory import exibir_conversa
 from src.phone import normalizar_telefone
 
 
-def exibir(papel: str, texto: str) -> None:
-    # O Streamlit interpreta "$" como fórmula matemática, o que quebra os preços.
-    st.chat_message(papel).markdown(texto.replace("$", r"\$"))
+def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
+    with st.chat_message(papel):
+        # O Streamlit interpreta "$" como fórmula matemática, o que quebra os preços.
+        st.markdown(texto.replace("$", r"\$"))
+        # O painel só existe nas respostas desta tela; o histórico recarregado não o traz.
+        if ferramentas is not None:
+            with st.expander("Ferramentas usadas"):
+                if ferramentas:
+                    for chamada in ferramentas:
+                        st.code(f"{chamada['nome']}({chamada['argumentos']})", language="python")
+                else:
+                    st.caption("Nenhuma ferramenta.")
 
 
 st.set_page_config(page_title="Empório da Música", page_icon="🎸")
@@ -39,18 +48,25 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         conexao.close()
 
 for mensagem in st.session_state.mensagens:
-    exibir(mensagem["papel"], mensagem["texto"])
+    exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))
 
 if pergunta := st.chat_input("Escreva sua mensagem"):
-    exibir("user", pergunta)
+    # Cada mensagem entra no estado antes de qualquer chamada de tela: se uma nova mensagem
+    # interromper este script, a próxima execução ainda desenha tudo a partir do estado.
     st.session_state.mensagens.append({"papel": "user", "texto": pergunta})
+    exibir("user", pergunta)
 
-    conexao = conectar(CAMINHO_BANCO)
+    sessao = Sessao(conectar(CAMINHO_BANCO), st.session_state.telefone)
     try:
         with st.spinner("O Tom está consultando..."):
-            resposta = responder(pergunta, Sessao(conexao, st.session_state.telefone))
+            resposta = responder(pergunta, sessao)
     finally:
-        conexao.close()
+        sessao.conexao.close()
 
-    exibir("assistant", resposta)
-    st.session_state.mensagens.append({"papel": "assistant", "texto": resposta})
+    ferramentas = [
+        {"nome": chamada.nome, "argumentos": chamada.argumentos} for chamada in sessao.ferramentas
+    ]
+    st.session_state.mensagens.append(
+        {"papel": "assistant", "texto": resposta, "ferramentas": ferramentas}
+    )
+    exibir("assistant", resposta, ferramentas)
