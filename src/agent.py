@@ -278,21 +278,21 @@ def ferramentas_do_turno(mensagens: list) -> list[ChamadaDeFerramenta]:
     ]
 
 
-def fontes_do_turno(mensagens: list) -> list[str]:
-    """Textos que podem sustentar a resposta: a pergunta do cliente e o retorno das ferramentas."""
+def fontes_do_turno(mensagens: list) -> tuple[list[str], list[str]]:
+    """Textos que podem sustentar a resposta: o retorno das ferramentas e a fala do cliente."""
     inicio = max(
         (i for i, m in enumerate(mensagens)
          if isinstance(m, ModelRequest) and any(isinstance(p, UserPromptPart) for p in m.parts)),
         default=0,
     )
-    fontes = []
+    das_ferramentas, do_cliente = [], []
     for mensagem in mensagens[inicio:]:
         for parte in mensagem.parts:
             if isinstance(parte, UserPromptPart):
-                fontes.append(str(parte.content))
+                do_cliente.append(str(parte.content))
             elif isinstance(parte, ToolReturnPart) and parte.outcome != "retried":
-                fontes.append(parte.model_response_str())
-    return fontes
+                das_ferramentas.append(parte.model_response_str())
+    return das_ferramentas, do_cliente
 
 
 BLOCO_INTERNO = re.compile(r"<system>.*?</system>", re.DOTALL)
@@ -325,8 +325,9 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
         )
     # As datas de hoje e de amanhã vêm do contexto da sessão, não de uma ferramenta.
     hoje = ctx.deps.hoje
-    fontes = [*fontes_do_turno(ctx.messages), formatar_data(hoje), formatar_data(hoje + timedelta(days=1))]
-    inventados = guardrail.valores_nao_confirmados(resposta, fontes)
+    das_ferramentas, do_cliente = fontes_do_turno(ctx.messages)
+    fontes = [*das_ferramentas, formatar_data(hoje), formatar_data(hoje + timedelta(days=1))]
+    inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente)
     if inventados:
         raise ModelRetry(
             "A resposta cita valores que não vieram das ferramentas: "

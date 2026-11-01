@@ -99,16 +99,24 @@ def test_rastreio_data_e_percentual_inventados_sao_corrigidos(
     assert resposta == correto
 
 
-def test_valor_citado_pelo_proprio_cliente_e_permitido(conexao):
+def test_valor_em_reais_citado_pelo_proprio_cliente_nao_e_confirmado(conexao):
+    # O cliente pode ditar um preço; só o retorno das ferramentas confirma dinheiro (ADR-013).
+    repeticao = "Sobre os R$ 500,00 que você mencionou, vou consultar."
+    resposta = perguntar(conexao, "Posso pagar R$ 500,00 à vista?", None, None, [repeticao] * 3)
+
+    assert resposta == RESPOSTA_SEGURA
+
+
+def test_data_citada_pelo_proprio_cliente_continua_permitida(conexao):
     resposta = perguntar(
         conexao,
-        "Posso pagar R$ 500,00 à vista?",
+        "Comprei em 10/03/2026, ainda posso devolver?",
         None,
         None,
-        ["Sobre os R$ 500,00 que você mencionou, vou consultar."],
+        ["Sobre a compra de 10/03/2026, vou consultar."],
     )
 
-    assert resposta == "Sobre os R$ 500,00 que você mencionou, vou consultar."
+    assert resposta == "Sobre a compra de 10/03/2026, vou consultar."
 
 
 def test_resposta_sem_valores_passa_sem_ferramenta(conexao):

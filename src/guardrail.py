@@ -61,12 +61,25 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
         return None
 
 
-def valores_nao_confirmados(resposta: str, fontes: list[str]) -> list[str]:
-    """Lista os valores da resposta que não aparecem em nenhuma das fontes."""
+# Dinheiro e percentual só valem se vierem do sistema: o cliente pode "ditar" um preço ou desconto.
+TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual")
+
+
+def valores_nao_confirmados(
+    resposta: str, fontes: list[str], fontes_do_cliente: list[str] | None = None
+) -> list[str]:
+    """Lista os valores da resposta que não aparecem nas fontes.
+
+    As fontes do cliente confirmam datas e rastreios, mas nunca dinheiro nem percentual.
+    """
     confirmados: dict[str, set] = {tipo: set() for tipo in ("dinheiro", "percentual", "data", "rastreio")}
     for fonte in fontes:
         for tipo, encontrados in valores(fonte).items():
             confirmados[tipo] |= encontrados
+    for fonte in fontes_do_cliente or []:
+        for tipo, encontrados in valores(fonte).items():
+            if tipo not in TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA:
+                confirmados[tipo] |= encontrados
     citados = valores(resposta)
     return [
         str(valor)
