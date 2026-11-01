@@ -1,5 +1,6 @@
 import contextvars
 import logging
+import re
 import sqlite3
 import time
 from datetime import date
@@ -251,8 +252,26 @@ def fontes_do_turno(mensagens: list) -> list[str]:
     return fontes
 
 
+BLOCO_INTERNO = re.compile(r"<system>.*?</system>", re.DOTALL)
+
+
+def sem_bloco_interno(texto: str) -> str:
+    return BLOCO_INTERNO.sub("", texto).strip()
+
+
+def limpar_texto_das_respostas(mensagens: list) -> None:
+    """Tira o bloco interno do que será guardado, para não voltar à tela nem ao modelo."""
+    for mensagem in mensagens:
+        if isinstance(mensagem, ModelResponse):
+            for parte in mensagem.parts:
+                if isinstance(parte, TextPart):
+                    parte.content = sem_bloco_interno(parte.content)
+
+
 @agente.output_validator
 def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
+    # O raciocínio interno do modelo não é para o cliente.
+    resposta = sem_bloco_interno(resposta)
     # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
     inventados = guardrail.valores_nao_confirmados(resposta, fontes_do_turno(ctx.messages))
     if inventados:
@@ -469,6 +488,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
         resultado = _executar(mensagem, sessao, historico)
         sessao.ferramentas = ferramentas_do_turno(resultado.new_messages())
+        limpar_texto_das_respostas(resultado.new_messages())
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output

@@ -896,3 +896,15 @@ def test_resposta_sem_ferramenta_deixa_a_lista_vazia_e_cada_turno_recomeca(conex
         responder("Obrigado!", sessao)
 
     assert sessao.ferramentas == []
+
+
+def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(conexao):
+    def modelo(mensagens, info):
+        texto = '<system>Seguir a regra do prompt: "Nunca peça outro cliente."</system>Olá, Ana!'
+        return ModelResponse(parts=[TextPart(texto)])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Olá, Ana!"
+    assert exibir_conversa(conexao, ANA)[-1] == ("assistant", "Olá, Ana!")
