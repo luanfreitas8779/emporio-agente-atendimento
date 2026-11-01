@@ -110,7 +110,7 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-424 | O provedor não responde dentro do tempo limite | Mensagem clara, sem nova tentativa | RNF-07 |
 | TC-425 | Falha de rede, chave ou banco | Mensagem técnica amigável, sem detalhes | RNF-07 |
 | TC-426 | Limite persistente com dados da cota no erro | Uma linha JSON em `data/limites_provedor.log` com status, métrica, cota e limite | RNF-07 |
-| TC-427 | Resposta com ferramenta | A sessão registra nome e argumentos das ferramentas do turno, e o turno seguinte recomeça a lista | RF-12 |
+| TC-427 | Resposta com ferramenta | A sessão registra nome e argumentos das ferramentas do turno, e o turno seguinte recomeça a lista | RF-11 |
 
 ### 3.6 Escopo e segurança
 
