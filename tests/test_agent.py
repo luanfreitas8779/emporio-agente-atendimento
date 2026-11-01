@@ -1284,3 +1284,28 @@ def test_produto_inexistente_na_conta_e_recusado_sem_excecao(conexao):
     )
 
     assert retorno.content == "Produto 999999 não encontrado: nenhuma conta foi feita."
+
+
+def modelo_que_responde_o_total(chama_a_ferramenta: bool):
+    def modelo(mensagens, info):
+        if chama_a_ferramenta and len(mensagens) == 1:
+            argumentos = {"itens": [{"product_id": 95, "quantidade": 2}]}
+            return ModelResponse(parts=[ToolCallPart("calcular_compra", argumentos)])
+        return ModelResponse(parts=[TextPart("Duas unidades ficam em R$ 4.398,00.")])
+
+    return modelo
+
+
+@pytest.mark.regressao
+def test_total_vindo_da_ferramenta_de_contas_passa_pela_guarda(conexao):
+    with agente.override(model=FunctionModel(modelo_que_responde_o_total(True))):
+        resposta = responder("Quanto fica 2 Takamine GD20?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Duas unidades ficam em R$ 4.398,00."
+
+
+def test_total_calculado_pelo_proprio_modelo_continua_barrado(conexao):
+    with agente.override(model=FunctionModel(modelo_que_responde_o_total(False))):
+        resposta = responder("Quanto fica 2 Takamine GD20?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == RESPOSTA_SEGURA
