@@ -5,6 +5,7 @@ import streamlit as st
 from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
 from src.config import CAMINHO_BANCO
 from src.database import conectar
+from src.load_data import banco_carregado
 from src.memory import exibir_conversa
 from src.phone import normalizar_telefone
 
@@ -26,6 +27,16 @@ def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> Non
 st.set_page_config(page_title="Empório da Música", page_icon="🎸")
 st.title("Empório da Música")
 st.caption("Sua música começa aqui.")
+
+# Sem a carga de dados não há catálogo nem pedidos para consultar.
+_conexao = conectar(CAMINHO_BANCO)
+try:
+    _carregado = banco_carregado(_conexao)
+finally:
+    _conexao.close()
+if not _carregado:
+    st.error("O banco de dados ainda não foi preparado. Execute `python -m src.load_data` e reinicie o app.")
+    st.stop()
 
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []

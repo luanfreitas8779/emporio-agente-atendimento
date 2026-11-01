@@ -6,6 +6,7 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from streamlit.testing.v1 import AppTest
 
+import src.database
 from src.agent import MENSAGEM_DE_ERRO_TECNICO, agente
 
 APP = str(Path(__file__).parent.parent / "app.py")
@@ -85,10 +86,16 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
 
 
 def test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
-    def conectar_com_falha(caminho):
-        raise OSError("disco indisponível")
+    aberturas = []
+    conectar_de_verdade = src.database.conectar
 
-    monkeypatch.setattr("src.database.conectar", conectar_com_falha)
+    def conectar_com_falha_depois_da_verificacao_inicial(caminho):
+        aberturas.append(caminho)
+        if len(aberturas) == 2:
+            raise OSError("disco indisponível")
+        return conectar_de_verdade(caminho)
+
+    monkeypatch.setattr("src.database.conectar", conectar_com_falha_depois_da_verificacao_inicial)
     tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": ""}
 
     tela.run()
@@ -96,3 +103,13 @@ def test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica(tela, monkeypat
     assert not tela.exception
     assert tela.session_state["mensagens"][-1]["texto"] == MENSAGEM_DE_ERRO_TECNICO
     assert not tela.chat_input[0].disabled
+
+
+def test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_traceback(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.config.CAMINHO_BANCO", tmp_path / "vazio.db")
+
+    tela = AppTest.from_file(APP, default_timeout=30).run()
+
+    assert not tela.exception
+    assert "python -m src.load_data" in tela.error[0].value
+    assert len(tela.chat_input) == 0
