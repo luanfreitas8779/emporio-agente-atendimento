@@ -19,6 +19,7 @@ from src.agent import (
     MENSAGEM_DE_ERRO_TECNICO,
     MENSAGEM_DE_LIMITE,
     MENSAGEM_DE_TIMEOUT,
+    RESPOSTA_SEGURA_SEM_REGISTRO,
     Sessao,
     agente,
     responder,
@@ -172,3 +173,15 @@ def test_banco_sem_tabelas_gera_mensagem_amigavel_em_vez_de_traceback(tmp_path):
 
     assert resposta == MENSAGEM_DE_ERRO_TECNICO
     vazio.close()
+
+
+def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_atendimento(conexao):
+    conexao.execute("DROP TABLE handoffs")
+
+    def modelo(mensagens, info):
+        return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Preço do violão?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == RESPOSTA_SEGURA_SEM_REGISTRO

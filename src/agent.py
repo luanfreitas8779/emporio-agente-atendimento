@@ -459,17 +459,22 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
-        resultado = handoffs.registrar(
-            sessao.conexao,
-            sessao.telefone or "",
-            handoffs.Motivo.SEM_RESPOSTA_SEGURA,
-            mensagem,
-        )
+        try:
+            resultado = handoffs.registrar(
+                sessao.conexao,
+                sessao.telefone or "",
+                handoffs.Motivo.SEM_RESPOSTA_SEGURA,
+                mensagem,
+            )
+        except sqlite3.Error:
+            registro.exception("Não foi possível registrar o encaminhamento")
+            resultado = None
         # O texto só afirma o registro quando ele existe.
         resposta = {
             handoffs.Resultado.REGISTRADO: RESPOSTA_SEGURA,
             handoffs.Resultado.JA_REGISTRADO: RESPOSTA_SEGURA,
             handoffs.Resultado.TELEFONE_INVALIDO: RESPOSTA_SEGURA_SEM_TELEFONE,
             handoffs.Resultado.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
+            None: RESPOSTA_SEGURA_SEM_REGISTRO,
         }[resultado]
         return _responder_sem_modelo(mensagem, sessao, resposta)
