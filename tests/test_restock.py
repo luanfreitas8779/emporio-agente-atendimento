@@ -1,7 +1,9 @@
 import pytest
 
 from src.catalog import buscar_produtos
-from src.restock import ErroDeReposicao, repor_estoque
+from src.database import conectar
+from src.load_data import carregar_dados
+from src.restock import ErroDeReposicao, principal, repor_estoque
 from tests.conftest import PASTA_DADOS
 
 GIANNINI_GF_3D = 96
@@ -37,3 +39,31 @@ def test_recusa_quantidade_menor_que_um(conexao, quantidade):
 def test_recusa_produto_que_nao_esta_ativo(conexao, produto):
     with pytest.raises(ErroDeReposicao, match="ativo"):
         repor_estoque(conexao, produto, 5)
+
+
+def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, capsys):
+    banco = tmp_path / "comando.db"
+    conexao = conectar(banco)
+    carregar_dados(conexao, PASTA_DADOS)
+
+    codigo = principal(["96", "--quantidade", "3", "--banco", str(banco)])
+
+    assert codigo == 0
+    assert "3" in capsys.readouterr().out
+    assert buscar_produtos(conexao, "Giannini GF-3D")[0].disponibilidade == "disponivel"
+
+    carregar_dados(conexao, PASTA_DADOS)
+    assert buscar_produtos(conexao, "Giannini GF-3D")[0].disponibilidade == "indisponivel"
+    conexao.close()
+
+
+def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
+    banco = tmp_path / "comando.db"
+    conexao = conectar(banco)
+    carregar_dados(conexao, PASTA_DADOS)
+    conexao.close()
+
+    codigo = principal(["99999", "--banco", str(banco)])
+
+    assert codigo == 1
+    assert "inexistente" in capsys.readouterr().err
