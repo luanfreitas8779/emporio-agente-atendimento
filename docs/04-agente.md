@@ -30,11 +30,12 @@ O agente se apresenta como assistente virtual, não se passa por uma pessoa e po
 | Produto, preço, estoque ou promoção | `buscar_produtos` |
 | Horário, endereço, pagamento, troca, frete, garantia ou privacidade | `consultar_politicas` |
 | Status, rastreio ou detalhes do pedido | `consultar_meus_pedidos` |
+| Troca, devolução ou defeito de um pedido | `avaliar_devolucao` |
 | Acompanhar produto indisponível | `registrar_interesse` |
 | Reclamação ou dúvida sem resposta segura | `encaminhar_para_atendente` |
 | Saudação ou conversa simples | Responder sem ferramenta |
 
-Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por exemplo, exige consultar o pedido e a política.
+Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por exemplo, exige avaliar o pedido e consultar a política.
 
 ## 4. Ferramentas
 
@@ -59,8 +60,16 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 | Item | Definição |
 |---|---|
 | Entrada | `numero_pedido`, opcional; o cliente vem da sessão |
-| Saída | Data, situação (traduzida em código, ADR-012), itens, total registrado, pagamento, rastreio e entrega estimada. O status original não é entregue ao modelo |
+| Saída | Data e entrega estimada em `dd/mm/aaaa`, situação (traduzida em código, ADR-012), itens, total registrado, pagamento, rastreio e entrega estimada. O status original não é entregue ao modelo |
 | Regras | Nunca recebe `customer_id` do modelo; pedido de terceiro é tratado como não encontrado |
+
+### 4.3.1 `avaliar_devolucao`
+
+| Item | Definição |
+|---|---|
+| Entrada | `numero_pedido`, `motivo` (`arrependimento`, `defeito` ou `preferencia`) e `canal` (`online` ou `presencial`), opcional; o cliente vem da sessão |
+| Saída | Veredito: `resultado` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados` ou `pedido_nao_encontrado`), `regras` com o prazo final de cada uma, `faltando`, `avisos`, `data_aproximada`, `data_de_recebimento` e `data_de_referencia`, com as datas em `dd/mm/aaaa` |
+| Regras | Prazos calculados em código (`docs/03-dados.md`, 5.4). O modelo repassa o veredito sem recalcular. Arrependimento sem canal devolve `faltam_dados`, e o código guarda a `pergunta_pendente`. Nunca recebe `customer_id` |
 
 ### 4.4 `registrar_interesse`
 
@@ -108,15 +117,14 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 
 ## 7. Trocas e devoluções
 
-1. Consultar o pedido.
-2. Consultar a política de trocas e devoluções.
-3. Identificar o motivo: arrependimento, defeito ou preferência.
-4. Em arrependimento, confirmar se a compra foi online.
-5. Comparar as datas com a data de referência.
-6. Explicar o resultado e as condições, sem prometer aprovação quando depender de análise do produto.
-7. Encaminhar casos que exijam verificação.
+1. Identificar o pedido; se o cliente não o informar e tiver vários, consultar os pedidos dele.
+2. Identificar o motivo: arrependimento, defeito ou preferência. Se faltar, perguntar.
+3. Em arrependimento, perguntar se a compra foi online ou presencial, porque o pedido não registra o canal (DQ-17). A pergunta fica registrada como pergunta pendente, e a mensagem seguinte é lida como a resposta.
+4. Chamar `avaliar_devolucao`, que compara as datas com a data de referência e devolve o veredito.
+5. Explicar o resultado e as condições da política, sem prometer aprovação: a troca depende da análise do produto.
+6. Fora do prazo, explicar as regras que ainda valem (por exemplo, a garantia legal em caso de defeito) e orientar o cliente a falar com a equipe pelos contatos da loja.
 
-Para pedidos `shipped`, a contagem do arrependimento depende do recebimento. A data estimada é uma aproximação e deve ser apresentada como tal.
+O recebimento usa a entrega estimada, também nos pedidos `delivered`, porque os dados não têm a data real. O veredito sempre a apresenta como aproximação, e o agente informa isso ao cliente. Compra presencial não usa o prazo de arrependimento.
 
 ## 8. Limites de escopo
 
@@ -135,7 +143,7 @@ O sistema fornece ao agente:
 - Data de referência.
 - Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
 - Interesses pendentes.
-- Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014).
+- Estado da conversa: pedido em análise, produto em foco e pergunta pendente, quando houver (ADR-014 e ADR-015).
 - Histórico recente, limitado a 7 mensagens e cortado em turnos inteiros, para economizar cota.
 
 ## 10. Exemplos de resposta

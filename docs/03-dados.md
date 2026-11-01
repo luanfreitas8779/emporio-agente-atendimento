@@ -89,8 +89,9 @@ O `status` tem prioridade sobre o estoque.
 | DQ-23 | Troca por defeito em 30 dias da compra e garantia legal de 90 dias do recebimento | Tratar como regras distintas |
 | DQ-24 | Arrependimento é citado apenas para compras online | Confirmar o canal antes de concluir |
 | DQ-25 | Lojas parceiras são citadas, mas não há lista | Redirecionar sem indicar lojas |
+| DQ-26 | A troca por preferência tem prazo de 7 dias, mas o manual não diz a partir de quando | Contar a partir do recebimento, como o arrependimento |
 
-Os itens DQ-19 a DQ-24 devem ser validados com a gestão da loja antes de um uso em produção.
+Os itens DQ-19 a DQ-24 e DQ-26 devem ser validados com a gestão da loja antes de um uso em produção.
 
 ## 5. Regras de negócio
 
@@ -114,6 +115,21 @@ Os itens DQ-19 a DQ-24 devem ser validados com a gestão da loja antes de um uso
 Os pedidos vão até 2026-03-22, então o sistema usa a data configurável `2026-03-25`. Isso mantém prazos coerentes com os dados e permite testes repetíveis.
 
 Com esse valor, nenhum pedido entregue está dentro dos 7 dias de arrependimento. O mais recente tem entrega estimada em 2026-02-17, 36 dias antes. Os casos dentro do prazo são validados em testes, com a data informada pelo próprio teste.
+
+O valor vem da variável de ambiente `DATA_DE_REFERENCIA` (formato `AAAA-MM-DD`), lida por `config.data_de_referencia()`. Um valor inválido interrompe a execução com uma mensagem que indica o formato.
+
+### 5.4 Prazos de troca e devolução
+
+Calculados em `src/returns.py`, a partir do manual (DQ-23, DQ-24 e DQ-26). O recebimento é a entrega estimada do pedido (DQ-17), sempre apresentada como aproximação.
+
+| Motivo | Regra | Contagem |
+|---|---|---|
+| Arrependimento | 7 dias corridos, só em compra online | Recebimento |
+| Defeito (troca) | 30 dias corridos | Compra |
+| Defeito (garantia legal) | 90 dias corridos | Recebimento |
+| Preferência | 7 dias corridos | Recebimento |
+
+O último dia da contagem ainda está dentro do prazo. Pedidos `pending`, `confirmed` e `cancelled` não têm produto recebido. Em arrependimento, o canal de compra precisa ser perguntado ao cliente. Datas apresentadas ao cliente saem em `dd/mm/aaaa`.
 
 ## 6. Pipeline de carga
 
@@ -163,7 +179,9 @@ As tabelas de conversa não vêm de arquivos, mas seguem o mesmo rigor na grava�
 |---|---|
 | `conversations` | Telefone normalizado com 10 ou 11 dígitos, único; telefone inválido não grava nada |
 | `messages` | Conversa existente; conteúdo é uma mensagem do Pydantic AI serializada pelo próprio adaptador. Na leitura, uma linha que não valida é descartada com tudo o que veio antes dela |
-| `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`) |
+| `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`); `pergunta_pendente` opcional, restrita por `CHECK` a `canal_de_compra` ou `motivo` |
+
+**Migração.** `CREATE TABLE IF NOT EXISTS` não altera tabelas existentes. Por isso `criar_tabelas` confere as colunas de `conversation_state` e acrescenta `pergunta_pendente` com `ALTER TABLE` quando ela falta. A operação é idempotente e preserva conversas e estado. Um banco anterior à issue #6 é atualizado ao rodar `python -m src.load_data`.
 
 ### 8.2 Argumentos das ferramentas
 
@@ -171,6 +189,7 @@ O modelo é uma fonte de entrada não confiável. Os argumentos são validados p
 
 - `preco_maximo`, `valor`: maiores que zero.
 - `parcelas`, `numero_pedido`: inteiros a partir de 1.
+- `motivo` (arrependimento, defeito ou preferencia) e `canal` (online ou presencial) da devolução: enumerações validadas pelo Pydantic.
 - `secao`: uma das seções de `policies.SECOES`.
 - Parcelas acima de 12 não são recusadas: a resposta informa o limite de 12x.
 - Argumentos desconhecidos, como `customer_id`, são rejeitados.

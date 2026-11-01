@@ -70,6 +70,13 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-306 | Pedido 7, compra online, data padrão | Fora do prazo de arrependimento | CA-04 |
 | TC-307 | Pedido 7 com defeito | Fora dos 30 dias de troca e dentro da garantia legal de 90 dias | CA-04 |
 | TC-308 | Compra presencial com arrependimento | Não aplica a regra de compra online | CA-04 |
+| TC-309 | Arrependimento sem o canal de compra | Veredito `faltam_dados`, com o canal a perguntar | CA-04 |
+| TC-310 | Cliente responde "foi online" na mensagem seguinte | A pergunta pendente chega ao contexto; ao sair o veredito, é limpa | CA-04 |
+| TC-311 | Cliente 2 pede a devolução do pedido 7 (cliente 14) | Pedido não encontrado | CA-05 |
+| TC-312 | Devolução de pedido pendente, confirmado ou cancelado | Não se aplica, com aviso | CA-04 |
+| TC-313 | Troca por preferência no 7º e no 8º dia após o recebimento | Dentro do prazo e fora do prazo | CA-04 |
+| TC-314 | Veredito de qualquer pedido enviado ou entregue | Informa que o recebimento é a entrega estimada e que depende da análise do produto | CA-04 |
+| TC-315 | Banco anterior à issue #6 | A coluna `pergunta_pendente` é acrescentada sem perder o estado | RNF-01 |
 
 ### 3.5 Memória
 

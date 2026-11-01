@@ -63,7 +63,7 @@ Tabelas operacionais:
 |---|---|---|
 | `conversations` | `id`, `phone` (único), `created_at`, `updated_at` | Uma conversa contínua por telefone |
 | `messages` | `id`, `conversation_id`, `content`, `created_at` | Guardar o histórico: cada linha é uma mensagem do Pydantic AI serializada em JSON |
-| `conversation_state` | `phone` (chave), `pedido_em_analise`, `produto_em_foco`, `updated_at` | Estado pequeno da conversa, mantido em código (ADR-014) |
+| `conversation_state` | `phone` (chave), `pedido_em_analise`, `produto_em_foco`, `pergunta_pendente`, `updated_at` | Estado pequeno da conversa, mantido em código (ADR-014) |
 | `product_interests` | `id`, `phone`, `product_id`, `status`, `created_at` | Acompanhar interesses em produtos |
 | `handoffs` | `id`, `phone`, `reason`, `summary`, `created_at` | Registrar encaminhamentos para a equipe |
 
@@ -136,7 +136,22 @@ Tabelas operacionais:
   6. **Estado.** A tabela `conversation_state` guarda, por telefone, `pedido_em_analise` (número do pedido) e `produto_em_foco` (id do produto). O código os preenche a partir dos retornos das ferramentas: um único pedido encontrado define o pedido em análise, e uma busca com um único produto define o produto em foco. Buscas com vários resultados não alteram o estado. Os dois campos entram no contexto dinâmico do prompt (ADR-007). Não há máquina de estados: cada campo é só um valor.
   7. **Sem chave estrangeira para a origem.** As tabelas operacionais não referenciam `products` nem `orders`, porque a carga recria essas tabelas. Os ids são validados pelo código que os grava (`CHECK` maior que zero).
 - **Alternativas:** guardar o histórico inteiro em um único campo, o que impede o corte por mensagem; resumir conversas antigas com o modelo, o que gasta cota e pode inventar; deixar o modelo registrar o foco por conta própria, o que reabre o problema da memória.
-- **Consequências:** a continuidade não depende do modelo, e o isolamento por telefone vale para histórico e estado. O estado só muda quando uma ferramenta devolve exatamente um resultado, então o foco pode ficar desatualizado até a próxima busca. A pergunta pendente não foi criada: entra com a issue #6, quando houver quem a preencha. O telefone digitado não prova identidade (ADR-009), então quem digitar o telefone de outra pessoa vê a conversa dela; em produção, o canal autenticado resolve isso.
+- **Consequências:** a continuidade não depende do modelo, e o isolamento por telefone vale para histórico e estado. O estado só muda quando uma ferramenta devolve exatamente um resultado, então o foco pode ficar desatualizado até a próxima busca. A pergunta pendente entrou com a issue #6 (ADR-015). O telefone digitado não prova identidade (ADR-009), então quem digitar o telefone de outra pessoa vê a conversa dela; em produção, o canal autenticado resolve isso.
+
+### ADR-015: Veredito de troca e devolução em código, com pergunta pendente
+
+- **Status:** Aceita.
+- **Contexto:** o prazo de devolução depende do status do pedido, do motivo, do canal de compra e de datas. Calcular isso na resposta do modelo arrisca prazos errados. Os dados não têm canal de compra nem data real de entrega (DQ-17), e a data de entrega estimada é a melhor aproximação.
+- **Decisão:**
+  1. **Ferramenta `avaliar_devolucao`.** O modelo informa o pedido, o motivo (`arrependimento`, `defeito` ou `preferencia`) e, quando souber, o canal (`online` ou `presencial`). O código (`src/returns.py`) devolve um `Veredito` pronto: resultado geral, regras avaliadas com o prazo final já formatado, o que falta perguntar, avisos e as datas de recebimento e de referência. O modelo repassa o veredito e não calcula prazos. O cliente vem da sessão, e pedido de outro cliente volta como não encontrado.
+  2. **Regras.** Arrependimento: 7 dias após o recebimento, só em compra online (DQ-24); sem o canal, o veredito pede o canal. Defeito: troca em 30 dias corridos da compra e garantia legal em 90 dias do recebimento, avaliadas separadamente (DQ-23). Preferência: 7 dias após o recebimento (DQ-26). Pedidos pendentes, confirmados ou cancelados não têm produto recebido, e o resultado é `nao_se_aplica`. O recebimento é a entrega estimada, e o veredito sempre avisa que é uma aproximação. O resultado vale para o prazo: a aprovação depende da análise do produto, e um aviso diz isso.
+  3. **Data de referência.** `DATA_DE_REFERENCIA` (padrão 2026-03-25), lida por `config.data_de_referencia()`. A `Sessao` a carrega no campo `hoje`, e o teste informa a data que precisa.
+  4. **Pergunta pendente.** O estado ganha `pergunta_pendente` (`canal_de_compra` ou `motivo`), preenchida pelo código quando o veredito traz algo em `faltando` e limpa quando há veredito. Ela entra no contexto dinâmico junto com o pedido em análise. Não há máquina de estados: é um único valor.
+  5. **Datas em formato brasileiro.** Datas apresentadas ao cliente, nos pedidos e nos vereditos, saem de `src/datas.py` como `dd/mm/aaaa` (ADR-012). A guarda compara datas pelo dia e continua aceitando o formato ISO.
+  6. **Tipos.** `Motivo`, `Canal` e `Resultado` são `StrEnum`: o Pydantic valida os argumentos do modelo e o JSON mantém o texto. Disponibilidade, status do pedido e preços seguem como texto, porque só circulam até o modelo. Um tipo `Dinheiro` não entrou, porque os novos cálculos são de datas e não há conta nova com valores.
+  7. **Migração.** `memory.criar_tabelas` confere as colunas de `conversation_state` e acrescenta `pergunta_pendente` com `ALTER TABLE` se faltar. Rodar `python -m src.load_data` em um banco existente preserva as conversas.
+- **Alternativas:** deixar o modelo comparar datas, que reabre o risco de prazos inventados; perguntar o canal sempre, o que incomoda quem só quer saber o prazo de um defeito.
+- **Consequências:** o veredito é testável sem o modelo. A escolha do motivo e a leitura de respostas curtas do cliente ("foi online") continuam com o modelo e dependem do prompt e da avaliação manual. O recebimento aproximado pode errar o prazo em alguns dias, e o aviso encaminha o cliente à equipe quando a data real for diferente.
 
 ### ADR-004: SQLite como armazenamento
 
@@ -210,6 +225,8 @@ Tabelas operacionais:
 │   ├── database.py         # Conexão com o banco
 │   ├── load_data.py        # Validação e carga dos dados
 │   ├── memory.py           # Histórico e estado da conversa por telefone
+│   ├── returns.py          # Veredito de prazos de troca e devolução
+│   ├── datas.py            # Formatação de datas para o cliente
 │   └── policies.py         # Leitura das políticas
 ├── scripts/
 │   └── simulate_restock.py # Simula uma reposição de estoque
