@@ -14,6 +14,7 @@ class Motivo(StrEnum):
 class Resultado(StrEnum):
     REGISTRADO = "registrado"
     RESUMO_INVALIDO = "resumo_invalido"
+    JA_REGISTRADO = "ja_registrado"
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
@@ -24,6 +25,12 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     resumo = resumo.strip()
     if not resumo:
         return Resultado.RESUMO_INVALIDO
+    repetido = conexao.execute(
+        "SELECT 1 FROM handoffs WHERE phone = ? AND reason = ? AND summary = ?",
+        (chave, motivo, resumo),
+    ).fetchone()
+    if repetido:
+        return Resultado.JA_REGISTRADO
     conexao.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
         (chave, motivo, resumo, agora()),

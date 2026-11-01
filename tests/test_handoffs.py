@@ -34,3 +34,21 @@ def test_telefone_invalido_nao_grava_encaminhamento(conexao, telefone):
 
     assert resultado == Resultado.TELEFONE_INVALIDO
     assert encaminhamentos(conexao) == []
+
+
+def test_repetir_o_mesmo_encaminhamento_nao_duplica(conexao):
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, RESUMO)
+
+    resultado = registrar(conexao, "67996547821", Motivo.RECLAMACAO, f"  {RESUMO} ")
+
+    assert resultado == Resultado.JA_REGISTRADO
+    assert len(encaminhamentos(conexao)) == 1
+
+
+def test_motivo_ou_resumo_diferente_gera_novo_encaminhamento(conexao):
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, RESUMO)
+
+    registrar(conexao, TELEFONE, Motivo.ATENDENTE_SOLICITADO, RESUMO)
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Outro assunto.")
+
+    assert len(encaminhamentos(conexao)) == 3
