@@ -416,9 +416,12 @@ def consultar_meus_pedidos(
     return pedidos
 
 
-PALAVRAS_DO_CANAL = {
-    returns.Canal.ONLINE: ("online", "site", "internet"),
-    returns.Canal.PRESENCIAL: ("presencial", "pessoalmente", "na loja", "balcao"),
+# Palavras inteiras e frases que dizem o canal da compra; "site" sozinho não diz, pode ser só consulta.
+PADRAO_DO_CANAL = {
+    returns.Canal.ONLINE: re.compile(r"\bonline\b|\bpel[oa] (?:site|internet|app|aplicativo)\b"),
+    returns.Canal.PRESENCIAL: re.compile(
+        r"\bpresencial(?:mente)?\b|\bpessoalmente\b|\bna loja\b|\bno balcao\b"
+    ),
 }
 
 
@@ -430,7 +433,7 @@ def canal_citado_pelo_cliente(mensagens: list, canal: returns.Canal) -> bool:
         for parte in mensagem.parts
         if isinstance(parte, UserPromptPart)
     )
-    return any(palavra in fala for fala in falas for palavra in PALAVRAS_DO_CANAL[canal])
+    return any(PADRAO_DO_CANAL[canal].search(fala) for fala in falas)
 
 
 @agente.tool

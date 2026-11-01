@@ -1068,3 +1068,32 @@ def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(conexao):
         resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
 
     assert resposta == honesta
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "mensagem",
+    [
+        "Vi o preço no site e quero devolver o pedido 7 por arrependimento",
+        "Os onlines de violão me deixaram em dúvida, quero devolver o pedido 7 por arrependimento",
+    ],
+)
+def test_palavra_parecida_com_o_canal_nao_conta_como_canal_citado(conexao, mensagem):
+    retorno = chamar_ferramenta_na_data(
+        conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
+        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        mensagem=mensagem,
+    )
+
+    assert retorno.content.resultado == "faltam_dados"
+
+
+@pytest.mark.parametrize("mensagem", ["Comprei pelo site, quero devolver o pedido 7", "Foi ONLINE mesmo"])
+def test_canal_dito_com_clareza_continua_valendo(conexao, mensagem):
+    retorno = chamar_ferramenta_na_data(
+        conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
+        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        mensagem=mensagem,
+    )
+
+    assert retorno.content.resultado == "dentro_do_prazo"
