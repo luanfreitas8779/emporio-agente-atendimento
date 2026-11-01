@@ -126,7 +126,8 @@ MENSAGENS_DE_ENCAMINHAMENTO = {
 
 RESPOSTA_SEGURA = (
     "Não consegui confirmar essa informação com segurança agora. "
-    "Pode reformular a pergunta ou falar com a nossa equipe?"
+    f"Registrei o seu caso para a nossa equipe. {PRAZO_DE_RETORNO} "
+    "Se preferir, pode reformular a pergunta."
 )
 
 
@@ -362,5 +363,11 @@ def responder(mensagem: str, sessao: Sessao) -> str:
                 ModelRequest(parts=[UserPromptPart(mensagem)]),
                 ModelResponse(parts=[TextPart(RESPOSTA_SEGURA)]),
             ],
+        )
+        handoffs.registrar(
+            sessao.conexao,
+            sessao.telefone or "",
+            handoffs.Motivo.SEM_RESPOSTA_SEGURA,
+            mensagem,
         )
         return RESPOSTA_SEGURA

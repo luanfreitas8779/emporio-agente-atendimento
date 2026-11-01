@@ -842,3 +842,17 @@ def test_motivo_desconhecido_e_recusado_pela_ferramenta(conexao):
 
     assert retorno.outcome == "retried"
     assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
+
+
+def modelo_que_sempre_inventa_um_preco(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
+
+
+def test_resposta_segura_registra_o_encaminhamento_e_informa_o_prazo(conexao):
+    with agente.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
+        resposta = responder("Preço do violão?", Sessao(conexao, telefone=ANA))
+
+    linhas = [tuple(l) for l in conexao.execute("SELECT phone, reason, summary FROM handoffs")]
+    assert linhas == [("67996547821", "sem_resposta_segura", "Preço do violão?")]
+    assert resposta == RESPOSTA_SEGURA
+    assert "24 horas úteis" in resposta
