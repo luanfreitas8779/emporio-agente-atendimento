@@ -158,10 +158,15 @@ def _filtrar(
     produtos = []
     for linha in linhas:
         nome = normalizar(linha["name"])
+        categoria_do_produto = singularizar(normalizar(linha["categoria"]))
         casa = _palavra_aproximada if aproximado else _contem
-        if not all(casa(palavra, nome) for palavra in palavras):
+        # "violão takamine": a palavra da categoria não está no nome do produto.
+        if not all(
+            casa(palavra, nome) or singularizar(palavra) in categoria_do_produto
+            for palavra in palavras
+        ):
             continue
-        if categoria_normalizada not in singularizar(normalizar(linha["categoria"])):
+        if categoria_normalizada not in categoria_do_produto:
             continue
         if preco_maximo is not None and calcular_preco_final(linha) > Decimal(str(preco_maximo)) * 100:
             continue

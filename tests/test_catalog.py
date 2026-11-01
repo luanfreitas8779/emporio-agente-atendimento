@@ -205,3 +205,18 @@ def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(con
 
     assert disponivel.atende_quantidade is True
     assert sem_estoque.atende_quantidade is False
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("consulta", "esperado"),
+    [
+        ("guitarra stratocaster fender", "Fender Stratocaster American Pro II"),
+        ("violao takamine", "Takamine GD20 Dreadnought Natural"),
+        ("ukulele kala", "Kala KA-C Concert Mogno"),
+    ],
+)
+def test_palavra_da_categoria_junto_do_nome_encontra_o_produto(conexao, consulta, esperado):
+    nomes = [p.nome for p in buscar_produtos(conexao, termo=consulta)]
+
+    assert esperado in nomes
