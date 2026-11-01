@@ -1,5 +1,6 @@
 import contextvars
 import sqlite3
+import time
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -7,7 +8,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
-from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.exceptions import ModelRateLimitError, UnexpectedModelBehavior
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -375,16 +376,31 @@ def encaminhar_para_atendente(
     return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
 
 
+ESPERAS_ENTRE_TENTATIVAS = (2, 5)
+_aguardar = time.sleep
+
+
+def _executar(mensagem: str, sessao: Sessao, historico: list):
+    """Roda o agente e repete quando o provedor recusa por limite de uso."""
+    for espera in (*ESPERAS_ENTRE_TENTATIVAS, None):
+        # O contexto copiado preserva o modelo simulado dos testes na outra thread.
+        contexto = contextvars.copy_context()
+        execucao = _executor.submit(
+            contexto.run, agente.run_sync, mensagem, deps=sessao, message_history=historico
+        )
+        try:
+            return execucao.result()
+        except ModelRateLimitError:
+            if espera is None:
+                raise
+            _aguardar(espera)
+
+
 def responder(mensagem: str, sessao: Sessao) -> str:
-    # O contexto copiado preserva o modelo simulado dos testes na outra thread.
-    contexto = contextvars.copy_context()
     historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
     sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
-    execucao = _executor.submit(
-        contexto.run, agente.run_sync, mensagem, deps=sessao, message_history=historico
-    )
     try:
-        resultado = execucao.result()
+        resultado = _executar(mensagem, sessao, historico)
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
