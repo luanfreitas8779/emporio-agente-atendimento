@@ -650,3 +650,20 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
     # A pergunta do Tom fica só no histórico; o estado guarda apenas o pedido em análise.
     assert "Pergunta pendente" not in instrucoes
     assert "Pedido em análise: 7" in instrucoes
+
+
+@pytest.mark.parametrize("argumentos", [
+    {"numero_pedido": 7, "motivo": "arrependimento"},
+    {"numero_pedido": 7, "motivo": "arrependimento", "canal": "presencial"},
+    {"numero_pedido": 999, "motivo": "arrependimento"},
+])
+def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(conexao, argumentos):
+    # O pedido 7 é da cliente 14; a sessão é da cliente 2 (Ana). O 999 não existe.
+    sessao = Sessao(conexao, telefone=ANA)
+    modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos)
+
+    with agente.override(model=FunctionModel(modelo)):
+        responder("Quero devolver", sessao)
+        instrucoes = responder("Mostra o contexto", sessao)
+
+    assert "Pedido em análise" not in instrucoes
