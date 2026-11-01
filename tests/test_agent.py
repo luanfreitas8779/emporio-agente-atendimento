@@ -1123,12 +1123,12 @@ def test_resposta_pode_citar_a_data_de_hoje_da_sessao(conexao):
 
 def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(conexao):
     def modelo(mensagens, info):
-        return ModelResponse(parts=[TextPart("O pedido chega em 26/03/2026.")])
+        return ModelResponse(parts=[TextPart("O pedido chega em 30/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
         resposta = responder("Quando chega?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
 
-    assert resposta != "O pedido chega em 26/03/2026."
+    assert resposta == RESPOSTA_SEGURA
 
 
 @pytest.mark.regressao
@@ -1177,3 +1177,14 @@ def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(con
 
     # Cada turno simples tem 2 mensagens: 15 turnos cabem em 30, e o P1 não.
     assert resposta == " | ".join(f"P{numero}" for numero in range(2, 18))
+
+
+@pytest.mark.regressao
+def test_resposta_pode_citar_a_data_de_amanha_da_sessao(conexao):
+    def modelo(mensagens, info):
+        return ModelResponse(parts=[TextPart("Amanhã é quinta-feira, 26/03/2026, e abrimos às 9h.")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Vocês abrem amanhã?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
+
+    assert resposta == "Amanhã é quinta-feira, 26/03/2026, e abrimos às 9h."

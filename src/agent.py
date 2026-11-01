@@ -3,7 +3,7 @@ import logging
 import re
 import sqlite3
 import time
-from datetime import date
+from datetime import date, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from typing import Annotated, Literal
@@ -323,8 +323,9 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
             "A resposta promete avisar o cliente, mas o sistema não envia avisos. "
             "Diga que o interesse foi anotado e que isso não reserva o produto nem garante aviso."
         )
-    # A data de hoje vem do contexto da sessão, não de uma ferramenta.
-    fontes = [*fontes_do_turno(ctx.messages), formatar_data(ctx.deps.hoje)]
+    # As datas de hoje e de amanhã vêm do contexto da sessão, não de uma ferramenta.
+    hoje = ctx.deps.hoje
+    fontes = [*fontes_do_turno(ctx.messages), formatar_data(hoje), formatar_data(hoje + timedelta(days=1))]
     inventados = guardrail.valores_nao_confirmados(resposta, fontes)
     if inventados:
         raise ModelRetry(
@@ -344,8 +345,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
         texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
     hoje = ctx.deps.hoje
-    texto += f"\nHoje: {formatar_data(hoje)}, {dia_da_semana(hoje)}. "
-    texto += "O sistema não informa a hora atual."
+    texto += f"\nHoje: {formatar_data(hoje)}, {dia_da_semana(hoje)}. O sistema não informa a hora atual."
     pedido = ctx.deps.estado.pedido_em_analise
     if pedido is not None:
         texto += f"\nPedido em análise: {pedido}."
