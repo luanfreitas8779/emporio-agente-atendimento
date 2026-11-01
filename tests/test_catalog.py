@@ -253,3 +253,13 @@ def test_codigo_sem_hifen_continua_sem_confundir_modelos_vizinhos(conexao):
     nomes = [p.nome for p in buscar_produtos(conexao, termo="D28E")]
 
     assert nomes == ["Martin D-28E Elétrico Aço Natural"]
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("pedaco", ["tar", "iolao", "vio", "ita"])
+def test_pedaco_de_palavra_da_categoria_nao_encontra_produtos(conexao, pedaco):
+    assert buscar_produtos(conexao, termo=pedaco) == []
+
+
+def test_categoria_no_plural_continua_encontrando_pela_palavra_inteira(conexao):
+    assert len(buscar_produtos(conexao, termo="guitarras")) == 5

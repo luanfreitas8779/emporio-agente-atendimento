@@ -13,7 +13,9 @@ PERCENTUAL_PIX = 5
 CAMPOS_DIVERGENTES = {137: {"strings"}}
 TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
 # Palavras de ligação que o cliente escreve e que não fazem parte de nenhum nome.
-PALAVRAS_DE_LIGACAO = {"a", "as", "o", "os", "um", "uma", "da", "das", "de", "do", "dos", "com", "para", "pra", "no", "na", "em"}
+PALAVRAS_DE_LIGACAO = frozenset(
+    "a as o os um uma e ou da das de do dos com para pra no na em".split()
+)
 
 
 @dataclass(frozen=True)
@@ -165,6 +167,7 @@ def _filtrar(
     for linha in linhas:
         nome = normalizar(linha["name"])
         categoria_do_produto = singularizar(normalizar(linha["categoria"]))
+        palavras_da_categoria = set(categoria_do_produto.split())
         casa = _palavra_aproximada if aproximado else _contem
         # "violão takamine": a palavra da categoria não está no nome do produto.
         # "GF3D" e "GF-3D" são o mesmo modelo: o hífen não conta na comparação exata.
@@ -172,7 +175,7 @@ def _filtrar(
         if not all(
             casa(palavra, nome)
             or _contem(palavra.replace("-", ""), nome_sem_hifen)
-            or singularizar(palavra) in categoria_do_produto
+            or singularizar(palavra) in palavras_da_categoria
             for palavra in palavras
         ):
             continue
