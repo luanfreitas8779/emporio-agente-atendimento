@@ -20,11 +20,12 @@ def tela(conexao, tmp_path, monkeypatch):
 
 
 def test_pergunta_fica_pendente_enquanto_o_tom_responde(tela, monkeypatch):
-    # Enquanto a resposta não chega, a tela mantém a pergunta pendente e o campo bloqueado.
+    # O campo só fica desabilitado enquanto há pergunta pendente (ADR-020). O AppTest não
+    # observa o `disabled` durante a execução; isso é conferido no navegador (docs/05, seção 8).
     durante: list = []
 
     def responder_observando(mensagem, sessao):
-        durante.append(st.session_state.get("pendente"))
+        durante.append(st.session_state.get("pendente")["pergunta"])
         return "Olá!"
 
     monkeypatch.setattr("src.agent.responder", responder_observando)
@@ -42,3 +43,19 @@ def test_depois_da_resposta_o_campo_libera_e_a_conversa_tem_uma_resposta(tela):
     assert tela.session_state["mensagens"][1]["texto"] == "Olá!"
     assert tela.session_state["pendente"] is None
     assert not tela.chat_input[0].disabled
+
+
+def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, monkeypatch):
+    # Trocar o telefone durante a resposta não pode passar a pergunta para outro cliente (ADR-009).
+    telefones: list = []
+
+    def responder_observando(mensagem, sessao):
+        telefones.append(sessao.telefone)
+        return "Olá!"
+
+    monkeypatch.setattr("src.agent.responder", responder_observando)
+
+    tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": "(67) 99654-7821"}
+    tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
+
+    assert telefones == ["(67) 99654-7821"]

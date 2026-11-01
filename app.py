@@ -51,18 +51,20 @@ for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))
 
 # Uma nova mensagem durante a resposta interrompe a execução e deixa a anterior sem resposta.
-# Por isso o campo fica bloqueado enquanto há uma pergunta pendente (ADR-020).
+# Por isso o campo fica bloqueado enquanto há uma pergunta pendente (ADR-020). A pergunta
+# guarda o telefone de quem a enviou, que não muda se o campo da barra lateral for alterado.
 pendente = st.session_state.get("pendente")
 if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
     st.session_state.mensagens.append({"papel": "user", "texto": pergunta})
-    st.session_state.pendente = pergunta
+    st.session_state.pendente = {"pergunta": pergunta, "telefone": st.session_state.telefone}
     st.rerun()
 
 if pendente is not None:
-    sessao = Sessao(conectar(CAMINHO_BANCO), st.session_state.telefone)
+    sessao = None
     try:
+        sessao = Sessao(conectar(CAMINHO_BANCO), pendente["telefone"])
         with st.spinner("O Tom está digitando..."):
-            resposta = responder(pendente, sessao)
+            resposta = responder(pendente["pergunta"], sessao)
         st.session_state.mensagens.append(
             {
                 "papel": "assistant",
@@ -74,6 +76,7 @@ if pendente is not None:
             }
         )
     finally:
-        sessao.conexao.close()
+        if sessao is not None:
+            sessao.conexao.close()
         st.session_state.pendente = None
     st.rerun()
