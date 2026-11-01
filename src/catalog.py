@@ -8,6 +8,7 @@ INDISPONIVEL = "indisponivel"
 FORA_DE_CATALOGO = "fora_de_catalogo"
 LANCAMENTO = "lancamento"
 PERCENTUAL_PIX = 5
+TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
 
 
 @dataclass(frozen=True)
@@ -45,7 +46,7 @@ def singularizar(texto: str) -> str:
     return " ".join(palavras)
 
 
-def _distancia_ate_um(a: str, b: str) -> bool:
+def _difere_em_ate_um_caractere(a: str, b: str) -> bool:
     """Diz se duas palavras diferem em no máximo uma inserção, remoção ou troca."""
     if abs(len(a) - len(b)) > 1:
         return False
@@ -55,12 +56,17 @@ def _distancia_ate_um(a: str, b: str) -> bool:
     return any(longa[:i] + longa[i + 1 :] == curta for i in range(len(longa)))
 
 
+def _contem(palavra: str, nome: str) -> bool:
+    return palavra in nome
+
+
 def _palavra_aproximada(palavra: str, nome: str) -> bool:
-    """Aceita um erro de digitação só em palavras longas, para não confundir modelos."""
+    """Aceita um erro de digitação só em nomes longos; códigos de modelo ficam exatos."""
     if palavra in nome:
         return True
-    return len(palavra) >= 5 and any(
-        _distancia_ate_um(palavra, parte) for parte in nome.split()
+    comprida = len(palavra) >= TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO
+    return palavra.isalpha() and comprida and any(
+        _difere_em_ate_um_caractere(palavra, parte) for parte in nome.split()
     )
 
 
@@ -131,7 +137,7 @@ def _filtrar(linhas, palavras, categoria_normalizada, preco_maximo, somente_disp
     produtos = []
     for linha in linhas:
         nome = normalizar(linha["name"])
-        casa = _palavra_aproximada if aproximado else lambda palavra, nome: palavra in nome
+        casa = _palavra_aproximada if aproximado else _contem
         if not all(casa(palavra, nome) for palavra in palavras):
             continue
         if categoria_normalizada not in singularizar(normalizar(linha["categoria"])):
