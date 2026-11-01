@@ -8,7 +8,12 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
-from pydantic_ai.exceptions import ModelRateLimitError, UnexpectedModelBehavior
+from pydantic_ai.exceptions import (
+    ModelRateLimitError,
+    ModelRequestTimeout,
+    ModelTimeoutError,
+    UnexpectedModelBehavior,
+)
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -160,6 +165,8 @@ MENSAGEM_DE_LIMITE = (
     "O serviço de IA atingiu o limite de uso agora. Tente novamente em alguns minutos."
 )
 
+MENSAGEM_DE_TIMEOUT = "O serviço demorou para responder. Tente novamente."
+
 RESPOSTA_SEGURA_SEM_REGISTRO = (
     "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
 )
@@ -192,6 +199,8 @@ agente = Agent(
     f"google:{MODELO_GEMINI}",
     deps_type=Sessao,
     instructions=INSTRUCOES,
+    # Uma chamada sem resposta não pode travar o chat: tempo por tentativa e por requisição.
+    model_settings={"timeout": 20, "request_timeout": 40},
     defer_model_check=True,
 )
 
@@ -425,6 +434,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         return resultado.output
     except ModelRateLimitError:
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
+    except (ModelTimeoutError, ModelRequestTimeout):
+        return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_TIMEOUT)
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.

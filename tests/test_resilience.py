@@ -1,9 +1,9 @@
 import pytest
 from pydantic_ai import ModelResponse, TextPart
-from pydantic_ai.exceptions import ModelRateLimitError
+from pydantic_ai.exceptions import ModelRateLimitError, ModelRequestTimeout, ModelTimeoutError
 from pydantic_ai.models.function import FunctionModel
 
-from src.agent import MENSAGEM_DE_LIMITE, Sessao, agente, responder
+from src.agent import MENSAGEM_DE_LIMITE, MENSAGEM_DE_TIMEOUT, Sessao, agente, responder
 from src.memory import exibir_conversa
 
 ANA = "(67) 99654-7821"
@@ -80,3 +80,21 @@ def test_a_conversa_nao_se_perde_quando_o_limite_persiste(conexao, esperas):
         ("user", "Quanto custa o Takamine GD20?"),
         ("assistant", MENSAGEM_DE_LIMITE),
     ]
+
+
+@pytest.mark.parametrize(
+    "erro",
+    [ModelTimeoutError("modelo", "sem resposta"), ModelRequestTimeout("modelo", 40)],
+)
+def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa(
+    conexao, esperas, erro
+):
+    tentativas: list[int] = []
+    modelo = modelo_que_falha_antes_de_responder([erro], tentativas)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_TIMEOUT
+    assert len(tentativas) == 1
+    assert exibir_conversa(conexao, ANA) == [("user", "Oi"), ("assistant", MENSAGEM_DE_TIMEOUT)]
