@@ -866,3 +866,11 @@ def test_resposta_segura_sem_telefone_valido_explica_que_nao_foi_possivel_encami
     assert "não consegui identificar o seu telefone" in resposta.lower()
     assert "Registrei" not in resposta
     assert "24 horas" not in resposta
+
+
+def test_resposta_segura_nao_diz_que_registrou_quando_a_mensagem_e_vazia(conexao):
+    with agente.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
+        resposta = responder("   ", Sessao(conexao, telefone=ANA))
+
+    assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
+    assert "Registrei" not in resposta

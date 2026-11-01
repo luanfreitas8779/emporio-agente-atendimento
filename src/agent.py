@@ -155,6 +155,10 @@ RESPOSTA_SEGURA_SEM_TELEFONE = (
     "Pode reformular a pergunta ou falar com a loja pelos contatos de atendimento."
 )
 
+RESPOSTA_SEGURA_SEM_REGISTRO = (
+    "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
+)
+
 RESPOSTA_SEGURA = (
     "Não consegui confirmar essa informação com segurança agora. "
     f"Registrei o seu caso para a nossa equipe. {PRAZO_DE_RETORNO} "
@@ -387,20 +391,25 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
-        memory.salvar_mensagens(
-            sessao.conexao,
-            sessao.telefone,
-            [
-                ModelRequest(parts=[UserPromptPart(mensagem)]),
-                ModelResponse(parts=[TextPart(RESPOSTA_SEGURA)]),
-            ],
-        )
         resultado = handoffs.registrar(
             sessao.conexao,
             sessao.telefone or "",
             handoffs.Motivo.SEM_RESPOSTA_SEGURA,
             mensagem,
         )
-        if resultado == handoffs.Resultado.TELEFONE_INVALIDO:
-            return RESPOSTA_SEGURA_SEM_TELEFONE
-        return RESPOSTA_SEGURA
+        # O texto só afirma o registro quando ele existe.
+        resposta = {
+            handoffs.Resultado.REGISTRADO: RESPOSTA_SEGURA,
+            handoffs.Resultado.JA_REGISTRADO: RESPOSTA_SEGURA,
+            handoffs.Resultado.TELEFONE_INVALIDO: RESPOSTA_SEGURA_SEM_TELEFONE,
+            handoffs.Resultado.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
+        }[resultado]
+        memory.salvar_mensagens(
+            sessao.conexao,
+            sessao.telefone,
+            [
+                ModelRequest(parts=[UserPromptPart(mensagem)]),
+                ModelResponse(parts=[TextPart(resposta)]),
+            ],
+        )
+        return resposta
