@@ -175,9 +175,9 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         if nome:
             texto += f"\nProduto em foco: {nome}."
     interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.telefone or "")
-    if interesses:
-        # Só os nomes: o estoque atual vem sempre de buscar_produtos.
-        texto += "\nInteresses pendentes: " + "; ".join(interesses[:MAX_INTERESSES_NO_CONTEXTO]) + "."
+    # Só os nomes: o estoque atual vem sempre de buscar_produtos.
+    nomes = "; ".join(interesses[:MAX_INTERESSES_NO_CONTEXTO]) or "nenhum"
+    texto += f"\nInteresses pendentes: {nomes}."
     return texto
 
 

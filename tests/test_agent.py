@@ -735,3 +735,13 @@ def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(conexao):
         resposta = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
 
     assert resposta == "Giannini GF-3D Dreadnought Sunburst: disponivel"
+
+
+def test_sem_interesse_salvo_o_contexto_diz_que_nao_ha_nenhum(conexao):
+    registrar(conexao, "(67) 91111-2222", 96)
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        instrucoes = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
+
+    assert "Interesses pendentes: nenhum" in instrucoes
+    assert "Giannini" not in instrucoes
