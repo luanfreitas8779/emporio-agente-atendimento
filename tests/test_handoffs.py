@@ -52,3 +52,10 @@ def test_motivo_ou_resumo_diferente_gera_novo_encaminhamento(conexao):
     registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Outro assunto.")
 
     assert len(encaminhamentos(conexao)) == 3
+
+
+def test_resumo_acima_de_500_caracteres_e_cortado(conexao):
+    resultado = registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "a" * 600)
+
+    assert resultado == Resultado.REGISTRADO
+    assert encaminhamentos(conexao)[0][2] == "a" * 500

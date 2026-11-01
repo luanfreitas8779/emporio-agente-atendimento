@@ -5,6 +5,9 @@ from src.memory import agora
 from src.phone import normalizar_telefone
 
 
+MAX_RESUMO = 500
+
+
 class Motivo(StrEnum):
     RECLAMACAO = "reclamacao"
     SEM_RESPOSTA_SEGURA = "sem_resposta_segura"
@@ -22,7 +25,7 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     chave = normalizar_telefone(telefone)
     if chave is None:
         return Resultado.TELEFONE_INVALIDO
-    resumo = resumo.strip()
+    resumo = resumo.strip()[:MAX_RESUMO].strip()
     if not resumo:
         return Resultado.RESUMO_INVALIDO
     repetido = conexao.execute(
