@@ -150,3 +150,8 @@ def test_busca_tolera_letra_a_menos_no_nome(conexao):
     (produto,) = buscar_produtos(conexao, termo="gianini gf 3d")
 
     assert produto.nome == "Giannini GF-3D Dreadnought Sunburst"
+
+
+@pytest.mark.parametrize("termo", ["Yamaha F320", "Giannini GF-9X", "Takamine GD21"])
+def test_busca_nao_confunde_modelos_distintos_com_codigo_parecido(conexao, termo):
+    assert buscar_produtos(conexao, termo=termo) == []
