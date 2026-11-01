@@ -1,5 +1,8 @@
 import pytest
 
+from src.load_data import carregar_dados
+from tests.conftest import PASTA_DADOS
+
 from src.interests import Resultado, listar_pendentes, registrar
 
 TELEFONE = "(67) 99654-7821"
@@ -36,4 +39,12 @@ def test_repetir_o_pedido_nao_duplica_o_interesse(conexao):
     resultado = registrar(conexao, "67996547821", GIANNINI_GF_3D)
 
     assert resultado == Resultado.JA_REGISTRADO
+    assert listar_pendentes(conexao, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
+
+
+def test_nova_carga_dos_dados_preserva_os_interesses(conexao):
+    registrar(conexao, TELEFONE, GIANNINI_GF_3D)
+
+    carregar_dados(conexao, PASTA_DADOS)
+
     assert listar_pendentes(conexao, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
