@@ -932,3 +932,26 @@ def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(conexao):
         resposta = responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert resposta == "Olá, Ana!"
+
+
+def modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta: str, argumentos: dict, retornos: list):
+    def modelo(mensagens, info):
+        if len(mensagens) == 1:
+            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+        retornos.append(mensagens[-1].parts[0])
+        return ModelResponse(parts=[TextPart("Não consegui calcular esse valor.")])
+
+    return FunctionModel(modelo)
+
+
+def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(conexao):
+    retornos: list = []
+    modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
+        "consultar_politicas", {"secao": "pagamentos", "valor": 1e33, "parcelas": 3}, retornos
+    )
+
+    with agente.override(model=modelo):
+        resposta = responder("Em quantas vezes posso pagar R$ 999999999999999999999999999999999?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Não consegui calcular esse valor."
+    assert retornos[0].outcome == "retried"

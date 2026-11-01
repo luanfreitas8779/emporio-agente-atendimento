@@ -214,6 +214,9 @@ class Sessao:
 _executor = ThreadPoolExecutor(max_workers=1)
 
 
+# Valores em reais acima disto não são de compras reais e estouram os cálculos.
+VALOR_MAXIMO = 1_000_000
+
 agente = Agent(
     f"google:{MODELO_GEMINI}",
     deps_type=Sessao,
@@ -338,7 +341,7 @@ def buscar_produtos(
 def consultar_politicas(
     ctx: RunContext[Sessao],
     secao: Literal[*policies.SECOES],
-    valor: Annotated[float | None, Field(gt=0)] = None,
+    valor: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
     parcelas: Annotated[int | None, Field(ge=1)] = None,
 ) -> str:
     """Consulta uma seção das políticas da loja.
