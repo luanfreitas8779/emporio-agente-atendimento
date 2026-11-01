@@ -291,8 +291,8 @@ Cada bug corrigido deve deixar um teste que o reproduz. Os automáticos levam o 
 | O Tom informava especificação de memória, como o fundo do Takamine GD20 em mogno | `test_expoe_as_especificacoes_cadastradas_do_produto` |
 | O campo de cordas do Bass 3X, que o cadastro contradiz, chegava ao modelo | `test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge` |
 | O Tom inventava o estoque ao receber um pedido de quantidade | `test_informa_se_o_estoque_atende_a_quantidade_sem_revelar_o_numero`, `test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida` |
-| O canal de compra era suposto pelo modelo | `test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal`, `test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado` |
-| O Tom prometia avisar o cliente quando o produto voltasse | `test_promessa_de_aviso_pede_nova_resposta_ao_modelo`, `test_recusa_explicita_de_avisar_passa_sem_nova_tentativa` |
+| O canal de compra era suposto pelo modelo | `test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal`, `test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado`, `test_palavra_parecida_com_o_canal_nao_conta_como_canal_citado` |
+| O Tom prometia avisar o cliente quando o produto voltasse | `test_promessa_de_aviso_pede_nova_resposta_ao_modelo`, `test_recusa_explicita_de_avisar_passa_sem_nova_tentativa`, `test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativa` |
 | Banco carregado antes das especificações quebrava a busca | `test_banco_carregado_antes_das_especificacoes_pede_nova_carga` |
 | Erro 5xx do servidor não recebia nova tentativa | `test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa`, `test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite` |
 
