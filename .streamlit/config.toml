@@ -1,0 +1,3 @@
+[client]
+# Erros inesperados não mostram traceback nem caminhos locais ao cliente.
+showErrorDetails = "none"
