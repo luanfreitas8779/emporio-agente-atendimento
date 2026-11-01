@@ -1,4 +1,5 @@
 import contextvars
+import logging
 import sqlite3
 import time
 from datetime import date
@@ -9,6 +10,7 @@ from typing import Annotated, Literal
 from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import (
+    ModelAPIError,
     ModelRateLimitError,
     ModelRequestTimeout,
     ModelTimeoutError,
@@ -166,6 +168,10 @@ MENSAGEM_DE_LIMITE = (
 )
 
 MENSAGEM_DE_TIMEOUT = "O serviço demorou para responder. Tente novamente."
+
+MENSAGEM_DE_ERRO_TECNICO = "Tive um problema técnico para atender agora. Tente novamente em instantes."
+
+registro = logging.getLogger(__name__)
 
 RESPOSTA_SEGURA_SEM_REGISTRO = (
     "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
@@ -436,6 +442,10 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
     except (ModelTimeoutError, ModelRequestTimeout):
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_TIMEOUT)
+    except (ModelAPIError, sqlite3.Error):
+        # Rede, chave, erro do provedor ou do banco: o detalhe vai para o log, não para o cliente.
+        registro.exception("Falha técnica ao responder")
+        return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_ERRO_TECNICO)
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.

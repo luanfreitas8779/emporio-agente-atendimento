@@ -1,9 +1,25 @@
+import sqlite3
+
 import pytest
 from pydantic_ai import ModelResponse, TextPart
-from pydantic_ai.exceptions import ModelRateLimitError, ModelRequestTimeout, ModelTimeoutError
+from pydantic_ai.exceptions import (
+    ModelAPIError,
+    ModelAuthenticationError,
+    ModelConnectionError,
+    ModelRateLimitError,
+    ModelRequestTimeout,
+    ModelTimeoutError,
+)
 from pydantic_ai.models.function import FunctionModel
 
-from src.agent import MENSAGEM_DE_LIMITE, MENSAGEM_DE_TIMEOUT, Sessao, agente, responder
+from src.agent import (
+    MENSAGEM_DE_ERRO_TECNICO,
+    MENSAGEM_DE_LIMITE,
+    MENSAGEM_DE_TIMEOUT,
+    Sessao,
+    agente,
+    responder,
+)
 from src.memory import exibir_conversa
 
 ANA = "(67) 99654-7821"
@@ -98,3 +114,24 @@ def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa
     assert resposta == MENSAGEM_DE_TIMEOUT
     assert len(tentativas) == 1
     assert exibir_conversa(conexao, ANA) == [("user", "Oi"), ("assistant", MENSAGEM_DE_TIMEOUT)]
+
+
+@pytest.mark.parametrize(
+    "erro",
+    [
+        ModelConnectionError("modelo", "sem rede"),
+        ModelAuthenticationError("modelo", "chave inválida"),
+        ModelAPIError("modelo", "erro qualquer"),
+        sqlite3.OperationalError("no such table: products"),
+    ],
+)
+def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(conexao, esperas, erro):
+    modelo = modelo_que_falha_antes_de_responder([erro], [])
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    for detalhe in ("sem rede", "chave inválida", "erro qualquer", "products"):
+        assert detalhe not in resposta
+    assert exibir_conversa(conexao, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
