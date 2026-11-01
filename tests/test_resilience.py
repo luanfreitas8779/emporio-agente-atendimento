@@ -1,3 +1,4 @@
+import decimal
 import json
 import sqlite3
 
@@ -245,3 +246,14 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(conexao, espe
         responder("Quanto custa o Takamine GD20?", Sessao(conexao, telefone=ANA))
 
     assert carregar_estado(conexao, ANA).produto_em_foco is None
+
+
+@pytest.mark.parametrize("erro", [ValueError("data inválida"), decimal.InvalidOperation(), OverflowError("grande")])
+def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(conexao, esperas, erro):
+    modelo = modelo_que_falha_antes_de_responder([erro], [])
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    assert exibir_conversa(conexao, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)

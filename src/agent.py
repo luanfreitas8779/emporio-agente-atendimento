@@ -11,7 +11,6 @@ from typing import Annotated, Literal
 from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import (
-    ModelAPIError,
     ModelOverloadedError,
     ModelQuotaExceededError,
     ModelRateLimitError,
@@ -503,10 +502,6 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
     except (ModelTimeoutError, ModelRequestTimeout):
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_TIMEOUT)
-    except (ModelAPIError, sqlite3.Error):
-        # Rede, chave, erro do provedor ou do banco: o detalhe vai para o log, não para o cliente.
-        registro.exception("Falha técnica ao responder")
-        return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_ERRO_TECNICO)
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
@@ -529,3 +524,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
             None: RESPOSTA_SEGURA_SEM_REGISTRO,
         }[resultado]
         return _responder_sem_modelo(mensagem, sessao, resposta)
+    except Exception:
+        # Rede, chave, provedor, banco ou erro inesperado: o detalhe vai para o log,
+        # e o cliente recebe a mensagem técnica para o campo de mensagem ser liberado.
+        registro.exception("Falha técnica ao responder")
+        return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_ERRO_TECNICO)
