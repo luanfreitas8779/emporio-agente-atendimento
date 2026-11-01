@@ -95,6 +95,12 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-409 | Conversa com mais de 7 mensagens, com e sem ferramenta | O modelo recebe só turnos inteiros, sem separar chamada e retorno | RF-08 |
 | TC-410 | Valor citado só em turno anterior | A guarda não o aceita | RNF-01 |
 | TC-411 | Linha do histórico ilegível | O atendimento continua sem o histórico anterior | RNF-01 |
+| TC-412 | Interesse em produto inexistente ou com telefone inválido | Não grava nada | RF-09 |
+| TC-413 | Modelo envia `phone` em `registrar_interesse` | Argumento recusado; nada é gravado | CA-05 |
+| TC-414 | Nova carga dos dados (`python -m src.load_data`) | Os interesses são preservados | RNF-01 |
+| TC-415 | Comando de reposição: produto inexistente, inativo, quantidade inválida ou banco ausente | Recusa com motivo, sem traceback e sem criar o banco | RF-09 |
+| TC-416 | Busca com vários resultados ou nenhum | O produto em foco é limpo | RF-08 |
+| TC-417 | Reposição simulada seguida de `python -m src.load_data` | A carga devolve o estoque original | RF-09 |
 
 ### 3.6 Escopo e segurança
 

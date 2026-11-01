@@ -150,6 +150,7 @@ O último dia da contagem ainda está dentro do prazo. Pedidos `pending`, `confi
 - Os dados versionados são fictícios. Telefones podem coincidir com números reais, então não devem ser usados para contato.
 - O histórico (`messages`) guarda o que o cliente digitou e o que o agente respondeu, incluindo os retornos das ferramentas do turno, como itens e totais de pedidos. Ele pode conter dados pessoais, como nomes, endereços ou números de pedido informados livremente, e é tratado como dado pessoal: fica no banco local, fora do Git, e é associado só ao telefone da conversa.
 - O estado da conversa guarda apenas ids (de pedido e de produto) por telefone.
+- Os interesses guardam o telefone e o id do produto. Ao modelo chegam só os nomes dos produtos do telefone da sessão.
 - Dados reais só podem ser usados após a revisão dos termos do provedor e a adequação à LGPD.
 
 ## 8. Validação de entrada
@@ -180,15 +181,18 @@ As tabelas de conversa não vêm de arquivos, mas seguem o mesmo rigor na grava�
 | `conversations` | Telefone normalizado com 10 ou 11 dígitos, único; telefone inválido não grava nada |
 | `messages` | Conversa existente; conteúdo é uma mensagem do Pydantic AI serializada pelo próprio adaptador. Na leitura, uma linha que não valida é descartada com tudo o que veio antes dela |
 | `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`) |
+| `product_interests` | Telefone normalizado com 10 ou 11 dígitos; produto existente, validado pelo código que grava, e id maior que zero (`CHECK`); `status` restrito a `pending` (`CHECK`); sem duplicidade por telefone e produto (`UNIQUE`). Telefone inválido ou produto inexistente não gravam nada |
 
-**Evolução do esquema.** `CREATE TABLE IF NOT EXISTS` não altera tabelas existentes. Se uma tabela operacional ganhar uma coluna que o código lê, a evolução precisa de um `ALTER TABLE` idempotente em `criar_tabelas`. A issue #6 não mudou o esquema, então não há migração pendente.
+**Evolução do esquema.** `CREATE TABLE IF NOT EXISTS` não altera tabelas existentes. Se uma tabela operacional ganhar uma coluna que o código lê, a evolução precisa de um `ALTER TABLE` idempotente em `criar_tabelas`. As issues #6 e #8 não alteraram tabelas existentes: `product_interests` é nova e é criada por `criar_tabelas`, então não há migração pendente. Ampliar os valores de `status` exigirá recriar a tabela, porque o SQLite não altera um `CHECK`.
+
+Reposição simulada: `scripts/simulate_restock.py` altera só `products.stock_quantity` no banco local, e `python -m src.load_data` o restaura a partir dos CSVs. As tabelas operacionais, como os interesses, sobrevivem à carga.
 
 ### 8.2 Argumentos das ferramentas
 
 O modelo é uma fonte de entrada não confiável. Os argumentos são validados pelo Pydantic AI, e um valor inválido volta ao modelo como pedido de correção:
 
 - `preco_maximo`, `valor`: maiores que zero.
-- `parcelas`, `numero_pedido`: inteiros a partir de 1.
+- `parcelas`, `numero_pedido`, `product_id`: inteiros a partir de 1.
 - `motivo` (arrependimento, defeito ou preferencia) e `canal` (online ou presencial) da devolução: enumerações validadas pelo Pydantic.
 - `secao`: uma das seções de `policies.SECOES`.
 - Parcelas acima de 12 não são recusadas: a resposta informa o limite de 12x.

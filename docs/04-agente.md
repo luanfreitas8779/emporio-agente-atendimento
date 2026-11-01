@@ -76,8 +76,8 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 | Item | Definição |
 |---|---|
 | Entrada | `product_id`; o telefone vem da sessão |
-| Saída | Confirmação do registro |
-| Regras | Evita duplicidade e não reserva produto nem promete aviso |
+| Saída | Texto fixo, montado em código: interesse registrado, já registrado, produto não encontrado ou telefone inválido. Os dois primeiros avisam que o registro não reserva o produto nem garante aviso ou data |
+| Regras | Evita duplicidade por telefone e produto (TC-402); valida o produto e o telefone em código; qualquer telefone válido pode registrar, com ou sem cadastro; o modelo não escolhe o telefone (argumentos como `phone` são recusados); define o produto em foco (ADR-016) |
 
 ### 4.5 `encaminhar_para_atendente`
 
@@ -142,8 +142,8 @@ O sistema fornece ao agente:
 
 - Data de referência.
 - Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
-- Interesses pendentes.
-- Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014).
+- Interesses pendentes do telefone da sessão: só os nomes dos produtos, no máximo 5, ou `nenhum` (ADR-016). A disponibilidade atual vem sempre de `buscar_produtos`.
+- Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014). Uma busca com vários resultados ou nenhum limpa o foco.
 - Histórico recente, limitado a 7 mensagens e cortado em turnos inteiros, para economizar cota.
 
 ## 10. Exemplos de resposta

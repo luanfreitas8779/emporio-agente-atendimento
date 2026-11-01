@@ -1,9 +1,8 @@
 import pytest
 
+from src.interests import Resultado, listar_pendentes, registrar
 from src.load_data import carregar_dados
 from tests.conftest import PASTA_DADOS
-
-from src.interests import Resultado, listar_pendentes, registrar
 
 TELEFONE = "(67) 99654-7821"
 GIANNINI_GF_3D = 96
