@@ -1,6 +1,6 @@
 # Parcelamento calculado em código
 
-**Cliente:** Ana (cadastrada) · **Casos relacionados:** TC-204, TC-205 · **Modelo:** `gemini-3.5-flash-lite`
+**Cliente:** Ana (cadastrada) · **Casos relacionados:** TC-204 e TC-205, que cobrem a parcela mínima; esta conversa usa o limite de 12 parcelas · **Modelo:** `gemini-3.5-flash-lite`
 
 > **Cliente:** Dá pra parcelar o Takamine GD20 em 12x?
 >

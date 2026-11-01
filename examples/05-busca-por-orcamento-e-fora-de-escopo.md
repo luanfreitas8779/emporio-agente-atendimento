@@ -18,7 +18,7 @@ Cada trecho é uma conversa curta e independente.
 >
 > Tem preferência por cordas de nylon ou de aço? 🎸
 
-Ferramenta usada: `buscar_produtos(categoria="Violões", preco_maximo=1000, somente_disponiveis=True)`.
+Ferramenta usada: `buscar_produtos(categoria="Violões", preco_maximo=1000, somente_disponiveis=True)`. O Tom lista alguns destaques; o TC-001 confere o resultado completo da ferramenta, com 12 violões.
 
 ## Produto fora do escopo da loja
 

@@ -109,7 +109,7 @@ As conversas de referência estão em [`examples/`](examples/) e foram geradas c
 - Os dados não informam o canal da compra nem a data real de entrega.
 - Não há previsão de reposição, então o agente informa apenas o estoque atual.
 - Os limites do plano gratuito do Gemini restringem o volume de uso: cada pergunta consome de 2 a 3 requisições.
-- A busca aproximada corrige apenas um erro de digitação por palavra e ignora palavras curtas e códigos de modelo.
+- A busca aproximada corrige apenas um erro de digitação por palavra e só vale para nomes com 5 letras ou mais e sem dígitos; códigos de modelo precisam estar corretos.
 - Os testes com o Gemini real cobrem poucos fluxos, e o comportamento do modelo depende do prompt. As pendências estão em [Testes](docs/05-testes-e-roteiro.md), seção 8.
 - O SQLite atende ao MVP, mas não a um uso concorrente de produção.
 

@@ -171,11 +171,11 @@ Se o prazo apertar, serão reduzidos primeiro o acabamento visual e as avaliaç�
 - [ ] Registrar o limite efetivo do modelo escolhido.
 - [x] Revisar os termos atuais do Gemini sobre uso de dados (resultado em `docs/03-dados.md`, seção 7).
 - [x] Executar a suíte automática.
-- [x] Executar a avaliação com o Gemini (duas rodadas, 24 requisições no total; os fluxos estão em `examples/`).
+- [x] Executar a avaliação com o Gemini (duas rodadas; os fluxos estão em `examples/`).
 - [x] Gerar as conversas de referência.
 - [x] Atualizar o README.
 - [x] Confirmar que nenhum segredo foi versionado.
-- [x] Validar a execução em um clone limpo (instalação, carga do banco e 248 testes, sem chave de API; o servidor Streamlit não foi iniciado no clone).
+- [x] Validar a execução em um clone limpo (instalação, carga do banco e 248 testes (251 após a correção da busca), sem chave de API; o servidor Streamlit não foi iniciado no clone).
 
 ## 8. Pendências conhecidas
 
@@ -202,8 +202,8 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Retenção do histórico | O histórico cresce sem limite e a tela recupera a conversa inteira. Ele pode conter dados pessoais (`docs/03-dados.md`, seção 7) | Definir prazo de retenção e exclusão antes de qualquer uso com dados reais |
 | Banco anterior à issue #7 | Um `emporio.db` criado antes das tabelas de conversa falha ao abrir o chat | Rodar `python -m src.load_data` para recriar o banco |
 | Preço do produto citado antes | Na validação real da issue #7, a continuidade funcionou (nome da cliente, produto em foco e retorno em nova sessão), mas a pergunta "E qual o preço dele?" caiu na resposta segura: a guarda exige que o valor venha de uma ferramenta chamada no turno, e o modelo não consultou o catálogo de novo. A primeira resposta ("Tem o Giannini GF-3D?") também não informou a disponibilidade do produto | Tratado na issue #8: o prompt manda consultar de novo o produto do histórico, do foco ou dos interesses. Na validação real, "chegou o violão?" consultou o catálogo e informou o preço correto; a pergunta "E qual o preço dele?" também foi revalidada em 2 mensagens (4 requisições) e informou R$ 799,90 e R$ 759,91 no PIX, com o aviso de que o produto está sem estoque |
-| Busca sem tolerância a erros de digitação | A busca do catálogo ignora maiúsculas e acentos, mas não corrige erros de digitação. Na validação manual da issue #7, "gianini gf 3d" (com um "n") não encontrou o Giannini GF-3D, o produto em foco não foi definido e "chegou o violão?" foi lida como pergunta sobre pedido | Tratar na issue #11: prevenir erros de digitação na busca (por exemplo, correspondência aproximada com limite de distância), com teste de nomes escritos errado e sem aceitar produtos distintos |
-| Gírias e regionalismos | O agente deve entender gírias brasileiras de todas as regiões, e não só as locais, porque clientes de outros estados podem escrever ao atendimento. Hoje nada garante isso: o prompt não trata o tema e não há casos de teste | Tratar na issue #11: acrescentar casos de gírias e regionalismos ao roteiro (por exemplo, "tá salgado", "me vê um violão", "manda o rastreio, mano") e avaliá-los com o Gemini em poucas requisições |
+| Busca com tolerância limitada a erros de digitação | Resolvido na issue #11 (ADR-019): "gianini gf 3d" encontra o Giannini GF-3D e foi validado com o Gemini. A tolerância vale só para nomes com 5 letras ou mais e sem dígitos; erros em códigos de modelo ("F320", "RV-176") continuam sem resultado, para não trazer outro produto | Aceito no MVP |
+| Gírias e regionalismos | Uma pergunta real ("me vê um violão até mil conto") foi validada com o Gemini (`examples/05`). Expressões como "tá salgado" ou "manda o rastreio, mano" ainda não foram avaliadas, e o prompt não trata o tema de forma explícita | Avaliar outras expressões na próxima rodada com o Gemini; ajustar o prompt só se houver falha |
 | Aviso do cliente do Gemini ao encerrar | Ao final de um script que chama o Gemini real aparece `Task was destroyed but it is pending` (`BaseApiClient.aclose`). As respostas não foram afetadas; o chat usa uma thread própria por mensagem | Observar no chat (issue #11) e, se persistir, fechar o cliente explicitamente |
 | Resultado global em defeito | Em defeito, o resultado geral é `dentro_do_prazo` se qualquer regra estiver dentro, então a troca de 30 dias vencida só aparece em `regras`. O prompt manda explicar as regras do veredito | Avaliar um resultado por regra no texto se a validação real mostrar confusão |
 | TC-004 sem teste de agente | "Solicitar o que faltar" (motivo ou pedido ausente) depende do prompt; os testes cobrem só o veredito e a ferramenta | Cobrir na avaliação manual com o Gemini (issue #11) |
@@ -232,6 +232,11 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Reposição acumulativa | `simulate_restock.py` soma ao estoque, então rodar duas vezes acumula quantidades | Aceito: `python -m src.load_data` restaura o estoque original |
 | Data de reposição sem teste automático | Que o agente não prometa data de reposição (RA-03) depende do prompt e da guarda de valores; não há teste automático para uma data inventada | Cobrir na avaliação manual da issue #11 |
 | Mudança de comportamento da #7 | O foco passou a ser limpo em busca de produtos com vários resultados ou nenhum (ADR-014, item 6, e ADR-016) | Registrado nos ADRs |
+| Cota diária como limite por minuto | O Gemini pode devolver a cota diária como `ModelRateLimitError`. Nesse caso o sistema repete a chamada duas vezes em vão e gasta cota. A diferença entre os dois casos depende do corpo real do erro, ainda não visto | Diferenciar pelo corpo do erro quando houver um 429 real (issue #11) |
+| Sem prazo total do turno | O tempo limite vale por requisição ao modelo (40 s); um turno com várias rodadas de ferramenta e repetições não tem teto total | Avaliar um prazo global se a validação mostrar esperas longas |
+| Painel em turnos com falha | Em turnos que terminam em limite, tempo esgotado, erro técnico ou resposta segura, o painel mostra "Nenhuma ferramenta", mesmo que alguma tenha rodado na tentativa que falhou | Aceito no MVP |
+| Mensagem durante a espera | Uma nova mensagem enviada enquanto o Tom responde só é processada depois da resposta atual, o que pode levar dezenas de segundos em um limite de uso | Aceito: nenhuma mensagem se perde, mas a espera é visível; avaliar fila explícita se incomodar |
+| Validação real do painel | Na issue #10, duas perguntas reais (4 requisições) confirmaram que `Sessao.ferramentas` traz `buscar_produtos` com o termo correto e que as respostas mantêm preços e disponibilidade das ferramentas. A interface Streamlit e o envio de mensagens em sequência não foram exercitados com o Gemini real | Conferir o painel e a sequência manualmente na interface (roteiro 9.2) |
 
 
 ## 9. Regressões
@@ -258,6 +263,8 @@ Cada bug corrigido deve deixar um teste que o reproduz. Os automáticos levam o 
 | Banco de uma versão anterior quebrava a leitura do estado | `test_banco_anterior_continua_funcionando_sem_migracao` |
 | Uma carga com erro apagava o banco anterior | `test_falha_na_carga_preserva_o_banco_anterior` |
 | O comando de reposição criava um banco vazio quando ele não existia | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
+| Um erro de digitação no nome ("gianini gf 3d") não encontrava o produto (ADR-019) | `test_busca_tolera_letra_a_menos_no_nome` |
+| A busca aproximada trocava um código de modelo por outro ("D-28E" trazia o D-28) | `test_busca_nao_confunde_modelos_distintos_com_codigo_parecido` |
 
 As validações da carga (`tests/test_load_data.py`, testes `test_interrompe_a_carga_*`) também levam o marcador: cada uma impede que um dado inválido da origem entre no banco, o que foi corrigido nas issues #2 a #5.
 
@@ -288,10 +295,5 @@ Rodar a cada mudança do prompt ou do modelo, com o telefone da cliente 2 (Ana) 
 
 | Bug | Previsto |
 |---|---|
-| A busca não tolera erro de digitação ("gianini gf 3d") | Issue #11, com teste do nome escrito errado |
-| Gírias e regionalismos não são tratados | Issue #11, com casos no roteiro 9.2 |
-| Cota diária como limite por minuto | O Gemini pode devolver a cota diária como `ModelRateLimitError`. Nesse caso o sistema repete a chamada duas vezes em vão e gasta cota. A diferença entre os dois casos depende do corpo real do erro, ainda não visto | Diferenciar pelo corpo do erro quando houver um 429 real (issue #11) |
-| Sem prazo total do turno | O tempo limite vale por requisição ao modelo (40 s); um turno com várias rodadas de ferramenta e repetições não tem teto total | Avaliar um prazo global se a validação mostrar esperas longas |
-| Painel em turnos com falha | Em turnos que terminam em limite, tempo esgotado, erro técnico ou resposta segura, o painel mostra "Nenhuma ferramenta", mesmo que alguma tenha rodado na tentativa que falhou | Aceito no MVP |
-| Mensagem durante a espera | Uma nova mensagem enviada enquanto o Tom responde só é processada depois da resposta atual, o que pode levar dezenas de segundos em um limite de uso | Aceito: nenhuma mensagem se perde, mas a espera é visível; avaliar fila explícita se incomodar |
-| Validação real do painel | Na issue #10, duas perguntas reais (4 requisições) confirmaram que `Sessao.ferramentas` traz `buscar_produtos` com o termo correto e que as respostas mantêm preços e disponibilidade das ferramentas. A interface Streamlit e o envio de mensagens em sequência não foram exercitados com o Gemini real | Conferir o painel e a sequência manualmente na interface (roteiro 9.2) |
+| A busca não tolera erro em código de modelo ("F320" no lugar de "F310") | Aceito: evita responder sobre o produto errado (ADR-019) |
+| Gírias além de "mil conto" não foram avaliadas | Próxima rodada manual com o Gemini (roteiro 9.2) |

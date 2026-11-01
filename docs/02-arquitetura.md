@@ -198,6 +198,14 @@ Tabelas operacionais:
 - **Alternativas:** `max_retries` do SDK, escondido e não testável offline; tabela para o registro de limites, descartada pela simplicidade; persistir as ferramentas no histórico para o painel também aparecer nas respostas antigas.
 - **Consequências:** o cliente nunca vê um traceback nas falhas previstas, e a conversa não se perde. Cada repetição gasta cota, e uma espera de até 22 s soma-se ao tempo de resposta. O registro de limites depende de o provedor informar os dados. Uma requisição interrompida no provedor ainda pode ter sido processada, o que aceitamos no MVP.
 
+### ADR-019: Busca de produtos com tolerância a erro de digitação
+
+- **Status:** Aceita.
+- **Contexto:** a busca ignorava maiúsculas e acentos, mas não erros de digitação: "gianini gf 3d" não encontrava o Giannini GF-3D, e o agente deixava de definir o produto em foco.
+- **Decisão:** `buscar_produtos` faz primeiro a busca exata. Só quando ela não encontra nada, repete a busca aceitando, em cada palavra do termo, uma letra a mais, a menos ou trocada em relação a uma palavra do nome. A tolerância vale apenas para palavras formadas só por letras e com 5 letras ou mais; palavras curtas e códigos de modelo, que têm dígitos ou hífen (`F310`, `GF-3D`, `D-28E`), continuam exatos.
+- **Alternativas:** distância de edição maior ou por trigramas, descartadas por aproximarem modelos distintos; delegar a correção ao modelo, descartada porque o preço e o estoque devem vir de uma busca determinística.
+- **Consequências:** nomes escritos errado passam a ser encontrados sem tocar o caminho exato. Um erro em código de modelo ou em palavra curta continua sem resultado, o que evita responder sobre o produto errado.
+
 ### ADR-004: SQLite como armazenamento
 
 - **Status:** Aceita.
