@@ -10,6 +10,7 @@ from pydantic_ai.exceptions import (
     ModelConnectionError,
     ModelHTTPError,
     ModelRateLimitError,
+    ModelServerError,
     ModelRequestTimeout,
     ModelOverloadedError,
     ModelQuotaExceededError,
@@ -146,7 +147,11 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(conexao, esperas, erro
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
-@pytest.mark.parametrize("erro", [ModelUnavailableError("modelo", "indisponível"), ModelOverloadedError("modelo", "sobrecarga")])
+@pytest.mark.parametrize("erro", [
+        ModelUnavailableError("modelo", "indisponível"),
+        ModelOverloadedError("modelo", "sobrecarga"),
+        ModelServerError("modelo", "erro 504"),
+    ])
 def test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa(conexao, esperas, erro):
     tentativas: list[int] = []
     modelo = modelo_que_falha_antes_de_responder([erro], tentativas)

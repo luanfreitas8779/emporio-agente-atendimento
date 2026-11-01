@@ -15,6 +15,7 @@ from pydantic_ai.exceptions import (
     ModelQuotaExceededError,
     ModelRateLimitError,
     ModelRequestTimeout,
+    ModelServerError,
     ModelTimeoutError,
     ModelUnavailableError,
     UnexpectedModelBehavior,
@@ -445,6 +446,8 @@ def encaminhar_para_atendente(
 
 # Limite de uso e indisponibilidade temporária: esperar pode resolver.
 ERROS_TEMPORARIOS = (ModelRateLimitError, ModelUnavailableError, ModelOverloadedError)
+# Falha do servidor do provedor (500, 502, 504): costuma passar na tentativa seguinte.
+ERROS_DE_SERVIDOR = (ModelServerError,)
 ESPERAS_ENTRE_TENTATIVAS = (2, 5)
 ESPERA_MAXIMA = 15
 _aguardar = time.sleep
@@ -463,7 +466,7 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
         )
         try:
             return execucao.result()
-        except ERROS_TEMPORARIOS as erro:
+        except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as erro:
             if espera is None:
                 raise
             # O provedor pode indicar quando tentar de novo; um teto evita travar o chat.
