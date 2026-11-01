@@ -216,6 +216,8 @@ _executor = ThreadPoolExecutor(max_workers=1)
 
 # Valores em reais acima disto não são de compras reais e estouram os cálculos.
 VALOR_MAXIMO = 1_000_000
+# Números de pedido e de produto maiores que isto não existem e estouram o inteiro do SQLite.
+NUMERO_MAXIMO = 2**31 - 1
 
 agente = Agent(
     f"google:{MODELO_GEMINI}",
@@ -318,7 +320,7 @@ def buscar_produtos(
     ctx: RunContext[Sessao],
     termo: str | None = None,
     categoria: str | None = None,
-    preco_maximo: Annotated[float | None, Field(gt=0)] = None,
+    preco_maximo: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
     somente_disponiveis: bool = False,
 ) -> list[catalog.Produto]:
     """Busca produtos do catálogo da loja, com preços e disponibilidade.
@@ -360,7 +362,7 @@ def consultar_politicas(
 
 @agente.tool
 def consultar_meus_pedidos(
-    ctx: RunContext[Sessao], numero_pedido: Annotated[int | None, Field(ge=1)] = None
+    ctx: RunContext[Sessao], numero_pedido: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None
 ) -> list[orders.Pedido] | str:
     """Consulta os pedidos do cliente desta conversa.
 
@@ -382,7 +384,7 @@ def consultar_meus_pedidos(
 @agente.tool
 def avaliar_devolucao(
     ctx: RunContext[Sessao],
-    numero_pedido: Annotated[int, Field(ge=1)],
+    numero_pedido: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)],
     motivo: returns.Motivo,
     canal: returns.Canal | None = None,
 ) -> returns.Veredito | str:
@@ -409,7 +411,7 @@ def avaliar_devolucao(
 
 
 @agente.tool
-def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Field(ge=1)]) -> str:
+def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)]) -> str:
     """Registra o interesse do cliente em um produto, para retomar o assunto depois.
 
     Use quando o cliente quiser acompanhar um produto indisponível. Não reserva o

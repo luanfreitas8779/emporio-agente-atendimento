@@ -955,3 +955,23 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
 
     assert resposta == "Não consegui calcular esse valor."
     assert retornos[0].outcome == "retried"
+
+
+@pytest.mark.parametrize(
+    ("ferramenta", "argumentos"),
+    [
+        ("consultar_meus_pedidos", {"numero_pedido": 10**30}),
+        ("avaliar_devolucao", {"numero_pedido": 10**30, "motivo": "arrependimento", "canal": "online"}),
+        ("registrar_interesse", {"product_id": 10**30}),
+        ("buscar_produtos", {"preco_maximo": 1e33}),
+    ],
+)
+def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(conexao, ferramenta, argumentos):
+    retornos: list = []
+    modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta, argumentos, retornos)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Não consegui calcular esse valor."
+    assert retornos[0].outcome == "retried"
