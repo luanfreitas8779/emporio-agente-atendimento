@@ -194,8 +194,8 @@ def _filtrar(
     return produtos
 
 
-def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int | None:
-    linha = conexao.execute(
+def _linha_de_preco(conexao: sqlite3.Connection, produto_id: int) -> sqlite3.Row | None:
+    return conexao.execute(
         """
         SELECT p.price_cents, pr.discount_percent
         FROM products p
@@ -204,7 +204,21 @@ def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int
         """,
         (produto_id,),
     ).fetchone()
+
+
+def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int | None:
+    linha = _linha_de_preco(conexao, produto_id)
     return calcular_preco_final(linha) if linha else None
+
+
+def preco_no_pix_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int | None:
+    """Preço pagando no PIX: o desconto incide sobre o preço de tabela e não soma à promoção."""
+    linha = _linha_de_preco(conexao, produto_id)
+    if linha is None:
+        return None
+    if linha["discount_percent"]:
+        return calcular_preco_final(linha)
+    return aplicar_desconto(linha["price_cents"], PERCENTUAL_PIX)
 
 
 def nome_do_produto(conexao: sqlite3.Connection, produto_id: int) -> str | None:

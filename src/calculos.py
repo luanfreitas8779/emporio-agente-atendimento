@@ -30,15 +30,19 @@ class LinhaDaCompra:
 class CalculoDaCompra:
     itens: list[LinhaDaCompra]
     total: str
+    total_no_pix: str
+    economia_no_pix: str
 
 
 def calcular_compra(conexao: sqlite3.Connection, itens: list[ItemDaCompra]) -> CalculoDaCompra:
     linhas = []
     total = 0
+    total_no_pix = 0
     for item in itens:
         unitario = catalog.preco_final_em_centavos(conexao, item.product_id)
         subtotal = unitario * item.quantidade
         total += subtotal
+        total_no_pix += catalog.preco_no_pix_em_centavos(conexao, item.product_id) * item.quantidade
         linhas.append(
             LinhaDaCompra(
                 catalog.nome_do_produto(conexao, item.product_id),
@@ -47,4 +51,9 @@ def calcular_compra(conexao: sqlite3.Connection, itens: list[ItemDaCompra]) -> C
                 catalog.formatar_preco(subtotal),
             )
         )
-    return CalculoDaCompra(linhas, catalog.formatar_preco(total))
+    return CalculoDaCompra(
+        linhas,
+        catalog.formatar_preco(total),
+        catalog.formatar_preco(total_no_pix),
+        catalog.formatar_preco(total - total_no_pix),
+    )

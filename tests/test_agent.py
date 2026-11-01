@@ -1239,3 +1239,28 @@ def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(conexao):
     assert [(i.nome, i.quantidade, i.subtotal) for i in resultado.itens] == [
         ("Takamine GD20 Dreadnought Natural", 2, "R$ 4.398,00")
     ]
+
+
+@pytest.mark.regressao
+def test_calcula_a_soma_de_dois_produtos_diferentes(conexao):
+    resultado = calcular_compra(conexao, ("Takamine GD20", 1), ("Yamaha C40", 1))
+
+    assert resultado.total == "R$ 2.798,90"
+
+
+@pytest.mark.regressao
+def test_calcula_o_total_no_pix_e_a_economia(conexao):
+    resultado = calcular_compra(conexao, ("Yamaha C40", 1))
+
+    assert resultado.total_no_pix == "R$ 569,91"
+    assert resultado.economia_no_pix == "R$ 29,99"
+
+
+@pytest.mark.regressao
+def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(conexao):
+    # O PIX não soma à promoção: o Crafter HT-100 custa o mesmo no PIX.
+    resultado = calcular_compra(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+
+    assert resultado.total == "R$ 2.567,08"
+    assert resultado.total_no_pix == "R$ 2.537,09"
+    assert resultado.economia_no_pix == "R$ 29,99"
