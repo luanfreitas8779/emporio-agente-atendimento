@@ -142,7 +142,7 @@ O sistema fornece ao agente:
 
 - Data de referência.
 - Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
-- Interesses pendentes do telefone da sessão: só os nomes dos produtos, no máximo 5, ou `nenhum` (ADR-016). A disponibilidade atual vem sempre de `buscar_produtos`.
+- Interesses pendentes do telefone da sessão: só os nomes dos 5 mais recentes (com aviso de quantos mais antigos ficaram de fora), ou `nenhum` (ADR-016). A disponibilidade atual vem sempre de `buscar_produtos`.
 - Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014). Uma busca com vários resultados ou nenhum limpa o foco.
 - Histórico recente, limitado a 7 mensagens e cortado em turnos inteiros, para economizar cota.
 
