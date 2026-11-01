@@ -38,6 +38,15 @@ CREATE TABLE IF NOT EXISTS conversation_state (
     produto_em_foco INTEGER CHECK (produto_em_foco > 0),
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS product_interests (
+    id INTEGER PRIMARY KEY,
+    phone TEXT NOT NULL,
+    product_id INTEGER NOT NULL CHECK (product_id > 0),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending')),
+    created_at TEXT NOT NULL,
+    UNIQUE (phone, product_id)
+);
 """
 
 MAX_MENSAGENS_NO_HISTORICO = 7
