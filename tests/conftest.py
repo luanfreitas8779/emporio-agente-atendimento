@@ -12,6 +12,14 @@ models.ALLOW_MODEL_REQUESTS = False
 PASTA_DADOS = Path(__file__).parent.parent / "data"
 
 
+@pytest.fixture(autouse=True)
+def log_de_limites_temporario(tmp_path, monkeypatch):
+    """Nenhum teste grava no registro de limites do ambiente local."""
+    caminho = tmp_path / "limites_provedor.log"
+    monkeypatch.setattr("src.config.CAMINHO_LOG_DE_LIMITES", caminho)
+    return caminho
+
+
 @pytest.fixture
 def conexao(tmp_path):
     conexao = conectar(tmp_path / "teste.db")

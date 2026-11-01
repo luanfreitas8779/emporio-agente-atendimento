@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 import pytest
@@ -6,6 +7,7 @@ from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelAuthenticationError,
     ModelConnectionError,
+    ModelHTTPError,
     ModelRateLimitError,
     ModelRequestTimeout,
     ModelOverloadedError,
@@ -185,3 +187,19 @@ def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_at
         resposta = responder("Preço do violão?", Sessao(conexao, telefone=ANA))
 
     assert resposta == RESPOSTA_SEGURA_SEM_REGISTRO
+
+
+def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
+    conexao, esperas, log_de_limites_temporario
+):
+    corpo = {"error": {"details": [{"violations": [{"quotaValue": "20", "quotaId": "PorDia"}]}]}}
+    erro = ModelHTTPError.for_category(
+        ModelRateLimitError, status_code=429, model_name="gemini-3.5-flash-lite", body=corpo
+    )
+    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], [])
+
+    with agente.override(model=modelo):
+        responder("Oi", Sessao(conexao, telefone=ANA))
+
+    eventos = [json.loads(l) for l in log_de_limites_temporario.read_text(encoding="utf-8").splitlines()]
+    assert [(e["status"], e["limite"], e["cota"]) for e in eventos] == [(429, "20", "PorDia")]

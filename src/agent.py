@@ -27,7 +27,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src import catalog, guardrail, handoffs, interests, memory, orders, policies, returns
+from src import catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
 
 MAX_INTERESSES_NO_CONTEXTO = 5
@@ -447,7 +447,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
-    except (*ERROS_TEMPORARIOS, ModelQuotaExceededError):
+    except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as erro:
+        limits.registrar_limite(erro)
         # Cota esgotada não se resolve esperando: não há nova tentativa, só a mesma mensagem.
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
     except (ModelTimeoutError, ModelRequestTimeout):

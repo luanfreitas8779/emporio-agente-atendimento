@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic_ai.exceptions import ModelAPIError
 
-from src.config import CAMINHO_LOG_DE_LIMITES
+from src import config
 
 
 def _violacao(corpo: object) -> dict:
@@ -16,8 +16,9 @@ def _violacao(corpo: object) -> dict:
     return {}
 
 
-def registrar_limite(erro: ModelAPIError, caminho: Path = CAMINHO_LOG_DE_LIMITES) -> None:
+def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
     """Acrescenta uma linha JSON com o limite que o provedor informou; campos ausentes ficam nulos."""
+    caminho = caminho or config.CAMINHO_LOG_DE_LIMITES
     violacao = _violacao(erro.body)
     evento = {
         "data": datetime.now(timezone.utc).isoformat(),
