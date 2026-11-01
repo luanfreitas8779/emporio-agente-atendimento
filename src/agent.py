@@ -423,7 +423,7 @@ def consultar_politicas(
 def calcular_compra(
     ctx: RunContext[Sessao],
     itens: Annotated[list[calculos.ItemDaCompra], Field(min_length=1, max_length=10)],
-) -> calculos.CalculoDaCompra:
+) -> calculos.CalculoDaCompra | str:
     """Calcula o total de uma compra de um ou mais produtos, em código.
 
     Use para toda conta: "quanto fica 2 deste", "quanto dá a soma destes", diferença de

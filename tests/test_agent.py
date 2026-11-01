@@ -1264,3 +1264,23 @@ def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(conexao):
     assert resultado.total == "R$ 2.567,08"
     assert resultado.total_no_pix == "R$ 2.537,09"
     assert resultado.economia_no_pix == "R$ 29,99"
+
+
+@pytest.mark.regressao
+def test_calcula_a_diferenca_de_preco_entre_dois_produtos(conexao):
+    resultado = calcular_compra(conexao, ("Takamine GD20", 1), ("Yamaha C40", 1))
+
+    assert resultado.diferenca == "R$ 1.599,10"
+
+
+def test_diferenca_so_existe_para_exatamente_dois_itens(conexao):
+    assert calcular_compra(conexao, ("Yamaha C40", 1)).diferenca is None
+
+
+@pytest.mark.regressao
+def test_produto_inexistente_na_conta_e_recusado_sem_excecao(conexao):
+    retorno = chamar_ferramenta(
+        conexao, ANA, "calcular_compra", {"itens": [{"product_id": 999999, "quantidade": 1}]}
+    )
+
+    assert retorno.content == "Produto 999999 não encontrado: nenhuma conta foi feita."
