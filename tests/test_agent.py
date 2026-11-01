@@ -1097,3 +1097,14 @@ def test_canal_dito_com_clareza_continua_valendo(conexao, mensagem):
     )
 
     assert retorno.content.resultado == "dentro_do_prazo"
+
+
+@pytest.mark.regressao
+def test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativa(conexao):
+    legitima = "Registrei o seu caso. Entraremos em contato em até 24 horas úteis."
+    modelo = modelo_que_responde_em_sequencia(legitima, "NÃO DEVERIA CHEGAR")
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Quero falar com um atendente", Sessao(conexao, telefone=ANA))
+
+    assert resposta == legitima

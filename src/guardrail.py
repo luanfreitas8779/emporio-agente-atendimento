@@ -15,15 +15,19 @@ PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 PADRAO_PROMESSA_DE_AVISO = re.compile(
     r"\bte avis\w*|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b"
     r"|\bfica(?:ra|r)?\s+sabendo\b|\bvoce\s+(?:sera|vai ser)\s+avisad\w+"
-    r"|\bentra(?:remos|mos)\s+em\s+contato\b"
 )
+# Quantos caracteres antes da promessa procurar uma negação ("não posso te avisar").
+JANELA_DA_NEGACAO = 25
 
 
 def promete_aviso(resposta: str) -> bool:
-    """Diz se a resposta promete avisar o cliente, sem contar quando nega a promessa."""
+    """Diz se a resposta promete avisar o cliente, sem contar quando nega a promessa.
+
+    O retorno da equipe após um encaminhamento ("entraremos em contato") não é promessa de aviso.
+    """
     texto = normalizar(resposta)
     for achado in PADRAO_PROMESSA_DE_AVISO.finditer(texto):
-        antes = texto[max(0, achado.start() - 25) : achado.start()]
+        antes = texto[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
         if not re.search(r"\b(?:nao|sem)\b", antes):
             return True
     return False
