@@ -74,10 +74,6 @@ def avaliar_devolucao(
     canal: Canal | None,
     hoje: date,
 ) -> Veredito:
-    if motivo == Motivo.ARREPENDIMENTO and canal is None:
-        return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
-    if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
-        return Veredito(Resultado.NAO_SE_APLICA, [])
     linha = conexao.execute(
         "SELECT order_date, status, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),
@@ -86,6 +82,11 @@ def avaliar_devolucao(
         return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
     if linha["status"] in SEM_ENTREGA:
         return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[SEM_ENTREGA[linha["status"]]])
+    # O canal só importa depois de confirmar que o pedido existe e é do cliente.
+    if motivo == Motivo.ARREPENDIMENTO and canal is None:
+        return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
+    if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
+        return Veredito(Resultado.NAO_SE_APLICA, [])
     compra = date.fromisoformat(linha["order_date"])
     # Sem data real de entrega nos dados (DQ-17), o recebimento é a entrega estimada.
     recebimento = date.fromisoformat(linha["estimated_delivery"])

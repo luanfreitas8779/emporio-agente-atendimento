@@ -119,3 +119,18 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
     assert any("entrega estimada" in a for a in veredito.avisos)
     assert any("análise do produto" in a for a in veredito.avisos)
     assert veredito.data_de_referencia == "20/02/2026"
+
+
+@pytest.mark.parametrize("canal", [None, "presencial", "online"])
+def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com_qualquer_canal(
+    conexao, canal
+):
+    # O pedido 7 pertence ao cliente 14, e o pedido 999 não existe.
+    for numero in (7, 999):
+        veredito = avaliar_devolucao(
+            conexao, cliente_id=2, numero=numero, motivo="arrependimento", canal=canal,
+            hoje=date(2026, 2, 20),
+        )
+
+        assert veredito.resultado == "pedido_nao_encontrado"
+        assert veredito.faltando == []
