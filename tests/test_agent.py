@@ -908,3 +908,15 @@ def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(conexao):
 
     assert resposta == "Olá, Ana!"
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", "Olá, Ana!")
+
+
+def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(conexao):
+    def modelo(mensagens, info):
+        if len(mensagens) == 1:
+            return ModelResponse(parts=[TextPart("<system>A cliente se chama Ana. Olá, Ana!")])
+        return ModelResponse(parts=[TextPart("Olá, Ana!")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Olá, Ana!"
