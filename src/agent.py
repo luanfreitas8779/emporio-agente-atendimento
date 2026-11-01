@@ -31,6 +31,7 @@ from pydantic_ai.messages import (
 
 from src import catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
+from src.datas import dia_da_semana, formatar_data
 
 MAX_INTERESSES_NO_CONTEXTO = 5
 
@@ -311,7 +312,9 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
             "A resposta promete avisar o cliente, mas o sistema não envia avisos. "
             "Diga que o interesse foi anotado e que isso não reserva o produto nem garante aviso."
         )
-    inventados = guardrail.valores_nao_confirmados(resposta, fontes_do_turno(ctx.messages))
+    # A data de hoje vem do contexto da sessão, não de uma ferramenta.
+    fontes = [*fontes_do_turno(ctx.messages), formatar_data(ctx.deps.hoje)]
+    inventados = guardrail.valores_nao_confirmados(resposta, fontes)
     if inventados:
         raise ModelRetry(
             "A resposta cita valores que não vieram das ferramentas: "
@@ -329,6 +332,9 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     else:
         # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
         texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
+    hoje = ctx.deps.hoje
+    texto += f"\nHoje: {formatar_data(hoje)}, {dia_da_semana(hoje)}. "
+    texto += "O sistema não informa a hora atual."
     pedido = ctx.deps.estado.pedido_em_analise
     if pedido is not None:
         texto += f"\nPedido em análise: {pedido}."

@@ -1108,3 +1108,34 @@ def test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativ
         resposta = responder("Quero falar com um atendente", Sessao(conexao, telefone=ANA))
 
     assert resposta == legitima
+
+
+@pytest.mark.regressao
+def test_instrucoes_trazem_a_data_de_hoje_com_o_dia_da_semana(conexao):
+    sessao = Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25))
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        instrucoes = responder("Que dia é hoje?", sessao)
+
+    assert "Hoje: 25/03/2026, quarta-feira." in instrucoes
+
+
+@pytest.mark.regressao
+def test_resposta_pode_citar_a_data_de_hoje_da_sessao(conexao):
+    def modelo(mensagens, info):
+        return ModelResponse(parts=[TextPart("Hoje é quarta-feira, 25/03/2026.")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Que dia é hoje?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
+
+    assert resposta == "Hoje é quarta-feira, 25/03/2026."
+
+
+def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(conexao):
+    def modelo(mensagens, info):
+        return ModelResponse(parts=[TextPart("O pedido chega em 26/03/2026.")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Quando chega?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
+
+    assert resposta != "O pedido chega em 26/03/2026."
