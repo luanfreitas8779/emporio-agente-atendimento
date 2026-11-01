@@ -170,12 +170,12 @@ Se o prazo apertar, serão reduzidos primeiro o acabamento visual e as avaliaç�
 - [x] Confirmar a compatibilidade das dependências com Python 3.12 e 3.14.
 - [ ] Registrar o limite efetivo do modelo escolhido.
 - [x] Revisar os termos atuais do Gemini sobre uso de dados (resultado em `docs/03-dados.md`, seção 7).
-- [ ] Executar a suíte automática.
-- [ ] Executar a avaliação com o Gemini.
+- [x] Executar a suíte automática.
+- [x] Executar a avaliação com o Gemini (duas rodadas, 24 requisições no total; os fluxos estão em `examples/`).
 - [x] Gerar as conversas de referência.
 - [x] Atualizar o README.
-- [ ] Confirmar que nenhum segredo foi versionado.
-- [ ] Validar a execução em um clone limpo.
+- [x] Confirmar que nenhum segredo foi versionado.
+- [x] Validar a execução em um clone limpo (instalação, carga do banco e 248 testes, sem chave de API; o servidor Streamlit não foi iniciado no clone).
 
 ## 8. Pendências conhecidas
 
