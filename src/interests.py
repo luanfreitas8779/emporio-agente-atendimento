@@ -7,16 +7,18 @@ from src.phone import normalizar_telefone
 
 class Resultado(StrEnum):
     REGISTRADO = "registrado"
+    JA_REGISTRADO = "ja_registrado"
 
 
 def registrar(conexao: sqlite3.Connection, telefone: str, product_id: int) -> Resultado:
     chave = normalizar_telefone(telefone)
-    conexao.execute(
-        "INSERT INTO product_interests (phone, product_id, created_at) VALUES (?, ?, ?)",
+    cursor = conexao.execute(
+        "INSERT INTO product_interests (phone, product_id, created_at) VALUES (?, ?, ?) "
+        "ON CONFLICT (phone, product_id) DO NOTHING",
         (chave, product_id, _agora()),
     )
     conexao.commit()
-    return Resultado.REGISTRADO
+    return Resultado.REGISTRADO if cursor.rowcount else Resultado.JA_REGISTRADO
 
 
 def listar_pendentes(conexao: sqlite3.Connection, telefone: str) -> list[str]:
