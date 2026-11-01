@@ -874,3 +874,25 @@ def test_resposta_segura_nao_diz_que_registrou_quando_a_mensagem_e_vazia(conexao
 
     assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
     assert "Registrei" not in resposta
+
+
+def test_sessao_registra_as_ferramentas_usadas_no_turno_com_os_argumentos(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
+        responder("Quanto custa o Takamine GD20?", sessao)
+
+    assert [(c.nome, c.argumentos) for c in sessao.ferramentas] == [
+        ("buscar_produtos", {"termo": "Takamine GD20"})
+    ]
+
+
+def test_resposta_sem_ferramenta_deixa_a_lista_vazia_e_cada_turno_recomeca(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
+        responder("Quanto custa o Takamine GD20?", sessao)
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        responder("Obrigado!", sessao)
+
+    assert sessao.ferramentas == []

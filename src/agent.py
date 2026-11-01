@@ -23,6 +23,7 @@ from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
     TextPart,
+    ToolCallPart,
     ToolReturnPart,
     UserPromptPart,
 )
@@ -187,12 +188,21 @@ RESPOSTA_SEGURA = (
 )
 
 
+@dataclass(frozen=True)
+class ChamadaDeFerramenta:
+    """Uma ferramenta que o modelo chamou no turno, para o painel da interface."""
+
+    nome: str
+    argumentos: dict
+
+
 @dataclass
 class Sessao:
     conexao: sqlite3.Connection
     telefone: str | None = None
     estado: memory.Estado = field(default_factory=memory.Estado)
     hoje: date = field(default_factory=data_de_referencia)
+    ferramentas: list[ChamadaDeFerramenta] = field(default_factory=list)
 
     @property
     def cliente(self) -> orders.Cliente | None:
@@ -212,6 +222,16 @@ agente = Agent(
     model_settings={"timeout": 20, "request_timeout": 40},
     defer_model_check=True,
 )
+
+
+def ferramentas_do_turno(mensagens: list) -> list[ChamadaDeFerramenta]:
+    return [
+        ChamadaDeFerramenta(parte.tool_name, parte.args_as_dict())
+        for mensagem in mensagens
+        if isinstance(mensagem, ModelResponse)
+        for parte in mensagem.parts
+        if isinstance(parte, ToolCallPart)
+    ]
 
 
 def fontes_do_turno(mensagens: list) -> list[str]:
@@ -444,6 +464,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
         sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
         resultado = _executar(mensagem, sessao, historico)
+        sessao.ferramentas = ferramentas_do_turno(resultado.new_messages())
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
