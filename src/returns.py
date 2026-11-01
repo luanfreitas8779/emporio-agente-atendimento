@@ -32,6 +32,11 @@ AVISO_SEM_ARREPENDIMENTO_PRESENCIAL = (
     "ainda pode pedir troca por defeito ou por preferência, dentro dos prazos da política."
 )
 
+AVISO_AINDA_NAO_CHEGOU = (
+    "Pela entrega estimada, o pedido ainda não chegou. Os prazos contados do recebimento "
+    "só começam quando o cliente receber o produto."
+)
+
 
 class Motivo(StrEnum):
     ARREPENDIMENTO = "arrependimento"
@@ -104,11 +109,14 @@ def avaliar_devolucao(
         regras = [_regra("troca_por_preferencia", recebimento, PRAZO_DE_TROCA_POR_PREFERENCIA_EM_DIAS, hoje)]
     else:
         regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, hoje)]
+    avisos = [AVISO_DE_APROXIMACAO, AVISO_DE_ANALISE]
+    if recebimento > hoje:
+        avisos.insert(0, AVISO_AINDA_NAO_CHEGOU)
     dentro = any(r.resultado == Resultado.DENTRO_DO_PRAZO for r in regras)
     return Veredito(
         Resultado.DENTRO_DO_PRAZO if dentro else Resultado.FORA_DO_PRAZO,
         regras,
-        avisos=[AVISO_DE_APROXIMACAO, AVISO_DE_ANALISE],
+        avisos=avisos,
         data_aproximada=True,
         data_de_recebimento=formatar_data(recebimento),
         data_de_referencia=formatar_data(hoje),

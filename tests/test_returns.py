@@ -135,3 +135,24 @@ def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com
 
         assert veredito.resultado == "pedido_nao_encontrado"
         assert veredito.faltando == []
+
+
+def test_pedido_enviado_com_entrega_estimada_futura_avisa_que_o_prazo_conta_do_recebimento(conexao):
+    # Pedido 8 (cliente 2): enviado, entrega estimada em 28/02/2026.
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
+        hoje=date(2026, 2, 20),
+    )
+
+    assert veredito.resultado == "dentro_do_prazo"
+    assert any("ainda não chegou" in aviso for aviso in veredito.avisos)
+
+
+def test_pedido_cuja_entrega_estimada_ja_passou_nao_recebe_o_aviso_de_pedido_a_caminho(conexao):
+    veredito = avaliar_devolucao(
+        conexao, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
+        hoje=date(2026, 3, 25),
+    )
+
+    assert veredito.resultado == "fora_do_prazo"
+    assert not any("ainda não chegou" in aviso for aviso in veredito.avisos)
