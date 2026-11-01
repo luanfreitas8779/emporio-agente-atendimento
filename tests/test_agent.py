@@ -1188,3 +1188,29 @@ def test_resposta_pode_citar_a_data_de_amanha_da_sessao(conexao):
         resposta = responder("Vocês abrem amanhã?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
 
     assert resposta == "Amanhã é quinta-feira, 26/03/2026, e abrimos às 9h."
+
+
+@pytest.mark.regressao
+def test_parcelas_sem_valor_usam_o_preco_do_produto_em_foco(conexao):
+    (ukulele,) = catalog.buscar_produtos(conexao, termo="Kala KA-C")
+    retornos: list = []
+    modelo = FunctionModel(
+        modelo_que_chama("consultar_politicas", {"secao": "pagamentos", "parcelas": 6}, retornos)
+    )
+    salvar_estado(conexao, ANA, Estado(produto_em_foco=ukulele.id))
+
+    with agente.override(model=modelo):
+        responder("Dá pra parcelar em 6x?", Sessao(conexao, telefone=ANA))
+
+    assert "máximo de 4x de R$ 87,48" in retornos[0].content
+    assert "6x não atende à parcela mínima" in retornos[0].content
+
+
+@pytest.mark.regressao
+def test_parcelas_sem_valor_e_sem_produto_em_foco_pedem_o_produto(conexao):
+    retorno = chamar_ferramenta(
+        conexao, ANA, "consultar_politicas", {"secao": "pagamentos", "parcelas": 6}
+    )
+
+    assert "informe o produto ou o valor" in retorno.content
+    assert "atende" not in retorno.content

@@ -194,6 +194,19 @@ def _filtrar(
     return produtos
 
 
+def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int | None:
+    linha = conexao.execute(
+        """
+        SELECT p.price_cents, pr.discount_percent
+        FROM products p
+        LEFT JOIN promotions pr ON pr.product_id = p.product_id AND pr.is_active = 1
+        WHERE p.product_id = ?
+        """,
+        (produto_id,),
+    ).fetchone()
+    return calcular_preco_final(linha) if linha else None
+
+
 def nome_do_produto(conexao: sqlite3.Connection, produto_id: int) -> str | None:
     linha = conexao.execute(
         "SELECT name FROM products WHERE product_id = ?", (produto_id,)
