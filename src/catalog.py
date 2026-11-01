@@ -147,7 +147,7 @@ def buscar_produtos(
     )
     if not produtos and palavras:
         produtos = _filtrar(
-            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, True
+            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, aproximado=True
         )
     return produtos
 

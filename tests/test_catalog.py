@@ -195,3 +195,13 @@ def test_produto_fora_de_catalogo_nunca_atende_a_quantidade_mesmo_com_estoque(co
     produto = buscar_produtos(conexao, termo="Ibanez Bass 2X", quantidade=2)[0]
 
     assert produto.atende_quantidade is False
+
+
+@pytest.mark.regressao
+def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(conexao):
+    # "Yamha" não é trecho de "Yamaha": só a busca aproximada o encontra.
+    (disponivel,) = buscar_produtos(conexao, termo="Yamha C40", somente_disponiveis=True, quantidade=10)
+    (sem_estoque,) = buscar_produtos(conexao, termo="Yamha C40", quantidade=13)
+
+    assert disponivel.atende_quantidade is True
+    assert sem_estoque.atende_quantidade is False
