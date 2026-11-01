@@ -9,7 +9,7 @@ from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
 from src.interests import listar_pendentes, registrar
 from src.load_data import ler_csv
-from src.memory import exibir_conversa
+from src.memory import Estado, carregar_estado, exibir_conversa, salvar_estado
 from src.restock import repor_estoque
 from tests.conftest import PASTA_DADOS
 
@@ -745,3 +745,15 @@ def test_sem_interesse_salvo_o_contexto_diz_que_nao_ha_nenhum(conexao):
 
     assert "Interesses pendentes: nenhum" in instrucoes
     assert "Giannini" not in instrucoes
+
+
+def test_busca_com_varios_produtos_limpa_o_foco(conexao):
+    salvar_estado(conexao, ANA, Estado(produto_em_foco=96))
+    capturados: list = []
+
+    with agente.override(
+        model=FunctionModel(modelo_que_chama("buscar_produtos", {"categoria": "Violões"}, capturados))
+    ):
+        responder("Quais violões vocês têm?", Sessao(conexao, telefone=ANA))
+
+    assert carregar_estado(conexao, ANA).produto_em_foco is None

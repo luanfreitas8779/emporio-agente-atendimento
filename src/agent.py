@@ -200,8 +200,8 @@ def buscar_produtos(
     produtos = catalog.buscar_produtos(
         ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis
     )
-    if len(produtos) == 1:
-        ctx.deps.estado.produto_em_foco = produtos[0].id
+    # Com vários resultados "ele" fica ambíguo, e sem resultados o foco anterior seria enganoso.
+    ctx.deps.estado.produto_em_foco = produtos[0].id if len(produtos) == 1 else None
     return produtos
 
 
