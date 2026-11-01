@@ -47,6 +47,14 @@ CREATE TABLE IF NOT EXISTS product_interests (
     created_at TEXT NOT NULL,
     UNIQUE (phone, product_id)
 );
+
+CREATE TABLE IF NOT EXISTS handoffs (
+    id INTEGER PRIMARY KEY,
+    phone TEXT NOT NULL,
+    reason TEXT NOT NULL CHECK (reason IN ('reclamacao', 'sem_resposta_segura', 'atendente_solicitado')),
+    summary TEXT NOT NULL CHECK (length(trim(summary)) > 0),
+    created_at TEXT NOT NULL
+);
 """
 
 MAX_MENSAGENS_NO_HISTORICO = 7
