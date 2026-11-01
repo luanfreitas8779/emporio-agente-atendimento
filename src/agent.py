@@ -89,6 +89,7 @@ RESPOSTA_SEGURA = (
     "Pode reformular a pergunta ou falar com a nossa equipe?"
 )
 
+
 @dataclass
 class Sessao:
     conexao: sqlite3.Connection
