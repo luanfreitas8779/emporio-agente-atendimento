@@ -460,6 +460,7 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
+    sessao.ferramentas = []
     try:
         historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
         sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)

@@ -21,6 +21,7 @@ from src.agent import (
     MENSAGEM_DE_ERRO_TECNICO,
     MENSAGEM_DE_LIMITE,
     MENSAGEM_DE_TIMEOUT,
+    ChamadaDeFerramenta,
     RESPOSTA_SEGURA_SEM_REGISTRO,
     Sessao,
     agente,
@@ -214,3 +215,14 @@ def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(conexao, es
         resposta = responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert resposta == MENSAGEM_DE_LIMITE
+
+
+def test_turno_com_erro_nao_herda_as_ferramentas_do_turno_anterior(conexao, esperas):
+    sessao = Sessao(conexao, telefone=ANA)
+    sessao.ferramentas = [ChamadaDeFerramenta("buscar_produtos", {"termo": "x"})]
+    modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
+
+    with agente.override(model=modelo):
+        responder("Oi", sessao)
+
+    assert sessao.ferramentas == []
