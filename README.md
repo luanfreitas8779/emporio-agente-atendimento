@@ -2,7 +2,7 @@
 
 Agente de atendimento por texto para a Empório da Música, loja de instrumentos musicais em Campo Grande/MS. O sistema responde perguntas recorrentes sobre produtos, pedidos e políticas, e encaminha para a equipe os casos que exigem análise humana.
 
-> **Status:** em desenvolvimento. O chat já responde preços do catálogo, e as demais funcionalidades estão em implementação.
+> **Status:** MVP funcional. O chat atende produtos, pedidos, políticas, devoluções, interesses e encaminhamentos, e a suíte automática roda sem chave de API.
 
 ## Funcionalidades
 
@@ -12,7 +12,12 @@ Agente de atendimento por texto para a Empório da Música, loja de instrumentos
 - Aplicação das políticas de pagamento, entrega, troca e garantia.
 - Tratamento de assuntos fora do escopo.
 - Histórico persistente e retomada de interesses em novas conversas.
-- Encaminhamento de reclamações para a equipe.
+- Avaliação de trocas e devoluções com prazos calculados em código.
+- Registro de interesse em produtos indisponíveis.
+- Encaminhamento de reclamações e de casos sem resposta segura para a equipe.
+- Busca de produtos que tolera um erro de digitação em palavras longas.
+- Nova tentativa e mensagens claras quando o provedor recusa por limite de uso ou não responde.
+- Painel "Ferramentas usadas" em cada resposta da interface.
 
 ## Arquitetura
 
@@ -88,27 +93,41 @@ As decisões completas estão em [Arquitetura](docs/02-arquitetura.md).
 
 ## Exemplos de conversa
 
-*Em implementação.* As conversas de referência ficarão em `examples/`.
+As conversas de referência estão em [`examples/`](examples/) e foram geradas com o Gemini real:
+
+| Conversa | Mostra |
+|---|---|
+| [Produto indisponível e interesse](examples/01-produto-indisponivel-e-interesse.md) | Busca com erro de digitação e registro sem promessa de data |
+| [Devolução fora do prazo](examples/02-devolucao-fora-do-prazo.md) | Pergunta do canal, prazo em código e oferta de atendente |
+| [Parcelamento](examples/03-parcelamento-sem-juros.md) | Duas ferramentas na mesma pergunta |
+| [Reclamação encaminhada](examples/04-reclamacao-encaminhada.md) | Acolhimento e registro no mesmo turno |
+| [Orçamento, escopo e pedido](examples/05-busca-por-orcamento-e-fora-de-escopo.md) | Linguagem coloquial, recusa de acessórios e status do pedido |
 
 ## Limitações conhecidas
 
 - O telefone digitado na interface não é uma autenticação real.
 - Os dados não informam o canal da compra nem a data real de entrega.
 - Não há previsão de reposição, então o agente informa apenas o estoque atual.
-- Os limites do plano gratuito do Gemini restringem o volume de uso.
+- Os limites do plano gratuito do Gemini restringem o volume de uso: cada pergunta consome de 2 a 3 requisições.
+- A busca aproximada corrige apenas um erro de digitação por palavra e ignora palavras curtas e códigos de modelo.
+- Os testes com o Gemini real cobrem poucos fluxos, e o comportamento do modelo depende do prompt. As pendências estão em [Testes](docs/05-testes-e-roteiro.md), seção 8.
 - O SQLite atende ao MVP, mas não a um uso concorrente de produção.
 
 ## Próximos passos
 
 - Integrar com a API oficial do WhatsApp e usar o número autenticado pelo canal.
-- Notificar clientes quando um produto voltar ao estoque.
+- Notificar clientes quando um produto voltar ao estoque e dar à equipe uma tela para ler os encaminhamentos.
 - Integrar com os sistemas de catálogo e pedidos da loja.
 - Adotar avaliações contínuas e observabilidade das respostas.
 - Migrar para um banco com suporte a uso concorrente.
 
 ## Desenvolvimento assistido por IA
 
-O Claude Code apoia a análise dos dados, a comparação de alternativas, a documentação e a implementação. As decisões e a revisão final são feitas pelo responsável do projeto. Esta seção será detalhada na primeira versão funcional.
+O Claude Code apoia a análise dos dados, a comparação de alternativas, a documentação e a implementação. As decisões e a revisão final são feitas pelo responsável do projeto.
+
+- **Desenvolvimento:** cada funcionalidade nasceu de um teste que falha, com a implementação mínima em seguida, e passou por revisão de padrões e de aderência à especificação antes de ir para a `main`.
+- **Em execução:** o Gemini interpreta a mensagem e redige a resposta. Preços, estoque, prazos e datas são calculados em código, e uma guarda confere os valores citados contra o retorno das ferramentas (ADR-013).
+- **Avaliação:** as conversas de `examples/` vêm de execuções reais, feitas em poucas requisições por causa da cota.
 
 ## Dados
 

@@ -131,7 +131,7 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | Devolução | Análise de pedido, prazo e garantia |
 | Memória | Interesse no GF-3D, retorno em nova sessão e reposição simulada |
 
-As conversas serão salvas em `examples/`, a partir de execuções reais.
+As conversas estão em `examples/`, geradas a partir de execuções reais com o Gemini.
 
 ## 5. Cronograma
 
@@ -190,7 +190,6 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Categorias vazias | O agente não consulta a lista de categorias. A recusa de itens como saxofone depende da busca vazia e da regra do prompt (DQ-06) | Avaliar uma consulta de categorias quando surgirem novos casos |
 | Divergências do manual | Os itens DQ-19 a DQ-24 aplicam interpretações que precisam ser confirmadas pela gestão da loja | Validar antes de qualquer uso em produção |
 | Cota do Gemini | Cada pergunta usa, em média, de 2 a 3 requisições ao modelo, por causa das chamadas de ferramenta. O limite considerado de 20 por dia foi atingido durante a validação das issues #3 e #4 e voltou a ser consumido quase por inteiro na issue #5 | Planejar os ciclos de avaliação por quantidade de requisições e registrar respostas 429 |
-| Conversas de referência | Ainda não há arquivos em `examples/` | Gerar a partir de execuções reais (issue #11) |
 | Redação da resposta de pedidos | O prompt de pedidos (data de entrega em formato brasileiro, recusa de terceiros, explicação sem cadastro) foi validado com 3 perguntas reais, sem teste automático | Revalidar com o Gemini a cada mudança do prompt |
 | Pipeline de carga incompleto | Faltam `specs` como JSON e índices. As tabelas de conversa, mensagens, estado, interesses e encaminhamentos já são criadas pela carga (issues #7, #8 e #9) | Avaliar índices e `specs` na revisão final (issue #11) |
 | Tamanho de `load_data.py` | O módulo reúne esquema, validação e carga de seis tabelas. Vai crescer com as tabelas operacionais | Separar esquema e validação se passar de cerca de 400 linhas |
