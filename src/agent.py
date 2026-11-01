@@ -424,21 +424,25 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
 
 def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
     """Guarda a fala do cliente e o texto enviado a ele, sem a tentativa que falhou."""
-    memory.salvar_mensagens(
-        sessao.conexao,
-        sessao.telefone,
-        [
-            ModelRequest(parts=[UserPromptPart(mensagem)]),
-            ModelResponse(parts=[TextPart(texto)]),
-        ],
-    )
+    try:
+        memory.salvar_mensagens(
+            sessao.conexao,
+            sessao.telefone,
+            [
+                ModelRequest(parts=[UserPromptPart(mensagem)]),
+                ModelResponse(parts=[TextPart(texto)]),
+            ],
+        )
+    except sqlite3.Error:
+        # Se o banco é a causa da falha, o cliente ainda recebe a mensagem.
+        registro.exception("Não foi possível guardar a conversa")
     return texto
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
-    historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
-    sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
     try:
+        historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
+        sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
         resultado = _executar(mensagem, sessao, historico)
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)

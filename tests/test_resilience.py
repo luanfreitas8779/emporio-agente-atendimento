@@ -23,6 +23,7 @@ from src.agent import (
     agente,
     responder,
 )
+from src.database import conectar
 from src.memory import exibir_conversa
 
 ANA = "(67) 99654-7821"
@@ -162,3 +163,12 @@ def test_cota_esgotada_nao_repete_e_informa_o_limite(conexao, esperas):
     assert resposta == MENSAGEM_DE_LIMITE
     assert len(tentativas) == 1
     assert esperas == []
+
+
+def test_banco_sem_tabelas_gera_mensagem_amigavel_em_vez_de_traceback(tmp_path):
+    vazio = conectar(tmp_path / "vazio.db")
+
+    resposta = responder("Oi", Sessao(vazio, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    vazio.close()
