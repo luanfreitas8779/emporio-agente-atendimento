@@ -26,3 +26,11 @@ def test_resumo_vazio_nao_grava_encaminhamento(conexao, resumo):
 
     assert resultado == Resultado.RESUMO_INVALIDO
     assert encaminhamentos(conexao) == []
+
+
+@pytest.mark.parametrize("telefone", ["", "12345", "abc"])
+def test_telefone_invalido_nao_grava_encaminhamento(conexao, telefone):
+    resultado = registrar(conexao, telefone, Motivo.RECLAMACAO, RESUMO)
+
+    assert resultado == Resultado.TELEFONE_INVALIDO
+    assert encaminhamentos(conexao) == []
