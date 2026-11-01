@@ -64,7 +64,7 @@ def criar_tabelas(conexao: sqlite3.Connection) -> None:
     conexao.executescript(ESQUEMA)
 
 
-def _agora() -> str:
+def agora() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -146,17 +146,17 @@ def salvar_mensagens(
     chave = normalizar_telefone(telefone or "")
     if chave is None:
         return
-    agora = _agora()
+    momento = agora()
     conexao.execute(
         "INSERT INTO conversations (phone, created_at, updated_at) VALUES (?, ?, ?) "
         "ON CONFLICT (phone) DO UPDATE SET updated_at = excluded.updated_at",
-        (chave, agora, agora),
+        (chave, momento, momento),
     )
     conversa = conexao.execute("SELECT id FROM conversations WHERE phone = ?", (chave,)).fetchone()
     conexao.executemany(
         "INSERT INTO messages (conversation_id, content, created_at) VALUES (?, ?, ?)",
         [
-            (conversa["id"], ModelMessagesTypeAdapter.dump_json([m]).decode(), agora)
+            (conversa["id"], ModelMessagesTypeAdapter.dump_json([m]).decode(), momento)
             for m in mensagens
         ],
     )
@@ -185,6 +185,6 @@ def salvar_estado(conexao: sqlite3.Connection, telefone: str | None, estado: Est
             produto_em_foco = excluded.produto_em_foco,
             updated_at = excluded.updated_at
         """,
-        (chave, estado.pedido_em_analise, estado.produto_em_foco, _agora()),
+        (chave, estado.pedido_em_analise, estado.produto_em_foco, agora()),
     )
     conexao.commit()
