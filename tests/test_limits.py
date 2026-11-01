@@ -52,3 +52,18 @@ def test_registra_o_limite_efetivo_informado_pelo_provedor(tmp_path):
     assert evento["cota"] == "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
     assert evento["retry_after"] == 27
     assert evento["data"]
+
+
+def test_sem_detalhes_do_provedor_os_campos_ficam_nulos_e_cada_evento_ganha_uma_linha(tmp_path):
+    caminho = tmp_path / "limites.log"
+
+    registrar_limite(erro_429(None), caminho)
+    registrar_limite(erro_429("texto solto"), caminho)
+
+    eventos = linhas(caminho)
+    assert len(eventos) == 2
+    for evento in eventos:
+        assert evento["status"] == 429
+        assert evento["limite"] is None
+        assert evento["metrica"] is None
+        assert evento["retry_after"] is None
