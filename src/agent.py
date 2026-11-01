@@ -448,7 +448,10 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
     except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as erro:
-        limits.registrar_limite(erro)
+        try:
+            limits.registrar_limite(erro)
+        except OSError:
+            registro.exception("Não foi possível registrar o limite do provedor")
         # Cota esgotada não se resolve esperando: não há nova tentativa, só a mesma mensagem.
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
     except (ModelTimeoutError, ModelRequestTimeout):

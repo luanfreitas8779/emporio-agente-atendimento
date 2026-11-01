@@ -203,3 +203,14 @@ def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
 
     eventos = [json.loads(l) for l in log_de_limites_temporario.read_text(encoding="utf-8").splitlines()]
     assert [(e["status"], e["limite"], e["cota"]) for e in eventos] == [(429, "20", "PorDia")]
+
+
+def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(conexao, esperas, tmp_path, monkeypatch):
+    # Um diretório no lugar do arquivo faz a gravação falhar.
+    monkeypatch.setattr("src.config.CAMINHO_LOG_DE_LIMITES", tmp_path)
+    modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_LIMITE
