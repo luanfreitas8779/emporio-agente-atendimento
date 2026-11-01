@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 
 import streamlit as st
 
@@ -29,11 +30,16 @@ st.title("Empório da Música")
 st.caption("Sua música começa aqui.")
 
 # Sem a carga de dados não há catálogo nem pedidos para consultar.
-_conexao = conectar(CAMINHO_BANCO)
 try:
-    _carregado = banco_carregado(_conexao)
-finally:
-    _conexao.close()
+    _conexao = conectar(CAMINHO_BANCO)
+    try:
+        _carregado = banco_carregado(_conexao)
+    finally:
+        _conexao.close()
+except (OSError, sqlite3.Error):
+    logging.getLogger(__name__).exception("Não foi possível abrir o banco de dados")
+    st.error("Não foi possível abrir o banco de dados. Verifique o arquivo e reinicie o app.")
+    st.stop()
 if not _carregado:
     st.error("O banco de dados ainda não foi preparado. Execute `python -m src.load_data` e reinicie o app.")
     st.stop()

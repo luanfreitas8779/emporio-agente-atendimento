@@ -116,3 +116,19 @@ def test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_tracebac
     assert not tela.exception
     assert "python -m src.load_data" in tela.error[0].value
     assert len(tela.chat_input) == 0
+
+
+@pytest.mark.regressao
+def test_falha_ao_abrir_o_banco_na_abertura_da_tela_orienta_sem_traceback(tmp_path, monkeypatch):
+    def conectar_com_falha(caminho):
+        raise OSError("sem permissão em /caminho/interno")
+
+    monkeypatch.setattr("src.config.CAMINHO_BANCO", tmp_path / "teste.db")
+    monkeypatch.setattr("src.database.conectar", conectar_com_falha)
+
+    tela = AppTest.from_file(APP, default_timeout=30).run()
+
+    assert not tela.exception
+    assert "banco de dados" in tela.error[0].value
+    assert "/caminho/interno" not in tela.error[0].value
+    assert len(tela.chat_input) == 0

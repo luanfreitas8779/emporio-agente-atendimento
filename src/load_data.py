@@ -5,7 +5,6 @@ from pathlib import Path
 
 from src.config import CAMINHO_BANCO, PASTA_DADOS
 from src.database import conectar
-from src.memory import criar_tabelas
 from src.orders import STATUS_DE_PEDIDO, pagamento_valido
 from src.phone import normalizar_telefone
 
@@ -290,7 +289,6 @@ def carregar_dados(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     carregar_catalogo(conexao, pasta_dados)
     carregar_clientes(conexao, pasta_dados)
     carregar_pedidos(conexao, pasta_dados)
-    criar_tabelas(conexao)
 
 
 TABELAS_DA_CARGA = ("categories", "products", "promotions", "customers", "orders", "order_items")
