@@ -4,7 +4,7 @@ import sqlite3
 import time
 from datetime import date
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Annotated, Literal
 
 from pydantic import Field
@@ -427,7 +427,10 @@ _aguardar = time.sleep
 
 def _executar(mensagem: str, sessao: Sessao, historico: list):
     """Roda o agente e repete quando o provedor recusa por limite de uso."""
+    estado_inicial = replace(sessao.estado)
     for espera in (*ESPERAS_ENTRE_TENTATIVAS, None):
+        # As ferramentas da tentativa que falhou podem ter alterado o estado da conversa.
+        sessao.estado = replace(estado_inicial)
         # O contexto copiado preserva o modelo simulado dos testes na outra thread.
         contexto = contextvars.copy_context()
         execucao = _executor.submit(

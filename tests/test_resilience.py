@@ -2,7 +2,7 @@ import json
 import sqlite3
 
 import pytest
-from pydantic_ai import ModelResponse, TextPart
+from pydantic_ai import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelAuthenticationError,
@@ -28,7 +28,7 @@ from src.agent import (
     responder,
 )
 from src.database import conectar
-from src.memory import exibir_conversa
+from src.memory import carregar_estado, exibir_conversa
 
 ANA = "(67) 99654-7821"
 
@@ -226,3 +226,22 @@ def test_turno_com_erro_nao_herda_as_ferramentas_do_turno_anterior(conexao, espe
         responder("Oi", sessao)
 
     assert sessao.ferramentas == []
+
+
+def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(conexao, esperas):
+    chamadas: list[int] = []
+
+    def modelo(mensagens, info):
+        chamadas.append(1)
+        if len(chamadas) == 1:
+            return ModelResponse(
+                parts=[ToolCallPart("buscar_produtos", {"termo": "Takamine GD20"})]
+            )
+        if len(chamadas) == 2:
+            raise limite_atingido()
+        return ModelResponse(parts=[TextPart("Resposta do Tom")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        responder("Quanto custa o Takamine GD20?", Sessao(conexao, telefone=ANA))
+
+    assert carregar_estado(conexao, ANA).produto_em_foco is None
