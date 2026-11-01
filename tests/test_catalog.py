@@ -160,6 +160,7 @@ def test_busca_nao_confunde_modelos_distintos_com_codigo_parecido(conexao, termo
     assert buscar_produtos(conexao, termo=termo) == []
 
 
+@pytest.mark.regressao
 def test_expoe_as_especificacoes_cadastradas_do_produto(conexao):
     produto = buscar_produtos(conexao, termo="Takamine GD20")[0]
 
@@ -167,6 +168,7 @@ def test_expoe_as_especificacoes_cadastradas_do_produto(conexao):
     assert produto.especificacoes["neck"] == "Mogno"
 
 
+@pytest.mark.regressao
 def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conexao):
     # Descrição e especificações do id 137 discordam (DQ-05): o dado não é confiável.
     produto = buscar_produtos(conexao, termo="Yamaha Bass 3X")[0]
@@ -175,6 +177,7 @@ def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conex
     assert produto.especificacoes["neck"] == "Maple"
 
 
+@pytest.mark.regressao
 def test_informa_se_o_estoque_atende_a_quantidade_sem_revelar_o_numero(conexao):
     # Yamaha C40 tem 12 unidades em estoque.
     atende = buscar_produtos(conexao, termo="Yamaha C40", quantidade=10)[0]

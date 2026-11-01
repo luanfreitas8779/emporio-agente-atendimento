@@ -214,6 +214,20 @@ Tabelas operacionais:
 - **Alternativas:** agrupar as mensagens recebidas numa janela de 2 a 5 segundos e enviar todas juntas ao agente (debounce), descartada no MVP porque soma a espera a toda mensagem e não cobre uma mensagem que chega durante a chamada ao modelo; aceitar a limitação, descartada porque perde respostas.
 - **Consequências:** nenhuma mensagem fica sem resposta, ao custo de o cliente só poder escrever depois da resposta (de poucos segundos a cerca de 22 s quando há nova tentativa). O agrupamento de mensagens por telefone fica para a integração com um canal como o WhatsApp, onde o servidor recebe as mensagens e a fila é natural. Uma recarga da página durante a espera perde a pergunta pendente, porque o estado da tela é da sessão. A pergunta pendente guarda o telefone de quem a enviou: se o campo de telefone mudar durante a espera, a resposta é guardada para o telefone original e não aparece na conversa exibida do novo número. Se a resposta falhar com uma exceção inesperada, a pendência é limpa, o campo é liberado e a tela mostra `MENSAGEM_DE_ERRO_TECNICO` em vez do traceback; o detalhe vai para o log. O Streamlit também roda com `showErrorDetails = "none"` (`.streamlit/config.toml`).
 
+### ADR-021: Respostas só com informação de fonte conhecida
+
+- **Status:** Aceita.
+- **Contexto:** uma avaliação de QA mostrou o Tom inventando especificações, estoque, fatos da loja e promessas de aviso, e supondo o canal de compra. A guarda do ADR-013 só confere valores em reais, percentuais, datas e rastreios.
+- **Decisão:**
+  1. **Especificações pelo cadastro.** A carga passa a guardar `specs` (JSON de `products.csv`) e `Produto.especificacoes` as devolve ao modelo. A descrição livre não é exposta (DQ-04). Campos que o cadastro contradiz ficam de fora: `strings` do Yamaha Bass 3X, id 137 (DQ-05). O que não estiver nas especificações é respondido como "não tenho essa informação".
+  2. **Quantidade sem estoque exato.** `buscar_produtos` aceita `quantidade` e devolve `atende_quantidade`, calculado em código: só é verdadeiro para produto disponível com estoque suficiente (o `status` tem prioridade, DQ-02 e DQ-03). O número do estoque não é exposto, porque muda a cada venda e vira promessa; o Tom nunca cita nem estima unidades.
+  3. **Canal só se o cliente citou.** `avaliar_devolucao` ignora o `canal` quando nenhuma fala do cliente na conversa traz uma palavra desse canal (online, site, internet, presencial, pessoalmente, na loja, balcão). O veredito volta `faltam_dados` e o Tom pergunta.
+  4. **Promessa de aviso na guarda.** O validador de saída recusa respostas que prometem avisar o cliente (ADR-016), exceto quando negam a promessa. O modelo recebe um pedido de correção.
+  5. **Regras de prompt.** O prompt ganha regras para especificação e quantidade, assuntos sem fonte (categorias, serviços, lojas parceiras, exceções de prazo, cidade do cliente, site e carrinho), compra, reserva, cancelamento e alteração de pedido. Elas dependem do comportamento do Gemini e são validadas à mão (docs/05, seção 9.2).
+  6. **Carga desatualizada.** Um banco carregado antes das especificações é tratado como não carregado e a tela indica `python -m src.load_data`.
+- **Alternativas:** expor o estoque exato, descartada; descartar o prompt e responder tudo por código, fora do prazo do MVP; teste automático sobre o texto do prompt, tautológico.
+- **Consequências:** o Tom passa a ter dados para responder sobre especificações e quantidade sem inventar, e o canal deixa de ser suposto. As listas de palavras do canal e de frases de aviso são heurísticas e não cobrem toda redação. As chaves das especificações vêm em inglês (`back_sides`, `neck`) e o modelo as traduz. As regras de prompt só foram avaliadas com modelo simulado até a cota do Gemini voltar.
+
 ### ADR-004: SQLite como armazenamento
 
 - **Status:** Aceita.

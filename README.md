@@ -108,7 +108,7 @@ As conversas de referência estão em [`examples/`](examples/) e foram geradas c
 
 - O telefone digitado na interface não é uma autenticação real.
 - Os dados não informam o canal da compra nem a data real de entrega.
-- Não há previsão de reposição, então o agente informa apenas o estoque atual.
+- Não há previsão de reposição, então o agente informa apenas o estoque atual. O número exato de unidades não é informado: o agente só confirma se a loja atende a quantidade pedida.
 - Os limites do plano gratuito do Gemini restringem o volume de uso: cada pergunta consome de 2 a 3 requisições.
 - A busca aproximada corrige apenas um erro de digitação por palavra e só vale para nomes com 5 letras ou mais e sem dígitos; códigos de modelo precisam estar corretos.
 - O campo de mensagem fica bloqueado enquanto o Tom responde, e recarregar a página nesse intervalo perde a pergunta pendente (ADR-020).

@@ -1006,6 +1006,7 @@ def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(conexao, ferramenta, ar
     assert retornos[0].outcome == "retried"
 
 
+@pytest.mark.regressao
 def test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida(conexao):
     retornos: list = []
     modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
@@ -1058,6 +1059,7 @@ def test_aviso_de_que_nao_ha_garantia_de_aviso_passa_sem_nova_tentativa(conexao)
     assert resposta == honesta
 
 
+@pytest.mark.regressao
 def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(conexao):
     honesta = "Anotei o interesse, mas não posso te avisar quando ele chegar. Consulte a loja."
     modelo = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
