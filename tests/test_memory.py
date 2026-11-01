@@ -33,10 +33,11 @@ INSERT INTO conversation_state VALUES ('67996547821', 8, 96, '2026-03-01T00:00:0
 @pytest.mark.parametrize("esquema", [ESQUEMA_COM_COLUNA_ANTIGA, ESQUEMA_SEM_COLUNA])
 @pytest.mark.regressao
 def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
-    conexao = conectar(tmp_path / "antigo.db")
-    conexao.executescript(esquema)
+    anterior = sqlite3.connect(tmp_path / "antigo.db")
+    anterior.executescript(esquema)
+    anterior.close()
 
-    criar_tabelas(conexao)
+    conexao = conectar(tmp_path / "antigo.db")
 
     assert carregar_estado(conexao, TELEFONE) == Estado(8, 96)
     salvar_estado(conexao, TELEFONE, Estado(7, None))
@@ -72,4 +73,13 @@ def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp
             "VALUES ('67996547821', ?, ?, '2026-03-25')",
             (motivo, resumo),
         )
+    conexao.close()
+
+
+def test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo(tmp_path):
+    conexao = conectar(tmp_path / "novo.db")
+
+    salvar_estado(conexao, TELEFONE, Estado(pedido_em_analise=8))
+
+    assert carregar_estado(conexao, TELEFONE) == Estado(pedido_em_analise=8)
     conexao.close()
