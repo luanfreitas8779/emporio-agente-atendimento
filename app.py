@@ -1,6 +1,8 @@
+import logging
+
 import streamlit as st
 
-from src.agent import Sessao, responder
+from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
 from src.config import CAMINHO_BANCO
 from src.database import conectar
 from src.memory import exibir_conversa
@@ -62,9 +64,14 @@ if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not No
 if pendente is not None:
     sessao = None
     try:
-        sessao = Sessao(conectar(CAMINHO_BANCO), pendente["telefone"])
-        with st.spinner("O Tom está digitando..."):
-            resposta = responder(pendente["pergunta"], sessao)
+        try:
+            sessao = Sessao(conectar(CAMINHO_BANCO), pendente["telefone"])
+            with st.spinner("O Tom está digitando..."):
+                resposta = responder(pendente["pergunta"], sessao)
+        except Exception:
+            # Sem isto o traceback apareceria ao cliente e o campo ficaria bloqueado (ADR-020).
+            logging.getLogger(__name__).exception("Falha ao responder na tela")
+            resposta = MENSAGEM_DE_ERRO_TECNICO
         # Se o telefone da tela mudou, a resposta já foi guardada para quem perguntou e
         # não deve aparecer na conversa de outro número.
         if normalizar_telefone(pendente["telefone"]) == st.session_state.get("conversa_de"):
@@ -74,7 +81,7 @@ if pendente is not None:
                     "texto": resposta,
                     "ferramentas": [
                         {"nome": chamada.nome, "argumentos": chamada.argumentos}
-                        for chamada in sessao.ferramentas
+                        for chamada in (sessao.ferramentas if sessao is not None else [])
                     ],
                 }
             )

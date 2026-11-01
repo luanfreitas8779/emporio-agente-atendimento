@@ -6,7 +6,7 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from streamlit.testing.v1 import AppTest
 
-from src.agent import agente
+from src.agent import MENSAGEM_DE_ERRO_TECNICO, agente
 
 APP = str(Path(__file__).parent.parent / "app.py")
 
@@ -68,3 +68,31 @@ def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypa
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
     assert all(m["texto"] != "Resposta da Ana" for m in tela.session_state["mensagens"])
+
+
+def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceback(tela, monkeypatch):
+    def responder_com_falha(mensagem, sessao):
+        raise RuntimeError("falha em /caminho/interno")
+
+    monkeypatch.setattr("src.agent.responder", responder_com_falha)
+
+    tela.chat_input[0].set_value("Oi").run()
+
+    assert not tela.exception
+    assert tela.session_state["mensagens"][-1]["texto"] == MENSAGEM_DE_ERRO_TECNICO
+    assert tela.session_state["pendente"] is None
+    assert not tela.chat_input[0].disabled
+
+
+def test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
+    def conectar_com_falha(caminho):
+        raise OSError("disco indisponível")
+
+    monkeypatch.setattr("src.database.conectar", conectar_com_falha)
+    tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": ""}
+
+    tela.run()
+
+    assert not tela.exception
+    assert tela.session_state["mensagens"][-1]["texto"] == MENSAGEM_DE_ERRO_TECNICO
+    assert not tela.chat_input[0].disabled
