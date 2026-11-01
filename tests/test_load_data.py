@@ -4,6 +4,7 @@ from src.catalog import buscar_produtos
 from src.database import conectar
 from src.load_data import (
     ErroDeCarga,
+    banco_carregado,
     carregar_catalogo,
     carregar_clientes,
     carregar_dados,
@@ -291,3 +292,14 @@ def test_interrompe_a_carga_quando_a_promocao_tem_dado_invalido(tmp_path, promoc
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
+
+
+def test_banco_so_com_a_memoria_nao_esta_carregado(tmp_path):
+    vazio = conectar(tmp_path / "vazio.db")
+
+    assert not banco_carregado(vazio)
+    vazio.close()
+
+
+def test_banco_com_os_dados_carregados_esta_pronto(conexao):
+    assert banco_carregado(conexao)

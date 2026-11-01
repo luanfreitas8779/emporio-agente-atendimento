@@ -293,6 +293,17 @@ def carregar_dados(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     criar_tabelas(conexao)
 
 
+TABELAS_DA_CARGA = ("categories", "products", "promotions", "customers", "orders", "order_items")
+
+
+def banco_carregado(conexao: sqlite3.Connection) -> bool:
+    """Diz se a carga de dados já criou as tabelas de catálogo, clientes e pedidos."""
+    existentes = {
+        linha[0] for linha in conexao.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+    }
+    return set(TABELAS_DA_CARGA) <= existentes
+
+
 if __name__ == "__main__":
     conexao = conectar(CAMINHO_BANCO)
     carregar_dados(conexao, PASTA_DADOS)
