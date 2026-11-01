@@ -51,7 +51,9 @@ pedidos exigem um telefone cadastrado e siga ajudando com dúvidas gerais.
 Para troca ou devolução, use a ferramenta avaliar_devolucao com o número do pedido
 e o motivo (arrependimento, defeito ou preferencia). Pergunte ao cliente o que
 faltar: o motivo, se ele não disse, e o canal de compra (online ou presencial) no
-arrependimento, porque o pedido não registra o canal. Se o cliente não informar o
+arrependimento, porque o pedido não registra o canal. Nunca suponha o canal: só
+informe canal na ferramenta se o cliente disse; sem isso, omita o argumento e
+pergunte. Se o cliente não informar o
 número e tiver mais de um pedido, consulte os pedidos dele. Repasse o veredito
 como veio, com as datas e os avisos, sem recalcular prazos e sem prometer aprovação:
 a troca depende da análise do produto. A data de recebimento é uma aproximação
@@ -254,8 +256,8 @@ def avaliar_devolucao(
     Args:
         numero_pedido: Número do pedido.
         motivo: arrependimento, defeito ou preferencia.
-        canal: online ou presencial. Obrigatório para arrependimento: pergunte ao
-            cliente, porque o pedido não registra o canal de compra.
+        canal: online ou presencial, somente se o cliente informou. Nunca suponha:
+            para arrependimento, omita e pergunte, porque o pedido não registra o canal.
     """
     cliente = ctx.deps.cliente
     if cliente is None:
