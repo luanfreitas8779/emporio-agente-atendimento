@@ -421,13 +421,14 @@ def consultar_politicas(
             parcelamento. Sem valor, vale o preço do produto em foco da conversa.
         parcelas: Só para a seção pagamentos: número de parcelas que o cliente quer.
     """
-    if secao == "pagamentos" and valor is None and parcelas is not None:
+    if secao == "pagamentos" and valor is None:
         # Sem valor o parcelamento seria afirmado às cegas: vale o preço do produto em foco.
         foco = ctx.deps.estado.produto_em_foco
         centavos = catalog.preco_final_em_centavos(ctx.deps.conexao, foco) if foco else None
-        if centavos is None:
+        if centavos is not None:
+            valor = centavos / 100
+        elif parcelas is not None:
             return "Para calcular o parcelamento, informe o produto ou o valor da compra."
-        valor = centavos / 100
     return policies.consultar_politicas(secao, valor, parcelas)
 
 

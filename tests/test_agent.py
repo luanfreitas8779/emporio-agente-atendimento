@@ -1384,3 +1384,23 @@ def test_quantidade_acima_do_estoque_traz_aviso_na_conta(conexao):
 
     assert resultado.aviso == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
     assert "12" not in str(resultado)
+
+
+@pytest.mark.regressao
+def test_pergunta_de_parcelamento_sem_numero_de_parcelas_usa_o_produto_em_foco(conexao):
+    (ukulele,) = catalog.buscar_produtos(conexao, termo="Kala KA-C")
+    retornos: list = []
+    modelo = FunctionModel(modelo_que_chama("consultar_politicas", {"secao": "pagamentos"}, retornos))
+    salvar_estado(conexao, ANA, Estado(produto_em_foco=ukulele.id))
+
+    with agente.override(model=modelo):
+        responder("Posso parcelar?", Sessao(conexao, telefone=ANA))
+
+    assert "máximo de 4x de R$ 87,48" in retornos[0].content
+
+
+def test_pergunta_geral_de_pagamento_sem_produto_em_foco_traz_so_a_politica(conexao):
+    retorno = chamar_ferramenta(conexao, ANA, "consultar_politicas", {"secao": "pagamentos"})
+
+    assert "Cálculo para esta compra" not in retorno.content
+    assert "informe o produto ou o valor" not in retorno.content
