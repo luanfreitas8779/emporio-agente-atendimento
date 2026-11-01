@@ -1,3 +1,5 @@
+import pytest
+
 from src.handoffs import Motivo, Resultado, registrar
 
 TELEFONE = "(67) 99654-7821"
@@ -16,3 +18,11 @@ def test_registra_a_reclamacao_com_telefone_motivo_e_resumo(conexao):
 
     assert resultado == Resultado.REGISTRADO
     assert encaminhamentos(conexao) == [("67996547821", "reclamacao", RESUMO)]
+
+
+@pytest.mark.parametrize("resumo", ["", "   ", "\n\t"])
+def test_resumo_vazio_nao_grava_encaminhamento(conexao, resumo):
+    resultado = registrar(conexao, TELEFONE, Motivo.RECLAMACAO, resumo)
+
+    assert resultado == Resultado.RESUMO_INVALIDO
+    assert encaminhamentos(conexao) == []

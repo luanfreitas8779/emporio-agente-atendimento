@@ -13,9 +13,13 @@ class Motivo(StrEnum):
 
 class Resultado(StrEnum):
     REGISTRADO = "registrado"
+    RESUMO_INVALIDO = "resumo_invalido"
 
 
 def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo: str) -> Resultado:
+    resumo = resumo.strip()
+    if not resumo:
+        return Resultado.RESUMO_INVALIDO
     conexao.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
         (normalizar_telefone(telefone), motivo, resumo, agora()),
