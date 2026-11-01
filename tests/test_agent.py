@@ -7,6 +7,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
+from src.interests import registrar
 from src.load_data import ler_csv
 from src.memory import exibir_conversa
 from tests.conftest import PASTA_DADOS
@@ -667,3 +668,17 @@ def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(conexao, argumen
         instrucoes = responder("Mostra o contexto", sessao)
 
     assert "Pedido em análise" not in instrucoes
+
+
+def test_instrucoes_trazem_os_interesses_pendentes_so_do_telefone_da_sessao(conexao):
+    registrar(conexao, ANA, 96)
+    registrar(conexao, "(67) 91111-2222", 90)
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        da_ana = responder("Oi!", Sessao(conexao, telefone=ANA))
+        de_outro = responder("Oi!", Sessao(conexao, telefone="(67) 93333-4444"))
+
+    assert "Giannini GF-3D" in da_ana
+    assert "Crafter HT-100" not in da_ana
+    assert "Giannini GF-3D" not in de_outro
+    assert "Crafter HT-100" not in de_outro

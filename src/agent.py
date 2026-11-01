@@ -16,8 +16,10 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src import catalog, guardrail, memory, orders, policies, returns
+from src import catalog, guardrail, interests, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
+
+MAX_INTERESSES_NO_CONTEXTO = 5
 
 INSTRUCOES = """\
 Você é o Tom, assistente virtual da Empório da Música, loja de instrumentos
@@ -161,6 +163,10 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
         if nome:
             texto += f"\nProduto em foco: {nome}."
+    interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.telefone or "")
+    if interesses:
+        # Só os nomes: o estoque atual vem sempre de buscar_produtos.
+        texto += "\nInteresses pendentes: " + "; ".join(interesses[:MAX_INTERESSES_NO_CONTEXTO]) + "."
     return texto
 
 
