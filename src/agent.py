@@ -16,7 +16,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src import catalog, guardrail, interests, memory, orders, policies, returns
+from src import catalog, guardrail, handoffs, interests, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
 
 MAX_INTERESSES_NO_CONTEXTO = 5
@@ -108,6 +108,19 @@ MENSAGENS_DE_INTERESSE = {
     interests.Resultado.PRODUTO_INEXISTENTE: "Produto não encontrado: nenhum interesse foi registrado.",
     interests.Resultado.TELEFONE_INVALIDO: (
         "Sem um telefone válido nesta conversa não é possível guardar o interesse."
+    ),
+}
+
+PRAZO_DE_RETORNO = "A equipe retorna em até 24 horas úteis."
+
+MENSAGENS_DE_ENCAMINHAMENTO = {
+    handoffs.Resultado.REGISTRADO: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
+    handoffs.Resultado.JA_REGISTRADO: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
+    handoffs.Resultado.RESUMO_INVALIDO: "O resumo está vazio: descreva o caso antes de encaminhar.",
+    handoffs.Resultado.TELEFONE_INVALIDO: (
+        "Não foi possível identificar o telefone do cliente nesta conversa, então o caso não foi "
+        "encaminhado. Explique isso ao cliente e passe os contatos da loja "
+        "(consultar_politicas, seção sobre_a_loja)."
     ),
 }
 
@@ -307,6 +320,23 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     if resultado in (interests.Resultado.REGISTRADO, interests.Resultado.JA_REGISTRADO):
         ctx.deps.estado.produto_em_foco = product_id
     return MENSAGENS_DE_INTERESSE[resultado]
+
+
+@agente.tool
+def encaminhar_para_atendente(
+    ctx: RunContext[Sessao], motivo: handoffs.Motivo, resumo: str
+) -> str:
+    """Registra o caso para a equipe da loja, que retorna ao cliente em até 24 horas úteis.
+
+    Use para reclamações, para quando o cliente pedir um atendente e para dúvidas que
+    nenhuma ferramenta responde com segurança.
+
+    Args:
+        motivo: reclamacao, atendente_solicitado ou sem_resposta_segura.
+        resumo: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
+    """
+    resultado = handoffs.registrar(ctx.deps.conexao, ctx.deps.telefone or "", motivo, resumo)
+    return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:

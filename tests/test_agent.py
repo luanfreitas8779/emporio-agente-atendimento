@@ -797,3 +797,16 @@ def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(conex
     assert nomes[0] not in instrucoes
     assert all(nome in instrucoes for nome in nomes[1:])
     assert "e mais 1" in instrucoes
+
+
+def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(conexao):
+    retorno = chamar_ferramenta(
+        conexao,
+        ANA,
+        "encaminhar_para_atendente",
+        {"motivo": "reclamacao", "resumo": "Violão chegou com defeito no braço."},
+    )
+
+    linhas = [tuple(l) for l in conexao.execute("SELECT phone, reason, summary FROM handoffs")]
+    assert linhas == [("67996547821", "reclamacao", "Violão chegou com defeito no braço.")]
+    assert "24 horas úteis" in retorno.content
