@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from src.orders import consultar_pedidos, identificar_cliente
@@ -94,3 +96,17 @@ def test_pedido_traz_a_situacao_traduzida_em_codigo(conexao, cliente, numero, si
     (pedido,) = consultar_pedidos(conexao, cliente_id=cliente, numero=numero)
 
     assert pedido.situacao == situacao
+
+
+@pytest.mark.regressao
+def test_pedido_enviado_depois_da_entrega_estimada_informa_os_dias_de_atraso(conexao):
+    # Pedido 8: enviado, entrega estimada em 28/02/2026 (DQ-16).
+    (pedido,) = consultar_pedidos(conexao, cliente_id=2, numero=8, hoje=date(2026, 3, 25))
+
+    assert pedido.atraso == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
+
+
+def test_pedido_dentro_da_previsao_nao_tem_atraso(conexao):
+    (pedido,) = consultar_pedidos(conexao, cliente_id=2, numero=8, hoje=date(2026, 2, 28))
+
+    assert pedido.atraso is None

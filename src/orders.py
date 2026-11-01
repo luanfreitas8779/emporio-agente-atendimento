@@ -1,5 +1,6 @@
 import sqlite3
 from dataclasses import dataclass
+from datetime import date
 from typing import Annotated
 
 from pydantic import Field
@@ -44,6 +45,8 @@ class Pedido:
     pagamento: str
     rastreio: str | None
     entrega_estimada: str | None
+    # Calculado em código; só existe para pedido enviado depois da previsão (DQ-16).
+    atraso: str | None = None
 
 
 def identificar_cliente(conexao: sqlite3.Connection, telefone: str | None) -> Cliente | None:
@@ -90,8 +93,22 @@ def consultar_itens(conexao: sqlite3.Connection, numero: int) -> list[ItemPedido
     return [ItemPedido(linha["name"], linha["quantity"]) for linha in linhas]
 
 
+def descrever_atraso(linha: sqlite3.Row, hoje: date | None) -> str | None:
+    if hoje is None or linha["status"] != "shipped" or not linha["estimated_delivery"]:
+        return None
+    dias = (hoje - date.fromisoformat(linha["estimated_delivery"])).days
+    if dias <= 0:
+        return None
+    unidade = "dia" if dias == 1 else "dias"
+    previsao = formatar_data(linha["estimated_delivery"])
+    return f"A entrega estimada era {previsao} e o pedido segue como enviado: {dias} {unidade} de atraso."
+
+
 def consultar_pedidos(
-    conexao: sqlite3.Connection, cliente_id: int, numero: int | None = None
+    conexao: sqlite3.Connection,
+    cliente_id: int,
+    numero: int | None = None,
+    hoje: date | None = None,
 ) -> list[Pedido]:
     linhas = conexao.execute(
         """
@@ -114,6 +131,7 @@ def consultar_pedidos(
             descrever_pagamento(linha["payment_method"]),
             linha["tracking_code"],
             formatar_data(linha["estimated_delivery"]),
+            descrever_atraso(linha, hoje),
         )
         for linha in linhas
     ]
