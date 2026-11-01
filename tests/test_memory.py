@@ -1,3 +1,7 @@
+import sqlite3
+
+import pytest
+
 from src.database import conectar
 from src.memory import Estado, carregar_estado, criar_tabelas, salvar_estado
 
@@ -26,3 +30,8 @@ def test_banco_anterior_ganha_a_pergunta_pendente_sem_perder_o_estado(tmp_path):
     salvar_estado(conexao, TELEFONE, Estado(8, 96, "canal_de_compra"))
     assert carregar_estado(conexao, TELEFONE) == Estado(8, 96, "canal_de_compra")
     conexao.close()
+
+
+def test_pergunta_pendente_fora_da_lista_nao_e_gravada(conexao):
+    with pytest.raises(sqlite3.IntegrityError):
+        salvar_estado(conexao, TELEFONE, Estado(None, None, "qualquer coisa"))
