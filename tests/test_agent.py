@@ -588,11 +588,11 @@ def test_telefone_sem_conversa_exibe_lista_vazia(conexao):
 LETICIA = "(67) 99789-0123"
 
 
-def chamar_ferramenta_na_data(conexao, telefone, hoje, ferramenta, argumentos):
+def chamar_ferramenta_na_data(conexao, telefone, hoje, ferramenta, argumentos, mensagem="Teste"):
     capturados: list = []
     modelo = FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))
     with agente.override(model=modelo):
-        responder("Teste", Sessao(conexao, telefone=telefone, hoje=hoje))
+        responder(mensagem, Sessao(conexao, telefone=telefone, hoje=hoje))
     return capturados[0]
 
 
@@ -600,10 +600,34 @@ def test_ferramenta_de_devolucao_usa_o_pedido_do_cliente_e_a_data_da_sessao(cone
     retorno = chamar_ferramenta_na_data(
         conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
         {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        mensagem="Comprei online e quero devolver o pedido 7 por arrependimento",
     )
 
     assert retorno.content.resultado == "dentro_do_prazo"
     assert retorno.content.regras[0].prazo_ate == "24/02/2026"
+
+
+@pytest.mark.regressao
+def test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal(conexao):
+    # O modelo supôs "online"; o cliente disse só o motivo.
+    retorno = chamar_ferramenta_na_data(
+        conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
+        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        mensagem="Quero devolver o pedido 7 por arrependimento",
+    )
+
+    assert retorno.content.resultado == "faltam_dados"
+
+
+@pytest.mark.regressao
+def test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado(conexao):
+    retorno = chamar_ferramenta_na_data(
+        conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
+        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        mensagem="Comprei presencialmente e quero devolver o pedido 7 por arrependimento",
+    )
+
+    assert retorno.content.resultado == "faltam_dados"
 
 
 def test_devolucao_de_pedido_de_outro_cliente_volta_como_nao_encontrado(conexao):

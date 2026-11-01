@@ -385,6 +385,23 @@ def consultar_meus_pedidos(
     return pedidos
 
 
+PALAVRAS_DO_CANAL = {
+    returns.Canal.ONLINE: ("online", "site", "internet"),
+    returns.Canal.PRESENCIAL: ("presencial", "pessoalmente", "na loja", "balcao"),
+}
+
+
+def canal_citado_pelo_cliente(mensagens: list, canal: returns.Canal) -> bool:
+    """O pedido não registra o canal: só vale o que uma fala do cliente da conversa disse."""
+    falas = (
+        catalog.normalizar(str(parte.content))
+        for mensagem in mensagens
+        for parte in mensagem.parts
+        if isinstance(parte, UserPromptPart)
+    )
+    return any(palavra in fala for fala in falas for palavra in PALAVRAS_DO_CANAL[canal])
+
+
 @agente.tool
 def avaliar_devolucao(
     ctx: RunContext[Sessao],
@@ -406,6 +423,8 @@ def avaliar_devolucao(
     cliente = ctx.deps.cliente
     if cliente is None:
         return SEM_CADASTRO
+    if canal is not None and not canal_citado_pelo_cliente(ctx.messages, canal):
+        canal = None
     veredito = returns.avaliar_devolucao(
         ctx.deps.conexao, cliente.id, numero_pedido, motivo, canal, ctx.deps.hoje
     )
