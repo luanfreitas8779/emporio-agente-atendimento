@@ -241,7 +241,7 @@ Cada bug corrigido deve deixar um teste que o reproduz. Os automáticos levam o 
 | Uma carga com erro apagava o banco anterior | `test_falha_na_carga_preserva_o_banco_anterior` |
 | O comando de reposição criava um banco vazio quando ele não existia | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
 
-As validações da carga (`tests/test_load_data.py`, testes `test_interrompe_a_carga_*`) cobrem os erros de origem corrigidos na issue #2 a #3.
+As validações da carga (`tests/test_load_data.py`, testes `test_interrompe_a_carga_*`) também levam o marcador: cada uma impede que um dado inválido da origem entre no banco, o que foi corrigido nas issues #2 a #5.
 
 ### 9.2 Roteiro manual com o Gemini
 

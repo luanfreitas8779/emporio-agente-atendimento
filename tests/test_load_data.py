@@ -30,6 +30,7 @@ def test_recarregar_recria_o_catalogo_sem_duplicar_produtos(conexao):
     assert len(buscar_produtos(conexao, termo="Takamine GD20")) == 1
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_produto_aponta_para_categoria_inexistente(tmp_path):
     escrever_catalogo(tmp_path, '10,100,Guitarra Teste,99,Descricao,1,active,{},2024-01-01')
     conexao = conectar(tmp_path / "teste.db")
@@ -40,6 +41,7 @@ def test_interrompe_a_carga_quando_o_produto_aponta_para_categoria_inexistente(t
     conexao.close()
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
     escrever_catalogo(tmp_path, '10,abc,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
     conexao = conectar(tmp_path / "teste.db")
@@ -50,6 +52,7 @@ def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
     conexao.close()
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tmp_path):
     escrever_catalogo(tmp_path, '10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
     (tmp_path / "promotions.csv").write_text(
@@ -99,6 +102,7 @@ def carregar_pedidos_de(pasta, cliente, pedido, item):
 CLIENTE = "1,Cliente Teste,(67) 90000-0001,teste@exemplo.com,Campo Grande"
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_path):
     with pytest.raises(ErroDeCarga, match="pedido 1"):
         carregar_pedidos_de(
@@ -106,6 +110,7 @@ def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_
         )
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_path):
     with pytest.raises(ErroDeCarga, match="item do pedido 1"):
         carregar_pedidos_de(
@@ -113,6 +118,7 @@ def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_pa
         )
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_path):
     with pytest.raises(ErroDeCarga, match="item do pedido 7"):
         carregar_pedidos_de(
@@ -120,6 +126,7 @@ def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_pat
         )
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_total_do_pedido_e_invalido(tmp_path):
     with pytest.raises(ErroDeCarga, match="pedido 1"):
         carregar_pedidos_de(
@@ -139,6 +146,7 @@ def carregar_produtos_de(pasta, produtos):
         conexao.close()
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
     with pytest.raises(ErroDeCarga, match="produto 10"):
         carregar_produtos_de(
@@ -146,6 +154,7 @@ def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
         )
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_id_do_produto_esta_duplicado(tmp_path):
     linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
 
@@ -153,6 +162,7 @@ def test_interrompe_a_carga_quando_o_id_do_produto_esta_duplicado(tmp_path):
         carregar_produtos_de(tmp_path, f"{linha}\n{linha}")
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
     with pytest.raises(ErroDeCarga, match="produto 10"):
         carregar_produtos_de(
@@ -160,6 +170,7 @@ def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
         )
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
     with pytest.raises(ErroDeCarga, match="produto 10"):
         carregar_produtos_de(
@@ -193,16 +204,19 @@ def carregar_clientes_de(pasta, *clientes):
         conexao.close()
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_telefone_do_cliente_e_invalido(tmp_path):
     with pytest.raises(ErroDeCarga, match="cliente 1"):
         carregar_clientes_de(tmp_path, "1,Cliente Teste,12345,t@exemplo.com,Campo Grande")
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_nome_do_cliente_esta_vazio(tmp_path):
     with pytest.raises(ErroDeCarga, match="cliente 1"):
         carregar_clientes_de(tmp_path, "1, ,(67) 90000-0001,t@exemplo.com,Campo Grande")
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_id_do_cliente_esta_duplicado(tmp_path):
     with pytest.raises(ErroDeCarga, match="cliente 1: id duplicado"):
         carregar_clientes_de(
@@ -212,6 +226,7 @@ def test_interrompe_a_carga_quando_o_id_do_cliente_esta_duplicado(tmp_path):
         )
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_dois_clientes_tem_o_mesmo_telefone(tmp_path):
     with pytest.raises(ErroDeCarga, match="cliente 2: telefone duplicado"):
         carregar_clientes_de(
@@ -240,11 +255,13 @@ def test_telefone_com_codigo_do_pais_e_gravado_sem_o_codigo(tmp_path):
         "1,1,2026-01-01,delivered,100.005,pix,,,",
     ],
 )
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_pedido_tem_dado_invalido(tmp_path, pedido):
     with pytest.raises(ErroDeCarga, match="pedido 1"):
         carregar_pedidos_de(tmp_path, CLIENTE, pedido, "1,1,93")
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_id_do_pedido_esta_duplicado(tmp_path):
     pedido = "1,1,2026-01-01,delivered,100,pix,,,"
 
@@ -252,6 +269,7 @@ def test_interrompe_a_carga_quando_o_id_do_pedido_esta_duplicado(tmp_path):
         carregar_pedidos_de(tmp_path, CLIENTE, f"{pedido}\n{pedido}", "1,1,93")
 
 
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_a_quantidade_do_item_nao_e_positiva(tmp_path):
     with pytest.raises(ErroDeCarga, match="item do pedido 1"):
         carregar_pedidos_de(
@@ -260,6 +278,7 @@ def test_interrompe_a_carga_quando_a_quantidade_do_item_nao_e_positiva(tmp_path)
 
 
 @pytest.mark.parametrize("promocao", ["1,10,101,Oferta,1", "1,10,-5,Oferta,1", "1,10,10,Oferta,2"])
+@pytest.mark.regressao
 def test_interrompe_a_carga_quando_a_promocao_tem_dado_invalido(tmp_path, promocao):
     escrever_catalogo(tmp_path, "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01")
     (tmp_path / "promotions.csv").write_text(
