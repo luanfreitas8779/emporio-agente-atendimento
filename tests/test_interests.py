@@ -11,6 +11,14 @@ def test_registra_interesse_no_giannini_gf_3d(conexao):
     assert listar_pendentes(conexao, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
 
 
+def test_produto_inexistente_nao_grava_interesse(conexao):
+    resultado = registrar(conexao, TELEFONE, 99999)
+
+    assert resultado == Resultado.PRODUTO_INEXISTENTE
+    assert listar_pendentes(conexao, TELEFONE) == []
+    assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
+
+
 def test_repetir_o_pedido_nao_duplica_o_interesse(conexao):
     registrar(conexao, TELEFONE, GIANNINI_GF_3D)
 
