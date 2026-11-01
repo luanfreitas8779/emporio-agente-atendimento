@@ -3,7 +3,7 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.exceptions import ModelRateLimitError
 from pydantic_ai.models.function import FunctionModel
 
-from src.agent import Sessao, agente, responder
+from src.agent import MENSAGEM_DE_LIMITE, Sessao, agente, responder
 
 ANA = "(67) 99654-7821"
 
@@ -55,3 +55,15 @@ def test_espera_o_tempo_pedido_pelo_provedor_com_teto_de_15_segundos(
         responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert esperas == esperado
+
+
+def test_limite_persistente_gera_mensagem_clara_apos_3_tentativas(conexao, esperas):
+    tentativas: list[int] = []
+    modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], tentativas)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_LIMITE
+    assert len(tentativas) == 3
+    assert esperas == [2, 5]

@@ -156,6 +156,10 @@ RESPOSTA_SEGURA_SEM_TELEFONE = (
     "Pode reformular a pergunta ou falar com a loja pelos contatos de atendimento."
 )
 
+MENSAGEM_DE_LIMITE = (
+    "O serviço de IA atingiu o limite de uso agora. Tente novamente em alguns minutos."
+)
+
 RESPOSTA_SEGURA_SEM_REGISTRO = (
     "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
 )
@@ -406,6 +410,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
+    except ModelRateLimitError:
+        return MENSAGEM_DE_LIMITE
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
