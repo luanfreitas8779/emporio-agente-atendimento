@@ -160,3 +160,28 @@ def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, e
 )
 def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(resposta, fonte, esperado):
     assert valores_nao_confirmados(resposta, [fonte]) == esperado
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("resposta", "fonte", "esperado"),
+    [
+        ("Custa mil reais.", "Preço: R$ 1.000,00", []),
+        ("Custa mil reais.", "Preço: R$ 599,90", ["1000"]),
+        ("Custa 1,5 mil reais.", "Preço: R$ 1.500,00", []),
+    ],
+)
+def test_mil_reais_por_extenso_tambem_e_conferido(resposta, fonte, esperado):
+    assert valores_nao_confirmados(resposta, [fonte]) == esperado
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("resposta", "fonte", "esperado"),
+    [
+        ("O prazo vai até 3 de março de 2026.", "Prazo até 03/03/2026.", []),
+        ("O prazo vai até 3 de março de 2027.", "Prazo até 03/03/2026.", ["2027-03-03"]),
+    ],
+)
+def test_data_por_extenso_com_ano_e_conferida_com_o_ano(resposta, fonte, esperado):
+    assert valores_nao_confirmados(resposta, [fonte]) == esperado
