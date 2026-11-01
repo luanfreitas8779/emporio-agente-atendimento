@@ -190,7 +190,10 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
             texto += f"\nProduto em foco: {nome}."
     interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.telefone or "")
     # Só os nomes: o estoque atual vem sempre de buscar_produtos.
-    nomes = "; ".join(interesses[:MAX_INTERESSES_NO_CONTEXTO]) or "nenhum"
+    recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
+    nomes = "; ".join(recentes) or "nenhum"
+    if len(interesses) > len(recentes):
+        nomes += f" (e mais {len(interesses) - len(recentes)} mais antigos)"
     texto += f"\nInteresses pendentes: {nomes}."
     return texto
 

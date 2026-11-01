@@ -5,6 +5,7 @@ import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from src import catalog
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
 from src.interests import listar_pendentes, registrar
@@ -769,3 +770,19 @@ def test_busca_sem_resultado_limpa_o_foco(conexao):
         responder("Tem saxofone?", Sessao(conexao, telefone=ANA))
 
     assert carregar_estado(conexao, ANA).produto_em_foco is None
+
+
+def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(conexao):
+    ids = [linha[0] for linha in conexao.execute(
+        "SELECT product_id FROM products WHERE status = 'active' ORDER BY product_id LIMIT 6"
+    )]
+    nomes = [catalog.nome_do_produto(conexao, i) for i in ids]
+    for produto in ids:
+        registrar(conexao, ANA, produto)
+
+    with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
+        instrucoes = responder("Chegou?", Sessao(conexao, telefone=ANA))
+
+    assert nomes[0] not in instrucoes
+    assert all(nome in instrucoes for nome in nomes[1:])
+    assert "e mais 1" in instrucoes
