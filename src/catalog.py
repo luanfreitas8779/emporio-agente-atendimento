@@ -197,7 +197,7 @@ def _filtrar(
 def _linha_de_preco(conexao: sqlite3.Connection, produto_id: int) -> sqlite3.Row | None:
     return conexao.execute(
         """
-        SELECT p.price_cents, pr.discount_percent
+        SELECT p.name, p.price_cents, p.stock_quantity, p.status, pr.discount_percent
         FROM products p
         LEFT JOIN promotions pr ON pr.product_id = p.product_id AND pr.is_active = 1
         WHERE p.product_id = ?
@@ -211,14 +211,31 @@ def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int
     return calcular_preco_final(linha) if linha else None
 
 
-def preco_no_pix_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int | None:
-    """Preço pagando no PIX: o desconto incide sobre o preço de tabela e não soma à promoção."""
+@dataclass(frozen=True)
+class DadosParaConta:
+    nome: str
+    preco_final: int
+    # Pagando no PIX: o desconto incide sobre o preço de tabela e não soma à promoção.
+    preco_no_pix: int
+    em_promocao: bool
+    disponibilidade: str
+    estoque: int
+
+
+def dados_para_conta(conexao: sqlite3.Connection, produto_id: int) -> DadosParaConta | None:
     linha = _linha_de_preco(conexao, produto_id)
     if linha is None:
         return None
-    if linha["discount_percent"]:
-        return calcular_preco_final(linha)
-    return aplicar_desconto(linha["price_cents"], PERCENTUAL_PIX)
+    em_promocao = bool(linha["discount_percent"])
+    preco_final = calcular_preco_final(linha)
+    return DadosParaConta(
+        linha["name"],
+        preco_final,
+        preco_final if em_promocao else aplicar_desconto(linha["price_cents"], PERCENTUAL_PIX),
+        em_promocao,
+        classificar(linha["status"], linha["stock_quantity"]),
+        linha["stock_quantity"],
+    )
 
 
 def nome_do_produto(conexao: sqlite3.Connection, produto_id: int) -> str | None:

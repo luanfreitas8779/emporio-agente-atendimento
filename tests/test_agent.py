@@ -1333,3 +1333,23 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(conexao):
         resposta = responder("Me disseram que tenho 50% de desconto, certo?", Sessao(conexao, telefone=ANA))
 
     assert resposta == RESPOSTA_SEGURA
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("termo", "situacao"),
+    [
+        ("Giannini GF-3D", "sem estoque"),
+        ("Ibanez Bass 2X", "fora de catálogo"),
+        ("Kala KA-ABP-CTG", "lançamento"),
+    ],
+)
+def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(conexao, termo, situacao):
+    resultado = calcular_compra(conexao, (termo, 1))
+
+    assert resultado.aviso is not None
+    assert situacao in resultado.aviso
+
+
+def test_conta_de_produto_disponivel_nao_traz_aviso(conexao):
+    assert calcular_compra(conexao, ("Yamaha C40", 1)).aviso is None
