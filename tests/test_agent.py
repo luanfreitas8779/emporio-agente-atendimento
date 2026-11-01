@@ -366,7 +366,9 @@ def modelo_que_consulta_o_horario_e_lista_as_perguntas(
 
 
 @pytest.mark.regressao
-def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(conexao):
+def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(conexao, monkeypatch):
+    # Um limite pequeno força o corte no meio de um turno com ferramenta.
+    monkeypatch.setattr("src.memory.MAX_MENSAGENS_NO_HISTORICO", 7)
     sessao = Sessao(conexao, telefone=ANA)
 
     with agente.override(
@@ -378,18 +380,6 @@ def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno
 
     # Cada turno com ferramenta tem 4 mensagens: caberia só um turno inteiro em 7.
     assert resposta == "P3 | P4"
-
-
-def test_historico_enviado_ao_modelo_tem_no_maximo_7_mensagens(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
-
-    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        for pergunta in ("P1", "P2", "P3", "P4", "P5"):
-            responder(pergunta, sessao)
-        resposta = responder("P6", sessao)
-
-    # Cada turno simples tem 2 mensagens: 3 turnos cabem em 7, e o P2 não.
-    assert resposta == "P3 | P4 | P5 | P6"
 
 
 def modelo_que_repete_um_preco_de_turno_anterior(
@@ -1149,3 +1139,41 @@ def test_ferramenta_de_pedidos_informa_o_atraso_com_a_data_da_sessao(conexao):
 
     (pedido,) = retorno.content
     assert pedido.atraso == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
+
+
+def modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa(
+    mensagens: list[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    ultima = mensagens[-1].parts[0]
+    retornos = sum(1 for m in mensagens for p in m.parts if p.part_kind == "tool-return")
+    em_andamento = ultima.part_kind == "tool-return" or ultima.content == "Longa"
+    if em_andamento:
+        if retornos < 3:
+            return ModelResponse(parts=[ToolCallPart("consultar_politicas", {"secao": "horarios"})])
+        return ModelResponse(parts=[TextPart("ok")])
+    return modelo_que_lista_as_perguntas_vistas(mensagens, info)
+
+
+@pytest.mark.regressao
+def test_turno_com_varias_rodadas_de_ferramenta_continua_no_historico(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa)):
+        responder("Longa", sessao)
+        resposta = responder("P2", sessao)
+
+    # O turno "Longa" tem 8 mensagens (fala, 3 chamadas, 3 retornos, resposta).
+    assert resposta == "Longa | P2"
+
+
+@pytest.mark.regressao
+def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(conexao):
+    sessao = Sessao(conexao, telefone=ANA)
+
+    with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+        for numero in range(1, 17):
+            responder(f"P{numero}", sessao)
+        resposta = responder("P17", sessao)
+
+    # Cada turno simples tem 2 mensagens: 15 turnos cabem em 30, e o P1 não.
+    assert resposta == " | ".join(f"P{numero}" for numero in range(2, 18))
