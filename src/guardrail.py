@@ -39,7 +39,8 @@ def numero(texto: str) -> Decimal:
 
 
 def valores(texto: str) -> dict[str, set]:
-    percentuais = {numero(p) for p in PADRAO_PERCENTUAL.findall(texto)}
+    # Em percentual o ponto e a vírgula são decimais: "18.5%" e "18,5%" valem 18,5.
+    percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(texto)}
     percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(texto)}
     datas = set()
     for dia, mes, ano in PADRAO_DATA_BR.findall(texto):

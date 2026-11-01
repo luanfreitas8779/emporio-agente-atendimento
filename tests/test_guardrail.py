@@ -3,6 +3,7 @@ from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import RESPOSTA_SEGURA, Sessao, agente, responder
+from src.guardrail import valores_nao_confirmados
 
 ANA = "(67) 99654-7821"
 
@@ -123,3 +124,10 @@ def test_resposta_sem_valores_passa_sem_ferramenta(conexao):
     resposta = perguntar(conexao, "Oi!", None, None, ["Oi! Como posso ajudar?"])
 
     assert resposta == "Oi! Como posso ajudar?"
+
+
+@pytest.mark.regressao
+def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
+    # "18.5%" virava 185 ao tirar o ponto como se fosse separador de milhar.
+    assert valores_nao_confirmados("São 185% de desconto.", ["Desconto de 18.5%."]) == ["185"]
+    assert valores_nao_confirmados("São 18.5% de desconto.", ["Desconto de 18,5%."]) == []
