@@ -262,3 +262,15 @@ def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(conexao, 
 
     assert resposta == MENSAGEM_DE_ERRO_TECNICO
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
+
+
+def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(conexao, esperas):
+    tentativas: list[int] = []
+    erros = [ModelServerError("modelo", "erro 504")] * 3
+    modelo = modelo_que_falha_antes_de_responder(erros, tentativas)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    assert len(tentativas) == 3
