@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from src.database import conectar
@@ -38,4 +40,21 @@ def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
     assert carregar_estado(conexao, TELEFONE) == Estado(8, 96)
     salvar_estado(conexao, TELEFONE, Estado(7, None))
     assert carregar_estado(conexao, TELEFONE) == Estado(7, None)
+    conexao.close()
+
+
+@pytest.mark.parametrize(
+    "produto, status",
+    [(0, "pending"), (-1, "pending"), (96, "notified")],
+)
+def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, produto, status):
+    conexao = conectar(tmp_path / "novo.db")
+    criar_tabelas(conexao)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        conexao.execute(
+            "INSERT INTO product_interests (phone, product_id, status, created_at) "
+            "VALUES ('67996547821', ?, ?, '2026-03-25')",
+            (produto, status),
+        )
     conexao.close()
