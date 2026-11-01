@@ -83,9 +83,9 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 
 | Item | Definição |
 |---|---|
-| Entrada | `motivo` e `resumo` |
-| Saída | Confirmação do registro |
-| Regras | Registra na tabela `handoffs` e informa retorno em até 24 horas úteis |
+| Entrada | `motivo` (`reclamacao`, `atendente_solicitado` ou `sem_resposta_segura`) e `resumo`; o telefone vem da sessão |
+| Saída | Texto fixo: encaminhamento registrado, já registrado, resumo vazio ou telefone não identificado. Os dois primeiros informam o retorno em até 24 horas úteis |
+| Regras | Registra na tabela `handoffs` (ADR-017); não grava sem telefone válido nem sem resumo; o resumo é cortado em 500 caracteres; o modelo não escolhe o telefone (`phone` é recusado). Quando a guarda na saída desiste, o próprio código registra um encaminhamento `sem_resposta_segura` |
 
 ## 5. Regras de resposta
 
@@ -112,7 +112,8 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 | Produto em lançamento | Não confirmar disponibilidade |
 | Promoção encerrada | Informar com transparência e apresentar o preço atual |
 | Cliente sem cadastro | Atender dúvidas gerais e informar que pedidos exigem telefone cadastrado |
-| Reclamação | Acolher, registrar e informar o prazo de retorno |
+| Reclamação | Acolher, registrar com `encaminhar_para_atendente` e informar o prazo de retorno devolvido pela ferramenta |
+| Resposta que a guarda não confirma | O código registra o encaminhamento e responde com o prazo de retorno; sem telefone válido, explica que não conseguiu identificá-lo |
 | Fora do horário | Responder ao que for possível e informar o retorno da equipe |
 
 ## 7. Trocas e devoluções
@@ -122,7 +123,7 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 3. Em arrependimento, perguntar se a compra foi online ou presencial, porque o pedido não registra o canal (DQ-17). A pergunta fica no histórico. Se o cliente mudar de assunto em vez de responder, o agente segue o novo assunto e não repete a pergunta.
 4. Chamar `avaliar_devolucao`, que compara as datas com a data de referência e devolve o veredito.
 5. Explicar o resultado e as condições da política, sem prometer aprovação: a troca depende da análise do produto.
-6. Fora do prazo, explicar as regras que ainda valem (por exemplo, a garantia legal em caso de defeito) e orientar o cliente a falar com a equipe pelos contatos da loja.
+6. Fora do prazo, avisar com clareza que o prazo expirou, explicar as regras que ainda valem (por exemplo, a garantia legal em caso de defeito) e oferecer ao cliente falar com um atendente, pelos contatos da loja ou pelo encaminhamento do caso. O encaminhamento só é registrado se o cliente aceitar.
 
 O recebimento usa a entrega estimada, também nos pedidos `delivered`, porque os dados não têm a data real. O veredito sempre a apresenta como aproximação, e o agente informa isso ao cliente. Compra presencial não usa o prazo de arrependimento.
 

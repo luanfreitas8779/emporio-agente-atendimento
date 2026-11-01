@@ -65,7 +65,7 @@ Tabelas operacionais:
 | `messages` | `id`, `conversation_id`, `content`, `created_at` | Guardar o histórico: cada linha é uma mensagem do Pydantic AI serializada em JSON |
 | `conversation_state` | `phone` (chave), `pedido_em_analise`, `produto_em_foco`, `updated_at` | Estado pequeno da conversa, mantido em código (ADR-014) |
 | `product_interests` | `id`, `phone`, `product_id`, `status`, `created_at`; único por `phone` e `product_id` | Acompanhar interesses em produtos (ADR-016) |
-| `handoffs` | `id`, `phone`, `reason`, `summary`, `created_at` | Registrar encaminhamentos para a equipe |
+| `handoffs` | `id`, `phone`, `reason`, `summary`, `created_at` | Registrar encaminhamentos para a equipe (ADR-017) |
 
 ## 5. Decisões de arquitetura
 
@@ -132,7 +132,7 @@ Tabelas operacionais:
   2. **Mensagens.** Cada mensagem do Pydantic AI (`ModelRequest` ou `ModelResponse`) é serializada em JSON com `ModelMessagesTypeAdapter` e guardada em `messages`. O banco guarda o registro completo; o corte é feito na leitura. Uma linha ilegível descarta o que veio antes dela, em vez de travar o atendimento.
   3. **Regra de corte.** O modelo recebe no máximo 7 mensagens. O corte começa no primeiro *turno* inteiro que cabe: um turno começa em uma fala do cliente que não responde a uma chamada de ferramenta, e vai até a próxima fala. Um turno que estoura o limite é descartado por completo. Com ferramenta, um turno tem 4 mensagens (fala, chamada, retorno, resposta), então 7 mensagens comportam um turno com ferramenta; sem ferramenta, o turno tem 2 e cabem 3. O corte é feito pelo próprio código ao carregar o histórico, e não por um *history processor* do Pydantic AI, porque o processador roda a cada chamada ao modelo dentro do turno e substitui o histórico da execução, o que poderia mexer nas fontes da guarda (ADR-013).
   4. **Guarda na saída.** Continua considerando só o turno atual (`fontes_do_turno`). Valores de mensagens antigas não sustentam respostas novas, mesmo estando no histórico enviado ao modelo.
-  5. **Resposta segura.** Quando a guarda desiste, o histórico guarda só a fala do cliente e a resposta segura, sem a tentativa rejeitada.
+  5. **Resposta segura.** Quando a guarda desiste, o código registra o encaminhamento (ADR-017) e o histórico guarda só a fala do cliente e a resposta segura, sem a tentativa rejeitada.
   6. **Estado.** A tabela `conversation_state` guarda, por telefone, `pedido_em_analise` (número do pedido) e `produto_em_foco` (id do produto). O código os preenche a partir dos retornos das ferramentas: um único pedido encontrado define o pedido em análise, e uma busca com um único produto define o produto em foco. Uma busca de produtos com vários resultados ou nenhum limpa o foco (ADR-016); a consulta de pedidos com vários resultados não altera o pedido em análise. Os dois campos entram no contexto dinâmico do prompt (ADR-007). Não há máquina de estados: cada campo é só um valor.
   7. **Sem chave estrangeira para a origem.** As tabelas operacionais não referenciam `products` nem `orders`, porque a carga recria essas tabelas. Os ids são validados pelo código que os grava (`CHECK` maior que zero).
 - **Alternativas:** guardar o histórico inteiro em um único campo, o que impede o corte por mensagem; resumir conversas antigas com o modelo, o que gasta cota e pode inventar; deixar o modelo registrar o foco por conta própria, o que reabre o problema da memória.
@@ -167,6 +167,21 @@ Tabelas operacionais:
   7. **Reposição simulada.** `scripts/simulate_restock.py <produto> [--quantidade N] [--banco caminho]` soma a quantidade ao estoque no banco local (padrão: 5 unidades, `data/emporio.db`). Recusa produto inexistente, quantidade menor que 1 e produto que não esteja `active` (o status tem prioridade sobre o estoque), e não cria o banco se ele não existir. Os CSVs não são tocados. `python -m src.load_data` recria `products` a partir dos CSVs e devolve o estoque original; interesses e conversas são preservados.
 - **Alternativas:** ferramenta `consultar_meus_interesses`, que custaria uma chamada a mais por pergunta; incluir a disponibilidade no contexto, que a deixaria desatualizada e fora da guarda; exigir cadastro para registrar interesse, o que impediria um cliente novo de retomar o assunto.
 - **Consequências:** a retomada não depende do histórico, e o isolamento por telefone vale também para interesses. A escolha de registrar e de consultar de novo continua com o modelo e depende do prompt e da avaliação manual. Não há aviso automático de reposição (fora do escopo). Um telefone digitado não prova identidade (ADR-009): quem digitar o telefone de outra pessoa vê os interesses dela.
+
+### ADR-017: Encaminhamento para a equipe
+
+- **Status:** Aceita.
+- **Contexto:** reclamações, pedidos de atendente e perguntas sem resposta segura precisam chegar à equipe com motivo e resumo (RF-10), e o cliente precisa saber quando terá retorno. Deixar isso só com o modelo arrisca "registros" que nunca foram gravados e prazos inventados.
+- **Decisão:**
+  1. **Tabela `handoffs`.** `phone`, `reason`, `summary` e `created_at`. `reason` aceita `reclamacao`, `sem_resposta_segura` e `atendente_solicitado` (`CHECK`), e `summary` não pode ser vazio (`CHECK`). Sem chave estrangeira; a carga nunca a recria, então não há migração.
+  2. **Gravação em `src/handoffs.py`.** `registrar` normaliza o telefone, corta o resumo em 500 caracteres e devolve `registrado`, `ja_registrado` (mesmo telefone, motivo e resumo), `resumo_invalido` ou `telefone_invalido`. Só `registrado` grava.
+  3. **Ferramenta `encaminhar_para_atendente(motivo, resumo)`.** O telefone vem da sessão e nunca do modelo (ADR-009). O retorno é um texto fixo, e o prazo de 24 horas úteis é montado em código.
+  4. **Sem telefone válido.** Nada é gravado, porque a equipe não teria como retornar (como nos interesses, ADR-016). A ferramenta devolve uma mensagem que manda o modelo explicar que o telefone não foi identificado e passar os contatos da loja.
+  5. **Resposta segura da guarda (ADR-013).** Quando a guarda desiste, o código registra um encaminhamento `sem_resposta_segura` com a fala do cliente como resumo, sem depender do modelo, e a resposta informa o prazo de retorno. Sem telefone válido, a resposta explica que não foi possível identificar o telefone para encaminhar o caso.
+  6. **Devolução fora do prazo.** O agente avisa que o prazo expirou e oferece falar com um atendente, pelos contatos da loja ou pelo encaminhamento. Só registra se o cliente aceitar.
+  7. **Escopo.** A recusa de assuntos fora do escopo, o redirecionamento de acessórios, a resistência a pedidos para ignorar regras e a ausência de promessas de desconto são regras de prompt, avaliadas manualmente (`docs/05-testes-e-roteiro.md`, seção 9.2). Nenhuma ferramenta expõe dados de outros clientes.
+- **Alternativas:** deixar o modelo registrar também a resposta segura, o que depende de ele cumprir o prompt justamente quando a resposta falhou; registrar sem telefone, o que gera casos sem retorno possível.
+- **Consequências:** o registro da resposta segura é garantido em código, e os demais dependem de o modelo chamar a ferramenta. O resumo guarda texto livre do cliente e é tratado como dado pessoal (`docs/03-dados.md`, seção 7). Não há painel nem leitura dos encaminhamentos: a equipe consulta a tabela (fora do escopo do MVP). Um encaminhamento repetido com resumo diferente gera outro registro.
 
 ### ADR-004: SQLite como armazenamento
 
