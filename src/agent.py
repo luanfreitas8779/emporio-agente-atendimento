@@ -377,6 +377,7 @@ def encaminhar_para_atendente(
 
 
 ESPERAS_ENTRE_TENTATIVAS = (2, 5)
+ESPERA_MAXIMA = 15
 _aguardar = time.sleep
 
 
@@ -390,10 +391,11 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
         )
         try:
             return execucao.result()
-        except ModelRateLimitError:
+        except ModelRateLimitError as erro:
             if espera is None:
                 raise
-            _aguardar(espera)
+            # O provedor pode indicar quando tentar de novo; um teto evita travar o chat.
+            _aguardar(min(erro.retry_after, ESPERA_MAXIMA) if erro.retry_after else espera)
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:

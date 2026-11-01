@@ -40,3 +40,18 @@ def test_erro_de_limite_gera_nova_tentativa(conexao, esperas):
 
     assert resposta == "Resposta do Tom"
     assert len(tentativas) == 2
+
+
+@pytest.mark.parametrize(
+    "retry_after, esperado",
+    [(7, [7]), (300, [15]), (None, [2])],
+)
+def test_espera_o_tempo_pedido_pelo_provedor_com_teto_de_15_segundos(
+    conexao, esperas, retry_after, esperado
+):
+    modelo = modelo_que_falha_antes_de_responder([limite_atingido(retry_after)], [])
+
+    with agente.override(model=modelo):
+        responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert esperas == esperado
