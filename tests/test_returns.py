@@ -40,6 +40,7 @@ def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(conexao):
 
     assert veredito.resultado == "nao_se_aplica"
     assert veredito.regras == []
+    assert any("compras online" in aviso for aviso in veredito.avisos)
 
 
 def test_arrependimento_sem_canal_pede_o_canal_de_compra(conexao):

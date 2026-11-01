@@ -27,6 +27,11 @@ AVISO_DE_ANALISE = (
     "pela equipe, e não há aprovação garantida."
 )
 
+AVISO_SEM_ARREPENDIMENTO_PRESENCIAL = (
+    "O direito de arrependimento vale para compras online. Em compra presencial, o cliente "
+    "ainda pode pedir troca por defeito ou por preferência, dentro dos prazos da política."
+)
+
 
 class Motivo(StrEnum):
     ARREPENDIMENTO = "arrependimento"
@@ -86,7 +91,7 @@ def avaliar_devolucao(
     if motivo == Motivo.ARREPENDIMENTO and canal is None:
         return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
-        return Veredito(Resultado.NAO_SE_APLICA, [])
+        return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[AVISO_SEM_ARREPENDIMENTO_PRESENCIAL])
     compra = date.fromisoformat(linha["order_date"])
     # Sem data real de entrega nos dados (DQ-17), o recebimento é a entrega estimada.
     recebimento = date.fromisoformat(linha["estimated_delivery"])
