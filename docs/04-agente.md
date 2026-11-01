@@ -144,11 +144,11 @@ O recebimento usa a entrega estimada, também nos pedidos `delivered`, porque os
 
 O sistema fornece ao agente:
 
-- Data de referência.
+- Data de hoje com o dia da semana, sem a hora atual (ADR-022).
 - Primeiro nome do cliente, quando houver cadastro. O sobrenome não é enviado ao modelo.
 - Interesses pendentes do telefone da sessão: só os nomes dos 5 mais recentes (com aviso de quantos mais antigos ficaram de fora), ou `nenhum` (ADR-016). A disponibilidade atual vem sempre de `buscar_produtos`.
 - Estado da conversa: pedido em análise e produto em foco, quando houver (ADR-014). Uma busca com vários resultados ou nenhum limpa o foco.
-- Histórico recente, limitado a 7 mensagens e cortado em turnos inteiros, para economizar cota.
+- Histórico recente, limitado a 30 mensagens e cortado em turnos inteiros (ADR-014).
 
 ## 10. Exemplos de resposta
 
