@@ -67,3 +67,13 @@ def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
 
     assert codigo == 1
     assert "inexistente" in capsys.readouterr().err
+
+
+def test_comando_nao_cria_banco_quando_ele_nao_existe(tmp_path, capsys):
+    banco = tmp_path / "ausente.db"
+
+    codigo = principal(["96", "--banco", str(banco)])
+
+    assert codigo == 1
+    assert "python -m src.load_data" in capsys.readouterr().err
+    assert not banco.exists()

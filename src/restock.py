@@ -1,6 +1,7 @@
 import argparse
 import sqlite3
 import sys
+from pathlib import Path
 
 from src.config import CAMINHO_BANCO
 from src.database import conectar
@@ -37,6 +38,12 @@ def principal(argumentos: list[str] | None = None) -> int:
     analisador.add_argument("--banco", default=str(CAMINHO_BANCO))
     escolhidos = analisador.parse_args(argumentos)
 
+    if not Path(escolhidos.banco).exists():
+        print(
+            f"Banco não encontrado em {escolhidos.banco}. Rode: python -m src.load_data",
+            file=sys.stderr,
+        )
+        return 1
     conexao = conectar(escolhidos.banco)
     try:
         repor_estoque(conexao, escolhidos.produto, escolhidos.quantidade)
