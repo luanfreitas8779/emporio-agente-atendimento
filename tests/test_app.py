@@ -32,3 +32,13 @@ def test_pergunta_fica_pendente_enquanto_o_tom_responde(tela, monkeypatch):
     tela.chat_input[0].set_value("Oi").run()
 
     assert durante == ["Oi"]
+
+
+def test_depois_da_resposta_o_campo_libera_e_a_conversa_tem_uma_resposta(tela):
+    tela.chat_input[0].set_value("Oi").run()
+
+    assert not tela.exception
+    assert [m["papel"] for m in tela.session_state["mensagens"]] == ["user", "assistant"]
+    assert tela.session_state["mensagens"][1]["texto"] == "Olá!"
+    assert tela.session_state["pendente"] is None
+    assert not tela.chat_input[0].disabled
