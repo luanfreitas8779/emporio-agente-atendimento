@@ -50,29 +50,30 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
 for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))
 
-if pergunta := st.chat_input("Escreva sua mensagem"):
-    # Cada mensagem entra no estado antes de qualquer chamada de tela: se uma nova mensagem
-    # interromper este script, a próxima execução ainda desenha tudo a partir do estado.
+# Uma nova mensagem durante a resposta interrompe a execução e deixa a anterior sem resposta.
+# Por isso o campo fica bloqueado enquanto há uma pergunta pendente (ADR-020).
+pendente = st.session_state.get("pendente")
+if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
     st.session_state.mensagens.append({"papel": "user", "texto": pergunta})
-    exibir("user", pergunta)
+    st.session_state.pendente = pergunta
+    st.rerun()
 
+if pendente is not None:
     sessao = Sessao(conectar(CAMINHO_BANCO), st.session_state.telefone)
     try:
-        with st.spinner("O Tom está consultando..."):
-            resposta = responder(pergunta, sessao)
-            # Dentro do spinner: a saída dele é uma chamada de tela e pode ser interrompida.
-            st.session_state.mensagens.append(
-                {
-                    "papel": "assistant",
-                    "texto": resposta,
-                    "ferramentas": [
-                        {"nome": chamada.nome, "argumentos": chamada.argumentos}
-                        for chamada in sessao.ferramentas
-                    ],
-                }
-            )
+        with st.spinner("O Tom está digitando..."):
+            resposta = responder(pendente, sessao)
+        st.session_state.mensagens.append(
+            {
+                "papel": "assistant",
+                "texto": resposta,
+                "ferramentas": [
+                    {"nome": chamada.nome, "argumentos": chamada.argumentos}
+                    for chamada in sessao.ferramentas
+                ],
+            }
+        )
     finally:
         sessao.conexao.close()
-
-    ultima = st.session_state.mensagens[-1]
-    exibir("assistant", ultima["texto"], ultima["ferramentas"])
+        st.session_state.pendente = None
+    st.rerun()
