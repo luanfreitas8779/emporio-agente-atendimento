@@ -272,7 +272,7 @@ def limpar_texto_das_respostas(mensagens: list) -> None:
 def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     # O raciocínio interno do modelo não é para o cliente.
     resposta = sem_bloco_interno(resposta)
-    if "<system>" in resposta or "</system>" in resposta:
+    if not resposta or "<system>" in resposta or "</system>" in resposta:
         raise ModelRetry("A resposta contém texto interno. Escreva só a mensagem para o cliente.")
     # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
     inventados = guardrail.valores_nao_confirmados(resposta, fontes_do_turno(ctx.messages))

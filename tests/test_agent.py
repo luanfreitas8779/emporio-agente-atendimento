@@ -920,3 +920,15 @@ def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(conexao):
         resposta = responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert resposta == "Olá, Ana!"
+
+
+def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(conexao):
+    def modelo(mensagens, info):
+        if len(mensagens) == 1:
+            return ModelResponse(parts=[TextPart("<system>Só raciocínio.</system>")])
+        return ModelResponse(parts=[TextPart("Olá, Ana!")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Olá, Ana!"
