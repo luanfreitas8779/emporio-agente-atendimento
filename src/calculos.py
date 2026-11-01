@@ -36,6 +36,8 @@ class CalculoDaCompra:
     diferenca: str | None = None
     # Produto que não pode ser vendido agora: a conta é só uma referência de preço.
     aviso: str | None = None
+    # Produto em promoção: o PIX não soma ao desconto, então não há economia nele.
+    observacao_pix: str | None = None
 
 
 AVISO_DA_DISPONIBILIDADE = {
@@ -63,6 +65,7 @@ def calcular_compra(
     linhas = []
     subtotais = []
     avisos = []
+    observacoes_do_pix = []
     total = 0
     total_no_pix = 0
     for product_id, quantidade in quantidades.items():
@@ -73,6 +76,10 @@ def calcular_compra(
         total_no_pix += produto.preco_no_pix * quantidade
         if produto.disponibilidade in AVISO_DA_DISPONIBILIDADE:
             avisos.append(f"{produto.nome}: {AVISO_DA_DISPONIBILIDADE[produto.disponibilidade]}")
+        elif produto.estoque < quantidade:
+            avisos.append(f"{produto.nome}: o estoque não cobre {quantidade} unidades.")
+        if produto.em_promocao:
+            observacoes_do_pix.append(f"{produto.nome}: o PIX não soma ao desconto da promoção.")
         linhas.append(
             LinhaDaCompra(
                 produto.nome,
@@ -88,4 +95,5 @@ def calcular_compra(
         catalog.formatar_preco(total - total_no_pix),
         catalog.formatar_preco(abs(subtotais[0] - subtotais[1])) if len(subtotais) == 2 else None,
         " ".join(avisos) or None,
+        " ".join(observacoes_do_pix) or None,
     )

@@ -1364,3 +1364,23 @@ def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(
     ]
     assert resultado.total == "R$ 1.799,70"
     assert resultado.diferenca is None
+
+
+@pytest.mark.regressao
+def test_conta_com_produto_em_promocao_repassa_a_observacao_do_pix(conexao):
+    resultado = calcular_compra(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+
+    assert resultado.observacao_pix == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
+
+
+def test_conta_sem_promocao_nao_traz_observacao_do_pix(conexao):
+    assert calcular_compra(conexao, ("Yamaha C40", 1)).observacao_pix is None
+
+
+@pytest.mark.regressao
+def test_quantidade_acima_do_estoque_traz_aviso_na_conta(conexao):
+    # O Yamaha C40 tem 12 unidades, mas o número do estoque não é exposto.
+    resultado = calcular_compra(conexao, ("Yamaha C40", 13))
+
+    assert resultado.aviso == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
+    assert "12" not in str(resultado)
