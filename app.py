@@ -60,13 +60,19 @@ if pergunta := st.chat_input("Escreva sua mensagem"):
     try:
         with st.spinner("O Tom está consultando..."):
             resposta = responder(pergunta, sessao)
+            # Dentro do spinner: a saída dele é uma chamada de tela e pode ser interrompida.
+            st.session_state.mensagens.append(
+                {
+                    "papel": "assistant",
+                    "texto": resposta,
+                    "ferramentas": [
+                        {"nome": chamada.nome, "argumentos": chamada.argumentos}
+                        for chamada in sessao.ferramentas
+                    ],
+                }
+            )
     finally:
         sessao.conexao.close()
 
-    ferramentas = [
-        {"nome": chamada.nome, "argumentos": chamada.argumentos} for chamada in sessao.ferramentas
-    ]
-    st.session_state.mensagens.append(
-        {"papel": "assistant", "texto": resposta, "ferramentas": ferramentas}
-    )
-    exibir("assistant", resposta, ferramentas)
+    ultima = st.session_state.mensagens[-1]
+    exibir("assistant", ultima["texto"], ultima["ferramentas"])

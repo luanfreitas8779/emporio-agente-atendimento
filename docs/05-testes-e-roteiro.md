@@ -291,3 +291,8 @@ Rodar a cada mudança do prompt ou do modelo, com o telefone da cliente 2 (Ana) 
 |---|---|
 | A busca não tolera erro de digitação ("gianini gf 3d") | Issue #11, com teste do nome escrito errado |
 | Gírias e regionalismos não são tratados | Issue #11, com casos no roteiro 9.2 |
+| Cota diária como limite por minuto | O Gemini pode devolver a cota diária como `ModelRateLimitError`. Nesse caso o sistema repete a chamada duas vezes em vão e gasta cota. A diferença entre os dois casos depende do corpo real do erro, ainda não visto | Diferenciar pelo corpo do erro quando houver um 429 real (issue #11) |
+| Sem prazo total do turno | O tempo limite vale por requisição ao modelo (40 s); um turno com várias rodadas de ferramenta e repetições não tem teto total | Avaliar um prazo global se a validação mostrar esperas longas |
+| Painel em turnos com falha | Em turnos que terminam em limite, tempo esgotado, erro técnico ou resposta segura, o painel mostra "Nenhuma ferramenta", mesmo que alguma tenha rodado na tentativa que falhou | Aceito no MVP |
+| Mensagem durante a espera | Uma nova mensagem enviada enquanto o Tom responde só é processada depois da resposta atual, o que pode levar dezenas de segundos em um limite de uso | Aceito: nenhuma mensagem se perde, mas a espera é visível; avaliar fila explícita se incomodar |
+| Validação real do painel | Na issue #10, duas perguntas reais (4 requisições) confirmaram que `Sessao.ferramentas` traz `buscar_produtos` com o termo correto e que as respostas mantêm preços e disponibilidade das ferramentas. A interface Streamlit e o envio de mensagens em sequência não foram exercitados com o Gemini real | Conferir o painel e a sequência manualmente na interface (roteiro 9.2) |
