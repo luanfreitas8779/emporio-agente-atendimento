@@ -9,6 +9,7 @@ from pydantic_ai.exceptions import (
     ModelRateLimitError,
     ModelRequestTimeout,
     ModelOverloadedError,
+    ModelQuotaExceededError,
     ModelTimeoutError,
     ModelUnavailableError,
 )
@@ -149,3 +150,15 @@ def test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa(con
 
     assert resposta == "Resposta do Tom"
     assert len(tentativas) == 2
+
+
+def test_cota_esgotada_nao_repete_e_informa_o_limite(conexao, esperas):
+    tentativas: list[int] = []
+    modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], tentativas)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_LIMITE
+    assert len(tentativas) == 1
+    assert esperas == []
