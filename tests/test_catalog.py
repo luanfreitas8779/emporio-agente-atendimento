@@ -220,3 +220,14 @@ def test_palavra_da_categoria_junto_do_nome_encontra_o_produto(conexao, consulta
     nomes = [p.nome for p in buscar_produtos(conexao, termo=consulta)]
 
     assert esperado in nomes
+
+
+@pytest.mark.regressao
+def test_palavras_de_ligacao_na_consulta_nao_impedem_a_busca(conexao):
+    nomes = [p.nome for p in buscar_produtos(conexao, termo="guitarra stratocaster da fender")]
+
+    assert nomes == ["Fender Stratocaster American Pro II"]
+
+
+def test_consulta_so_com_palavras_de_ligacao_nao_devolve_o_catalogo_inteiro(conexao):
+    assert buscar_produtos(conexao, termo="o da um") == []

@@ -12,6 +12,8 @@ PERCENTUAL_PIX = 5
 # Campos que o cadastro contradiz em outra coluna (DQ-05); o modelo não deve afirmá-los.
 CAMPOS_DIVERGENTES = {137: {"strings"}}
 TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
+# Palavras de ligação que o cliente escreve e que não fazem parte de nenhum nome.
+PALAVRAS_DE_LIGACAO = {"a", "as", "o", "os", "um", "uma", "da", "das", "de", "do", "dos", "com", "para", "pra", "no", "na", "em"}
 
 
 @dataclass(frozen=True)
@@ -140,7 +142,11 @@ def buscar_produtos(
         """
     ).fetchall()
 
-    palavras = normalizar(termo or "").split()
+    palavras_do_cliente = normalizar(termo or "").split()
+    palavras = [p for p in palavras_do_cliente if p not in PALAVRAS_DE_LIGACAO]
+    if palavras_do_cliente and not palavras:
+        # Só palavras de ligação não dizem o que o cliente procura.
+        return []
     categoria_normalizada = singularizar(normalizar(categoria or ""))
     produtos = _filtrar(
         linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade
