@@ -696,3 +696,13 @@ def test_ferramenta_registra_o_interesse_do_telefone_da_sessao_e_define_o_foco(c
     assert listar_pendentes(conexao, ANA) == ["Giannini GF-3D Dreadnought Sunburst"]
     assert sessao.estado.produto_em_foco == 96
     assert "não reserva o produto" in capturados[0].content
+
+
+def test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone(conexao):
+    retorno = chamar_ferramenta(
+        conexao, ANA, "registrar_interesse", {"product_id": 96, "phone": "67911112222"}
+    )
+
+    assert retorno.outcome == "retried"
+    assert listar_pendentes(conexao, "67911112222") == []
+    assert listar_pendentes(conexao, ANA) == []
