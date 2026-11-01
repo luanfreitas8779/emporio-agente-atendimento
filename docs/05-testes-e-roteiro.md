@@ -111,6 +111,7 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-425 | Falha de rede, chave ou banco | Mensagem técnica amigável, sem detalhes | RNF-07 |
 | TC-426 | Limite persistente com dados da cota no erro | Uma linha JSON em `data/limites_provedor.log` com status, métrica, cota e limite | RNF-07 |
 | TC-427 | Resposta com ferramenta | A sessão registra nome e argumentos das ferramentas do turno, e o turno seguinte recomeça a lista | RF-11 |
+| TC-428 | Pergunta enviada na interface | A pergunta fica pendente durante a resposta, a tela guarda uma resposta por pergunta e o campo é liberado | RF-11 |
 
 ### 3.6 Escopo e segurança
 
@@ -218,7 +219,7 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Registro do limite efetivo | O checklist de release ainda pede o limite efetivo do modelo, que só aparece quando o provedor o informa | Preencher após um 429 real |
 | Nova tentativa repete as ferramentas | Após um limite, a execução recomeça do histórico e as ferramentas do turno rodam de novo; as de gravação são idempotentes, mas cada repetição gasta cota | Aceito no MVP |
 | Painel só nas respostas novas | As respostas recarregadas pelo telefone não mostram as ferramentas usadas | Aceito; extrair do histórico se for necessário |
-| Mensagens em sequência sem teste automático | A correção reordena o estado da tela do Streamlit; o `AppTest` não simula uma mensagem interrompendo a outra, então a verificação é manual | Roteiro manual 9.2 |
+| Bloqueio do campo só testado em parte | O `AppTest` cobre a pergunta pendente e a liberação do campo, mas não observa o campo desabilitado durante a resposta. Isso foi conferido no navegador com um modelo simulado lento (ADR-020) | Repetir no navegador a cada mudança de `app.py` (roteiro 9.2) |
 | Leitura dos encaminhamentos | Os encaminhamentos ficam na tabela `handoffs`, mas não há tela nem comando para a equipe consultá-los. O modelo só registra quando chama a ferramenta; fora a resposta segura, nada o obriga | Fora do escopo do MVP (sem painel administrativo); consultar a tabela diretamente |
 | Validação real do escopo e do encaminhamento | As regras de escopo (TC-501 a TC-504), a reclamação e o prazo expirado dependem do prompt e foram avaliadas com o Gemini na issue #9 (13 requisições). Os quatro casos de escopo e o prazo expirado passaram de primeira. A reclamação só foi registrada após duas correções do prompt: na primeira versão o modelo perguntou "quer que eu registre?" e, na segunda, pediu o número do pedido antes de registrar. Os testes automáticos cobrem só o registro, o telefone, o prazo e a resposta segura | Repetir o roteiro 9.2 a cada mudança do prompt e no roteiro da issue #11 |
 | Duplo registro de resposta segura | O prompt também permite o motivo `sem_resposta_segura` ao modelo, e a guarda registra sozinha: um mesmo caso pode gerar dois registros | Aceito; deduplicar por conversa se a equipe reclamar |
@@ -235,8 +236,8 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | Cota diária como limite por minuto | O Gemini pode devolver a cota diária como `ModelRateLimitError`. Nesse caso o sistema repete a chamada duas vezes em vão e gasta cota. A diferença entre os dois casos depende do corpo real do erro, ainda não visto | Diferenciar pelo corpo do erro quando houver um 429 real (issue #11) |
 | Sem prazo total do turno | O tempo limite vale por requisição ao modelo (40 s); um turno com várias rodadas de ferramenta e repetições não tem teto total | Avaliar um prazo global se a validação mostrar esperas longas |
 | Painel em turnos com falha | Em turnos que terminam em limite, tempo esgotado, erro técnico ou resposta segura, o painel mostra "Nenhuma ferramenta", mesmo que alguma tenha rodado na tentativa que falhou | Aceito no MVP |
-| Mensagem durante a espera | Uma nova mensagem enviada enquanto o Tom responde só é processada depois da resposta atual, o que pode levar dezenas de segundos em um limite de uso | Aceito: nenhuma mensagem se perde, mas a espera é visível; avaliar fila explícita se incomodar |
-| Validação real do painel | Na issue #10, duas perguntas reais (4 requisições) confirmaram que `Sessao.ferramentas` traz `buscar_produtos` com o termo correto e que as respostas mantêm preços e disponibilidade das ferramentas. A interface Streamlit e o envio de mensagens em sequência não foram exercitados com o Gemini real | Conferir o painel e a sequência manualmente na interface (roteiro 9.2) |
+| Mensagem durante a espera | O campo fica bloqueado enquanto o Tom responde (ADR-020), então o cliente não pode escrever durante a espera, que pode chegar a cerca de 22 s com repetições. Recarregar a página nesse intervalo perde a pergunta | Aceito no MVP; agrupar mensagens por telefone na integração com o canal de produção |
+| Validação real do painel | Na issue #10, duas perguntas reais (4 requisições) confirmaram que `Sessao.ferramentas` traz `buscar_produtos` com o termo correto e que as respostas mantêm preços e disponibilidade das ferramentas. O painel também foi conferido na interface Streamlit com o Gemini real. O comportamento de duas perguntas diferentes na mesma mensagem ainda não foi avaliado | Avaliar duas perguntas na mesma mensagem na próxima rodada com o Gemini |
 
 
 ## 9. Regressões
@@ -289,7 +290,7 @@ Rodar a cada mudança do prompt ou do modelo, com o telefone da cliente 2 (Ana) 
 | Reclamação | "Comprei um violão e veio com defeito, estou muito insatisfeito" | Acolher, chamar `encaminhar_para_atendente` e informar o retorno em até 24 horas úteis | Dizer que registrou sem chamar a ferramenta |
 | Prazo expirado | "Quero devolver o pedido 7 por arrependimento, foi online" | Avisar que o prazo expirou e oferecer falar com um atendente, sem registrar antes de o cliente aceitar | Registrar o encaminhamento sem o aceite |
 | Painel de ferramentas | "Quanto custa o Takamine GD20?" | Mostrar "Ferramentas usadas" com `buscar_produtos` na resposta | Mostrar o painel vazio quando houve consulta |
-| Mensagens em sequência | Enviar duas mensagens seguidas, sem esperar a primeira resposta | Mostrar a resposta das duas, na ordem | Sumir com uma delas até recarregar a página |
+| Mensagem durante a resposta | Enviar uma mensagem e tentar escrever outra enquanto o Tom responde | O campo fica desabilitado, o spinner mostra "O Tom está digitando..." e o campo volta com a resposta | Aceitar uma segunda mensagem e deixar a primeira sem resposta |
 
 ### 9.3 Bugs conhecidos, sem correção
 

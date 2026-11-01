@@ -194,7 +194,7 @@ Tabelas operacionais:
   4. **Mensagens ao cliente.** Limite persistente, cota esgotada e indisponibilidade geram `MENSAGEM_DE_LIMITE`. Qualquer outra falha do provedor (rede, chave, 5xx) ou do banco gera `MENSAGEM_DE_ERRO_TECNICO`, sem detalhes técnicos, que vão para o log (`logging`). Em todos os casos a fala do cliente e a mensagem enviada entram no histórico, no mesmo molde da resposta segura, e uma falha ao gravar não derruba o atendimento. A resposta segura (ADR-013) também tolera falha do banco ao registrar o encaminhamento.
   5. **Limite efetivo.** `src/limits.py` acrescenta uma linha JSON a `data/limites_provedor.log` (fora do Git) quando um erro de limite persiste: data, modelo, status, `retry_after` e, quando o corpo do erro do Gemini traz, a métrica, a cota e o valor do limite. Não há telefone nem texto do cliente. Uma falha ao gravar o arquivo não impede a mensagem.
   6. **Painel de ferramentas.** `responder` preenche `Sessao.ferramentas` com as chamadas do turno (nome e argumentos), reiniciada a cada turno. A interface mostra um bloco "Ferramentas usadas" em cada resposta recebida na tela aberta; as respostas recarregadas pelo telefone não têm o painel.
-  7. **Mensagens em sequência.** A interface anexa a fala e a resposta ao estado da tela antes de qualquer chamada de desenho e desenha sempre a partir do estado. Se uma nova mensagem interromper a execução, a seguinte ainda mostra tudo.
+  7. **Mensagens em sequência.** A interface anexa a fala e a resposta ao estado da tela antes de qualquer chamada de desenho. Esse ajuste não impediu que uma mensagem enviada durante a resposta deixasse a anterior sem resposta; o bloqueio do campo (ADR-020) o substitui como solução.
 - **Alternativas:** `max_retries` do SDK, escondido e não testável offline; tabela para o registro de limites, descartada pela simplicidade; persistir as ferramentas no histórico para o painel também aparecer nas respostas antigas.
 - **Consequências:** o cliente nunca vê um traceback nas falhas previstas, e a conversa não se perde. Cada repetição gasta cota, e uma espera de até 22 s soma-se ao tempo de resposta. O registro de limites depende de o provedor informar os dados. Uma requisição interrompida no provedor ainda pode ter sido processada, o que aceitamos no MVP.
 
@@ -205,6 +205,14 @@ Tabelas operacionais:
 - **Decisão:** `buscar_produtos` faz primeiro a busca exata. Só quando ela não encontra nada, repete a busca aceitando, em cada palavra do termo, uma letra a mais, a menos ou trocada em relação a uma palavra do nome. A tolerância vale apenas para palavras formadas só por letras e com 5 letras ou mais; palavras curtas e códigos de modelo, que têm dígitos ou hífen (`F310`, `GF-3D`, `D-28E`), continuam exatos.
 - **Alternativas:** distância de edição maior ou por trigramas, descartadas por aproximarem modelos distintos; delegar a correção ao modelo, descartada porque o preço e o estoque devem vir de uma busca determinística.
 - **Consequências:** nomes escritos errado passam a ser encontrados sem tocar o caminho exato. Um erro em código de modelo ou em palavra curta continua sem resultado, o que evita responder sobre o produto errado.
+
+### ADR-020: Campo de mensagem bloqueado enquanto o Tom responde
+
+- **Status:** Aceita.
+- **Contexto:** no Streamlit, uma nova mensagem interrompe a execução em andamento. Na validação com a interface real, uma segunda mensagem enviada durante a resposta da primeira deixou a primeira sem resposta na tela, e a chamada ao Gemini continuou sem destino.
+- **Decisão:** a interface roda em duas execuções. Ao enviar, a pergunta entra no estado da tela como pendente e a tela é recarregada com o campo desabilitado. A segunda execução responde à pendência, guarda a resposta e recarrega a tela com o campo liberado. Durante a espera o spinner diz "O Tom está digitando...", sem pausa artificial.
+- **Alternativas:** agrupar as mensagens recebidas numa janela de 2 a 5 segundos e enviar todas juntas ao agente (debounce), descartada no MVP porque soma a espera a toda mensagem e não cobre uma mensagem que chega durante a chamada ao modelo; aceitar a limitação, descartada porque perde respostas.
+- **Consequências:** nenhuma mensagem fica sem resposta, ao custo de o cliente só poder escrever depois da resposta (de poucos segundos a cerca de 22 s quando há nova tentativa). O agrupamento de mensagens por telefone fica para a integração com um canal como o WhatsApp, onde o servidor recebe as mensagens e a fila é natural. Uma recarga da página durante a espera perde a pergunta pendente, porque o estado da tela é da sessão.
 
 ### ADR-004: SQLite como armazenamento
 

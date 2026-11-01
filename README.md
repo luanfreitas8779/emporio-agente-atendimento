@@ -17,7 +17,7 @@ Agente de atendimento por texto para a Empório da Música, loja de instrumentos
 - Encaminhamento de reclamações e de casos sem resposta segura para a equipe.
 - Busca de produtos que tolera um erro de digitação em palavras longas.
 - Nova tentativa e mensagens claras quando o provedor recusa por limite de uso ou não responde.
-- Painel "Ferramentas usadas" em cada resposta da interface.
+- Painel "Ferramentas usadas" em cada resposta da interface, com indicador de que o Tom está digitando.
 
 ## Arquitetura
 
@@ -110,12 +110,14 @@ As conversas de referência estão em [`examples/`](examples/) e foram geradas c
 - Não há previsão de reposição, então o agente informa apenas o estoque atual.
 - Os limites do plano gratuito do Gemini restringem o volume de uso: cada pergunta consome de 2 a 3 requisições.
 - A busca aproximada corrige apenas um erro de digitação por palavra e só vale para nomes com 5 letras ou mais e sem dígitos; códigos de modelo precisam estar corretos.
+- O campo de mensagem fica bloqueado enquanto o Tom responde, e recarregar a página nesse intervalo perde a pergunta pendente (ADR-020).
 - Os testes com o Gemini real cobrem poucos fluxos, e o comportamento do modelo depende do prompt. As pendências estão em [Testes](docs/05-testes-e-roteiro.md), seção 8.
 - O SQLite atende ao MVP, mas não a um uso concorrente de produção.
 
 ## Próximos passos
 
 - Integrar com a API oficial do WhatsApp e usar o número autenticado pelo canal.
+- Agrupar mensagens enviadas em sequência pelo mesmo telefone antes de chamar o agente, ao integrar um canal como o WhatsApp.
 - Notificar clientes quando um produto voltar ao estoque e dar à equipe uma tela para ler os encaminhamentos.
 - Integrar com os sistemas de catálogo e pedidos da loja.
 - Adotar avaliações contínuas e observabilidade das respostas.
