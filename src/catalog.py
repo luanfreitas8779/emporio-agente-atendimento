@@ -9,6 +9,8 @@ INDISPONIVEL = "indisponivel"
 FORA_DE_CATALOGO = "fora_de_catalogo"
 LANCAMENTO = "lancamento"
 PERCENTUAL_PIX = 5
+# Campos que o cadastro contradiz em outra coluna (DQ-05); o modelo não deve afirmá-los.
+CAMPOS_DIVERGENTES = {137: {"strings"}}
 TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
 
 
@@ -104,7 +106,11 @@ def montar_produto(linha: sqlite3.Row) -> Produto:
         formatar_preco(calcular_preco_final(linha)),
         pix,
         classificar(linha["status"], linha["stock_quantity"]),
-        json.loads(linha["specs"]),
+        {
+            chave: valor
+            for chave, valor in json.loads(linha["specs"]).items()
+            if chave not in CAMPOS_DIVERGENTES.get(linha["product_id"], ())
+        },
     )
 
 

@@ -165,3 +165,11 @@ def test_expoe_as_especificacoes_cadastradas_do_produto(conexao):
 
     assert produto.especificacoes["back_sides"] == "Sapele"
     assert produto.especificacoes["neck"] == "Mogno"
+
+
+def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conexao):
+    # Descrição e especificações do id 137 discordam (DQ-05): o dado não é confiável.
+    produto = buscar_produtos(conexao, termo="Yamaha Bass 3X")[0]
+
+    assert "strings" not in produto.especificacoes
+    assert produto.especificacoes["neck"] == "Maple"
