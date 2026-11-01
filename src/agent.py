@@ -6,7 +6,7 @@ import time
 from datetime import date, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
-from typing import Annotated, Literal
+from typing import Annotated, Literal, NamedTuple
 
 from pydantic import Field
 from pydantic_ai import Agent, ModelRetry, RunContext
@@ -289,7 +289,12 @@ def ferramentas_do_turno(mensagens: list) -> list[ChamadaDeFerramenta]:
     ]
 
 
-def fontes_do_turno(mensagens: list) -> tuple[list[str], list[str]]:
+class FontesDoTurno(NamedTuple):
+    das_ferramentas: list[str]
+    do_cliente: list[str]
+
+
+def fontes_do_turno(mensagens: list) -> FontesDoTurno:
     """Textos que podem sustentar a resposta: o retorno das ferramentas e a fala do cliente."""
     inicio = max(
         (i for i, m in enumerate(mensagens)
@@ -303,7 +308,7 @@ def fontes_do_turno(mensagens: list) -> tuple[list[str], list[str]]:
                 do_cliente.append(str(parte.content))
             elif isinstance(parte, ToolReturnPart) and parte.outcome != "retried":
                 das_ferramentas.append(parte.model_response_str())
-    return das_ferramentas, do_cliente
+    return FontesDoTurno(das_ferramentas, do_cliente)
 
 
 BLOCO_INTERNO = re.compile(r"<system>.*?</system>", re.DOTALL)

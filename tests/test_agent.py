@@ -1221,7 +1221,7 @@ def id_do_produto(conexao, termo: str) -> int:
     return produto.id
 
 
-def calcular_compra(conexao, *itens: tuple[str, int]):
+def conta_pela_ferramenta(conexao, *itens: tuple[str, int]):
     argumentos = {
         "itens": [
             {"product_id": id_do_produto(conexao, termo), "quantidade": quantidade}
@@ -1233,7 +1233,7 @@ def calcular_compra(conexao, *itens: tuple[str, int]):
 
 @pytest.mark.regressao
 def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(conexao):
-    resultado = calcular_compra(conexao, ("Takamine GD20", 2))
+    resultado = conta_pela_ferramenta(conexao, ("Takamine GD20", 2))
 
     assert resultado.total == "R$ 4.398,00"
     assert [(i.nome, i.quantidade, i.subtotal) for i in resultado.itens] == [
@@ -1243,14 +1243,14 @@ def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(conexao):
 
 @pytest.mark.regressao
 def test_calcula_a_soma_de_dois_produtos_diferentes(conexao):
-    resultado = calcular_compra(conexao, ("Takamine GD20", 1), ("Yamaha C40", 1))
+    resultado = conta_pela_ferramenta(conexao, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
     assert resultado.total == "R$ 2.798,90"
 
 
 @pytest.mark.regressao
 def test_calcula_o_total_no_pix_e_a_economia(conexao):
-    resultado = calcular_compra(conexao, ("Yamaha C40", 1))
+    resultado = conta_pela_ferramenta(conexao, ("Yamaha C40", 1))
 
     assert resultado.total_no_pix == "R$ 569,91"
     assert resultado.economia_no_pix == "R$ 29,99"
@@ -1259,7 +1259,7 @@ def test_calcula_o_total_no_pix_e_a_economia(conexao):
 @pytest.mark.regressao
 def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(conexao):
     # O PIX não soma à promoção: o Crafter HT-100 custa o mesmo no PIX.
-    resultado = calcular_compra(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+    resultado = conta_pela_ferramenta(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
     assert resultado.total == "R$ 2.567,08"
     assert resultado.total_no_pix == "R$ 2.537,09"
@@ -1268,13 +1268,14 @@ def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(conexao):
 
 @pytest.mark.regressao
 def test_calcula_a_diferenca_de_preco_entre_dois_produtos(conexao):
-    resultado = calcular_compra(conexao, ("Takamine GD20", 1), ("Yamaha C40", 1))
+    resultado = conta_pela_ferramenta(conexao, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
     assert resultado.diferenca == "R$ 1.599,10"
 
 
+@pytest.mark.regressao
 def test_diferenca_so_existe_para_exatamente_dois_itens(conexao):
-    assert calcular_compra(conexao, ("Yamaha C40", 1)).diferenca is None
+    assert conta_pela_ferramenta(conexao, ("Yamaha C40", 1)).diferenca is None
 
 
 @pytest.mark.regressao
@@ -1345,19 +1346,20 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(conexao):
     ],
 )
 def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(conexao, termo, situacao):
-    resultado = calcular_compra(conexao, (termo, 1))
+    resultado = conta_pela_ferramenta(conexao, (termo, 1))
 
     assert resultado.aviso is not None
     assert situacao in resultado.aviso
 
 
+@pytest.mark.regressao
 def test_conta_de_produto_disponivel_nao_traz_aviso(conexao):
-    assert calcular_compra(conexao, ("Yamaha C40", 1)).aviso is None
+    assert conta_pela_ferramenta(conexao, ("Yamaha C40", 1)).aviso is None
 
 
 @pytest.mark.regressao
 def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(conexao):
-    resultado = calcular_compra(conexao, ("Yamaha C40", 1), ("Yamaha C40", 2))
+    resultado = conta_pela_ferramenta(conexao, ("Yamaha C40", 1), ("Yamaha C40", 2))
 
     assert [(i.nome, i.quantidade, i.subtotal) for i in resultado.itens] == [
         ("Yamaha C40 Nylon Natural", 3, "R$ 1.799,70")
@@ -1368,19 +1370,19 @@ def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(
 
 @pytest.mark.regressao
 def test_conta_com_produto_em_promocao_repassa_a_observacao_do_pix(conexao):
-    resultado = calcular_compra(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+    resultado = conta_pela_ferramenta(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
     assert resultado.observacao_pix == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
 
 
 def test_conta_sem_promocao_nao_traz_observacao_do_pix(conexao):
-    assert calcular_compra(conexao, ("Yamaha C40", 1)).observacao_pix is None
+    assert conta_pela_ferramenta(conexao, ("Yamaha C40", 1)).observacao_pix is None
 
 
 @pytest.mark.regressao
 def test_quantidade_acima_do_estoque_traz_aviso_na_conta(conexao):
     # O Yamaha C40 tem 12 unidades, mas o número do estoque não é exposto.
-    resultado = calcular_compra(conexao, ("Yamaha C40", 13))
+    resultado = conta_pela_ferramenta(conexao, ("Yamaha C40", 13))
 
     assert resultado.aviso == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
     assert "12" not in str(resultado)
