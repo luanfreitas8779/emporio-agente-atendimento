@@ -231,3 +231,25 @@ def test_palavras_de_ligacao_na_consulta_nao_impedem_a_busca(conexao):
 
 def test_consulta_so_com_palavras_de_ligacao_nao_devolve_o_catalogo_inteiro(conexao):
     assert buscar_produtos(conexao, termo="o da um") == []
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    ("consulta", "esperado"),
+    [
+        ("Martin D28", "Martin D-28 Dreadnought Natural"),
+        ("GF3D", "Giannini GF-3D Dreadnought Sunburst"),
+        ("AC39", "Tagima Memphis AC-39 Nylon Natural"),
+        ("KAC", "Kala KA-C Concert Mogno"),
+    ],
+)
+def test_codigo_de_modelo_sem_hifen_encontra_o_produto(conexao, consulta, esperado):
+    nomes = [p.nome for p in buscar_produtos(conexao, termo=consulta)]
+
+    assert esperado in nomes
+
+
+def test_codigo_sem_hifen_continua_sem_confundir_modelos_vizinhos(conexao):
+    nomes = [p.nome for p in buscar_produtos(conexao, termo="D28E")]
+
+    assert nomes == ["Martin D-28E Elétrico Aço Natural"]

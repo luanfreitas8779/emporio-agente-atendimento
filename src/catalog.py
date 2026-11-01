@@ -167,8 +167,12 @@ def _filtrar(
         categoria_do_produto = singularizar(normalizar(linha["categoria"]))
         casa = _palavra_aproximada if aproximado else _contem
         # "violão takamine": a palavra da categoria não está no nome do produto.
+        # "GF3D" e "GF-3D" são o mesmo modelo: o hífen não conta na comparação exata.
+        nome_sem_hifen = nome.replace("-", "")
         if not all(
-            casa(palavra, nome) or singularizar(palavra) in categoria_do_produto
+            casa(palavra, nome)
+            or _contem(palavra.replace("-", ""), nome_sem_hifen)
+            or singularizar(palavra) in categoria_do_produto
             for palavra in palavras
         ):
             continue
