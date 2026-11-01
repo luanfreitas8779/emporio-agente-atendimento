@@ -153,6 +153,7 @@ O último dia da contagem ainda está dentro do prazo. Pedidos `pending`, `confi
 - Os encaminhamentos guardam o telefone, o motivo e um resumo em texto livre, escrito pelo modelo ou, na resposta segura, a própria fala do cliente. O resumo pode conter dados pessoais e é tratado como o histórico: fica no banco local, fora do Git, e é associado só ao telefone.
 - Os interesses guardam o telefone e o id do produto. Ao modelo chegam só os nomes dos produtos do telefone da sessão.
 - Dados reais só podem ser usados após a revisão dos termos do provedor e a adequação à LGPD.
+- Revisão dos termos do Gemini API (versão em vigor desde 23/03/2026, atualizada em 28/04/2026): no serviço gratuito, o Google pode usar os prompts e as respostas para melhorar seus produtos, e revisores humanos podem lê-los, depois de desvinculados da conta e da chave. Os termos orientam a não enviar informação pessoal, sensível ou confidencial a esse serviço. No serviço pago, o conteúdo não é usado para melhorar produtos. Por isso o plano gratuito serve apenas para os dados fictícios deste projeto; qualquer dado real exige o plano pago e a adequação à LGPD.
 
 ## 8. Validação de entrada
 
