@@ -45,6 +45,25 @@ def singularizar(texto: str) -> str:
     return " ".join(palavras)
 
 
+def _distancia_ate_um(a: str, b: str) -> bool:
+    """Diz se duas palavras diferem em no máximo uma inserção, remoção ou troca."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) <= 1
+    curta, longa = sorted((a, b), key=len)
+    return any(longa[:i] + longa[i + 1 :] == curta for i in range(len(longa)))
+
+
+def _palavra_aproximada(palavra: str, nome: str) -> bool:
+    """Aceita um erro de digitação só em palavras longas, para não confundir modelos."""
+    if palavra in nome:
+        return True
+    return len(palavra) >= 5 and any(
+        _distancia_ate_um(palavra, parte) for parte in nome.split()
+    )
+
+
 def classificar(status: str, estoque: int) -> str:
     # O status tem prioridade sobre o estoque.
     if status == "discontinued":
@@ -100,10 +119,20 @@ def buscar_produtos(
 
     palavras = normalizar(termo or "").split()
     categoria_normalizada = singularizar(normalizar(categoria or ""))
+    produtos = _filtrar(linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis)
+    if not produtos and palavras:
+        produtos = _filtrar(
+            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, True
+        )
+    return produtos
+
+
+def _filtrar(linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, aproximado=False):
     produtos = []
     for linha in linhas:
         nome = normalizar(linha["name"])
-        if not all(palavra in nome for palavra in palavras):
+        casa = _palavra_aproximada if aproximado else lambda palavra, nome: palavra in nome
+        if not all(casa(palavra, nome) for palavra in palavras):
             continue
         if categoria_normalizada not in singularizar(normalizar(linha["categoria"])):
             continue

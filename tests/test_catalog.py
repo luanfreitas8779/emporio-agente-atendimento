@@ -142,3 +142,11 @@ def test_categorias_no_singular_de_outros_plurais(conexao):
 
 def test_categoria_inexistente_nao_encontra_produtos(conexao):
     assert buscar_produtos(conexao, categoria="saxofone") == []
+
+
+@pytest.mark.regressao
+def test_busca_tolera_letra_a_menos_no_nome(conexao):
+    # Validação da issue #7: "gianini gf 3d" não encontrava o Giannini GF-3D.
+    (produto,) = buscar_produtos(conexao, termo="gianini gf 3d")
+
+    assert produto.nome == "Giannini GF-3D Dreadnought Sunburst"
