@@ -17,7 +17,8 @@ Agente de atendimento por texto para a Empório da Música, loja de instrumentos
 - Encaminhamento de reclamações e de casos sem resposta segura para a equipe.
 - Busca de produtos que tolera um erro de digitação em palavras longas.
 - Nova tentativa e mensagens claras quando o provedor recusa por limite de uso ou não responde.
-- Painel "Ferramentas usadas" em cada resposta da interface, com indicador de que o Tom está digitando.
+- Painel "Ferramentas usadas" em cada resposta da interface.
+- Indicador de que o Tom está digitando e campo de mensagem bloqueado até a resposta.
 
 ## Arquitetura
 

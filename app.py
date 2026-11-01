@@ -65,16 +65,19 @@ if pendente is not None:
         sessao = Sessao(conectar(CAMINHO_BANCO), pendente["telefone"])
         with st.spinner("O Tom está digitando..."):
             resposta = responder(pendente["pergunta"], sessao)
-        st.session_state.mensagens.append(
-            {
-                "papel": "assistant",
-                "texto": resposta,
-                "ferramentas": [
-                    {"nome": chamada.nome, "argumentos": chamada.argumentos}
-                    for chamada in sessao.ferramentas
-                ],
-            }
-        )
+        # Se o telefone da tela mudou, a resposta já foi guardada para quem perguntou e
+        # não deve aparecer na conversa de outro número.
+        if normalizar_telefone(pendente["telefone"]) == st.session_state.get("conversa_de"):
+            st.session_state.mensagens.append(
+                {
+                    "papel": "assistant",
+                    "texto": resposta,
+                    "ferramentas": [
+                        {"nome": chamada.nome, "argumentos": chamada.argumentos}
+                        for chamada in sessao.ferramentas
+                    ],
+                }
+            )
     finally:
         if sessao is not None:
             sessao.conexao.close()

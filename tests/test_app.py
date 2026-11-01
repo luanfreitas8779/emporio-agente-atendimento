@@ -59,3 +59,12 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
     assert telefones == ["(67) 99654-7821"]
+
+
+def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypatch):
+    monkeypatch.setattr("src.agent.responder", lambda mensagem, sessao: "Resposta da Ana")
+
+    tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": "(67) 99654-7821"}
+    tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
+
+    assert all(m["texto"] != "Resposta da Ana" for m in tela.session_state["mensagens"])
