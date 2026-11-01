@@ -402,6 +402,19 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
             _aguardar(min(erro.retry_after, ESPERA_MAXIMA) if erro.retry_after else espera)
 
 
+def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
+    """Guarda a fala do cliente e o texto enviado a ele, sem a tentativa que falhou."""
+    memory.salvar_mensagens(
+        sessao.conexao,
+        sessao.telefone,
+        [
+            ModelRequest(parts=[UserPromptPart(mensagem)]),
+            ModelResponse(parts=[TextPart(texto)]),
+        ],
+    )
+    return texto
+
+
 def responder(mensagem: str, sessao: Sessao) -> str:
     historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
     sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
@@ -411,7 +424,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
         return resultado.output
     except ModelRateLimitError:
-        return MENSAGEM_DE_LIMITE
+        return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
     except UnexpectedModelBehavior:
         # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
         # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
@@ -428,12 +441,4 @@ def responder(mensagem: str, sessao: Sessao) -> str:
             handoffs.Resultado.TELEFONE_INVALIDO: RESPOSTA_SEGURA_SEM_TELEFONE,
             handoffs.Resultado.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
         }[resultado]
-        memory.salvar_mensagens(
-            sessao.conexao,
-            sessao.telefone,
-            [
-                ModelRequest(parts=[UserPromptPart(mensagem)]),
-                ModelResponse(parts=[TextPart(resposta)]),
-            ],
-        )
-        return resposta
+        return _responder_sem_modelo(mensagem, sessao, resposta)

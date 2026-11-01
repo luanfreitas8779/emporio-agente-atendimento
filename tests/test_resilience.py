@@ -4,6 +4,7 @@ from pydantic_ai.exceptions import ModelRateLimitError
 from pydantic_ai.models.function import FunctionModel
 
 from src.agent import MENSAGEM_DE_LIMITE, Sessao, agente, responder
+from src.memory import exibir_conversa
 
 ANA = "(67) 99654-7821"
 
@@ -67,3 +68,15 @@ def test_limite_persistente_gera_mensagem_clara_apos_3_tentativas(conexao, esper
     assert resposta == MENSAGEM_DE_LIMITE
     assert len(tentativas) == 3
     assert esperas == [2, 5]
+
+
+def test_a_conversa_nao_se_perde_quando_o_limite_persiste(conexao, esperas):
+    modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
+
+    with agente.override(model=modelo):
+        responder("Quanto custa o Takamine GD20?", Sessao(conexao, telefone=ANA))
+
+    assert exibir_conversa(conexao, ANA) == [
+        ("user", "Quanto custa o Takamine GD20?"),
+        ("assistant", MENSAGEM_DE_LIMITE),
+    ]
