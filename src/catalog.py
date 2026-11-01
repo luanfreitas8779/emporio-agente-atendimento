@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import unicodedata
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ class Produto:
     preco_final: str
     preco_pix: str | None
     disponibilidade: str
+    especificacoes: dict[str, str]
 
 
 def formatar_preco(centavos: int) -> str:
@@ -102,6 +104,7 @@ def montar_produto(linha: sqlite3.Row) -> Produto:
         formatar_preco(calcular_preco_final(linha)),
         pix,
         classificar(linha["status"], linha["stock_quantity"]),
+        json.loads(linha["specs"]),
     )
 
 
@@ -115,7 +118,7 @@ def buscar_produtos(
     linhas = conexao.execute(
         """
         SELECT p.product_id, p.name, c.name AS categoria, p.price_cents,
-               p.stock_quantity, p.status, pr.discount_percent
+               p.stock_quantity, p.status, p.specs, pr.discount_percent
         FROM products p
         JOIN categories c ON c.category_id = p.category_id
         LEFT JOIN promotions pr ON pr.product_id = p.product_id AND pr.is_active = 1

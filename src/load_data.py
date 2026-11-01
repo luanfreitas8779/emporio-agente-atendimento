@@ -25,7 +25,8 @@ CREATE TABLE products (
     category_id INTEGER NOT NULL REFERENCES categories (category_id),
     price_cents INTEGER NOT NULL,
     stock_quantity INTEGER NOT NULL,
-    status TEXT NOT NULL
+    status TEXT NOT NULL,
+    specs TEXT NOT NULL
 );
 
 CREATE TABLE promotions (
@@ -113,6 +114,7 @@ def preparar_produto(
             para_centavos(produto["price_brl"]),
             int(produto["stock_quantity"]),
             produto["status"],
+            produto["specs"],
         )
     except (ValueError, ArithmeticError) as erro:
         raise ErroDeCarga(f"produto {identificador}: valor inválido") from erro
@@ -165,8 +167,8 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     conexao.executemany(
         """
         INSERT INTO products (
-            product_id, name, category_id, price_cents, stock_quantity, status
-        ) VALUES (?, ?, ?, ?, ?, ?)
+            product_id, name, category_id, price_cents, stock_quantity, status, specs
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         produtos,
     )

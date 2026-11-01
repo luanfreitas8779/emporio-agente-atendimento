@@ -110,7 +110,7 @@ def test_categoria_sem_produtos_nao_retorna_resultados(conexao):
 def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(conexao):
     # 4.35 * 100 vale 434.99999999999994 em ponto flutuante.
     conexao.execute(
-        "INSERT INTO products VALUES (9001, 'Produto Limite', 5, 435, 1, 'active')"
+        "INSERT INTO products VALUES (9001, 'Produto Limite', 5, 435, 1, 'active', '{}')"
     )
 
     produtos = buscar_produtos(conexao, termo="Produto Limite", preco_maximo=4.35)
@@ -158,3 +158,10 @@ def test_busca_tolera_letra_a_menos_no_nome(conexao):
 )
 def test_busca_nao_confunde_modelos_distintos_com_codigo_parecido(conexao, termo):
     assert buscar_produtos(conexao, termo=termo) == []
+
+
+def test_expoe_as_especificacoes_cadastradas_do_produto(conexao):
+    produto = buscar_produtos(conexao, termo="Takamine GD20")[0]
+
+    assert produto.especificacoes["back_sides"] == "Sapele"
+    assert produto.especificacoes["neck"] == "Mogno"
