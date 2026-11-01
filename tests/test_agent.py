@@ -1139,3 +1139,13 @@ def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(conexao):
         resposta = responder("Quando chega?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
 
     assert resposta != "O pedido chega em 26/03/2026."
+
+
+@pytest.mark.regressao
+def test_ferramenta_de_pedidos_informa_o_atraso_com_a_data_da_sessao(conexao):
+    retorno = chamar_ferramenta_na_data(
+        conexao, ANA, date(2026, 3, 25), "consultar_meus_pedidos", {"numero_pedido": 8}
+    )
+
+    (pedido,) = retorno.content
+    assert pedido.atraso == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."

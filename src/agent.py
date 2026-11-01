@@ -416,7 +416,9 @@ def consultar_meus_pedidos(
     cliente = ctx.deps.cliente
     if cliente is None:
         return SEM_CADASTRO
-    pedidos = orders.consultar_pedidos(ctx.deps.conexao, cliente.id, numero_pedido)
+    pedidos = orders.consultar_pedidos(
+        ctx.deps.conexao, cliente.id, numero_pedido, ctx.deps.hoje
+    )
     if len(pedidos) == 1:
         ctx.deps.estado.pedido_em_analise = pedidos[0].numero
     return pedidos
