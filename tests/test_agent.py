@@ -10,6 +10,7 @@ from src.database import conectar
 from src.interests import listar_pendentes, registrar
 from src.load_data import ler_csv
 from src.memory import exibir_conversa
+from src.restock import repor_estoque
 from tests.conftest import PASTA_DADOS
 
 
@@ -706,3 +707,31 @@ def test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone(conexao):
     assert retorno.outcome == "retried"
     assert listar_pendentes(conexao, "67911112222") == []
     assert listar_pendentes(conexao, ANA) == []
+
+
+def modelo_que_retoma_o_interesse(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """Lê o nome do interesse no contexto e consulta o catálogo, como manda o prompt."""
+    if len(mensagens) == 1:
+        nome = info.instructions.split("Interesses pendentes: ")[1].split(".")[0].split(";")[0]
+        return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"termo": nome})])
+    (produto,) = mensagens[-1].parts[0].content
+    return ModelResponse(parts=[TextPart(f"{produto.nome}: {produto.disponibilidade}")])
+
+
+def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(conexao):
+    registrar(conexao, ANA, 96)
+
+    with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
+        resposta = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Giannini GF-3D Dreadnought Sunburst: indisponivel"
+
+
+def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(conexao):
+    registrar(conexao, ANA, 96)
+    repor_estoque(conexao, 96, 5)
+
+    with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
+        resposta = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Giannini GF-3D Dreadnought Sunburst: disponivel"
