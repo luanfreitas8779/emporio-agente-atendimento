@@ -8,6 +8,9 @@
 *.sqlite
 *.sqlite3
 
+# Registro local dos limites do provedor
+*.log
+
 # Configuração local do Claude Code
 .claude/
 

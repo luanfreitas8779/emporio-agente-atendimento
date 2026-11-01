@@ -9,6 +9,7 @@ load_dotenv()
 RAIZ_PROJETO = Path(__file__).parent.parent
 PASTA_DADOS = RAIZ_PROJETO / "data"
 CAMINHO_BANCO = PASTA_DADOS / "emporio.db"
+CAMINHO_LOG_DE_LIMITES = PASTA_DADOS / "limites_provedor.log"
 MODELO_GEMINI = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 DATA_DE_REFERENCIA_PADRAO = "2026-03-25"
