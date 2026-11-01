@@ -757,3 +757,15 @@ def test_busca_com_varios_produtos_limpa_o_foco(conexao):
         responder("Quais violões vocês têm?", Sessao(conexao, telefone=ANA))
 
     assert carregar_estado(conexao, ANA).produto_em_foco is None
+
+
+def test_busca_sem_resultado_limpa_o_foco(conexao):
+    salvar_estado(conexao, ANA, Estado(produto_em_foco=96))
+    capturados: list = []
+
+    with agente.override(
+        model=FunctionModel(modelo_que_chama("buscar_produtos", {"termo": "saxofone"}, capturados))
+    ):
+        responder("Tem saxofone?", Sessao(conexao, telefone=ANA))
+
+    assert carregar_estado(conexao, ANA).produto_em_foco is None
