@@ -9,6 +9,7 @@ INDISPONIVEL = "indisponivel"
 FORA_DE_CATALOGO = "fora_de_catalogo"
 LANCAMENTO = "lancamento"
 PERCENTUAL_PIX = 5
+OBSERVACAO_PIX_EM_PROMOCAO = "O PIX não soma ao desconto da promoção."
 # Campos que o cadastro contradiz em outra coluna (DQ-05); o modelo não deve afirmá-los.
 CAMPOS_DIVERGENTES = {137: {"strings"}}
 TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
@@ -31,6 +32,8 @@ class Produto:
     especificacoes: dict[str, str]
     # Só existe quando o cliente pediu uma quantidade; o estoque exato nunca é exposto.
     atende_quantidade: bool | None = None
+    # Presente só quando há promoção ativa, que não se soma ao desconto do PIX.
+    observacao_pix: str | None = None
 
 
 def formatar_preco(centavos: int) -> str:
@@ -122,6 +125,7 @@ def montar_produto(linha: sqlite3.Row, quantidade: int | None = None) -> Produto
             if chave not in CAMPOS_DIVERGENTES.get(linha["product_id"], ())
         },
         atende,
+        OBSERVACAO_PIX_EM_PROMOCAO if desconto else None,
     )
 
 

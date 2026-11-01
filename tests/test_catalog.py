@@ -263,3 +263,13 @@ def test_pedaco_de_palavra_da_categoria_nao_encontra_produtos(conexao, pedaco):
 
 def test_categoria_no_plural_continua_encontrando_pela_palavra_inteira(conexao):
     assert len(buscar_produtos(conexao, termo="guitarras")) == 5
+
+
+@pytest.mark.regressao
+def test_produto_em_promocao_explica_que_o_pix_nao_soma_ao_desconto(conexao):
+    (promocional,) = buscar_produtos(conexao, termo="Crafter HT-100")
+    (sem_promocao,) = buscar_produtos(conexao, termo="Yamaha C40")
+
+    assert promocional.preco_pix is None
+    assert promocional.observacao_pix == "O PIX não soma ao desconto da promoção."
+    assert sem_promocao.observacao_pix is None
