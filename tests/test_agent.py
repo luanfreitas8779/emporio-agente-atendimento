@@ -810,3 +810,35 @@ def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(conexao):
     linhas = [tuple(l) for l in conexao.execute("SELECT phone, reason, summary FROM handoffs")]
     assert linhas == [("67996547821", "reclamacao", "Violão chegou com defeito no braço.")]
     assert "24 horas úteis" in retorno.content
+
+
+def test_encaminhamento_sem_telefone_valido_explica_e_nao_grava(conexao):
+    retorno = chamar_ferramenta(
+        conexao, None, "encaminhar_para_atendente", {"motivo": "reclamacao", "resumo": "Defeito."}
+    )
+
+    assert "não foi possível identificar o telefone" in retorno.content.lower()
+    assert "sobre_a_loja" in retorno.content
+    assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
+
+
+@pytest.mark.regressao
+def test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone(conexao):
+    retorno = chamar_ferramenta(
+        conexao,
+        ANA,
+        "encaminhar_para_atendente",
+        {"motivo": "reclamacao", "resumo": "Defeito.", "phone": "67911112222"},
+    )
+
+    assert retorno.outcome == "retried"
+    assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
+
+
+def test_motivo_desconhecido_e_recusado_pela_ferramenta(conexao):
+    retorno = chamar_ferramenta(
+        conexao, ANA, "encaminhar_para_atendente", {"motivo": "fofoca", "resumo": "Defeito."}
+    )
+
+    assert retorno.outcome == "retried"
+    assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
