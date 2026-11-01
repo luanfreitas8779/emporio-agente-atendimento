@@ -71,6 +71,7 @@ def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypa
     assert all(m["texto"] != "Resposta da Ana" for m in tela.session_state["mensagens"])
 
 
+@pytest.mark.regressao
 def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceback(tela, monkeypatch):
     def responder_com_falha(mensagem, sessao):
         raise RuntimeError("falha em /caminho/interno")
@@ -85,6 +86,7 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
     assert not tela.chat_input[0].disabled
 
 
+@pytest.mark.regressao
 def test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
     aberturas = []
     conectar_de_verdade = src.database.conectar
@@ -105,6 +107,7 @@ def test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica(tela, monkeypat
     assert not tela.chat_input[0].disabled
 
 
+@pytest.mark.regressao
 def test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_traceback(tmp_path, monkeypatch):
     monkeypatch.setattr("src.config.CAMINHO_BANCO", tmp_path / "vazio.db")
 

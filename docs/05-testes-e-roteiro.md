@@ -112,6 +112,11 @@ A cota gratuita vigente não foi confirmada. O planejamento usa a premissa conse
 | TC-426 | Limite persistente com dados da cota no erro | Uma linha JSON em `data/limites_provedor.log` com status, métrica, cota e limite | RNF-07 |
 | TC-427 | Resposta com ferramenta | A sessão registra nome e argumentos das ferramentas do turno, e o turno seguinte recomeça a lista | RF-11 |
 | TC-428 | Pergunta enviada na interface | A pergunta fica pendente durante a resposta, a tela guarda uma resposta por pergunta e o campo é liberado | ADR-020 |
+| TC-429 | O modelo devolve `<system>…</system>` no texto | O cliente e o histórico recebem só a mensagem; bloco aberto ou resposta vazia pedem nova resposta | ADR-013 |
+| TC-430 | Exceção inesperada ao responder, na função ou na tela | Mensagem técnica sem traceback, conversa guardada e campo liberado | RNF-07 |
+| TC-431 | Valor, preço ou número de pedido ou produto fora da faixa | A ferramenta recusa o argumento, sem exceção | RNF-07 |
+| TC-432 | Erro 5xx do servidor do provedor | Até 2 repetições; se persistir, mensagem técnica e não a de limite | RNF-07 |
+| TC-433 | Banco novo, ou sem a carga de dados | Banco novo guarda a conversa sem preparo; sem a carga, a tela indica `python -m src.load_data` | RNF-07 |
 
 ### 3.6 Escopo e segurança
 
@@ -266,6 +271,11 @@ Cada bug corrigido deve deixar um teste que o reproduz. Os automáticos levam o 
 | O comando de reposição criava um banco vazio quando ele não existia | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
 | Um erro de digitação no nome ("gianini gf 3d") não encontrava o produto (ADR-019) | `test_busca_tolera_letra_a_menos_no_nome` |
 | A busca aproximada trocava um código de modelo por outro ("D-28E" trazia o D-28) | `test_busca_nao_confunde_modelos_distintos_com_codigo_parecido` |
+| O cliente via blocos `<system>` com o raciocínio interno do modelo | `test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico`, `test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo`, `test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo` |
+| Uma exceção fora da lista prevista mostrava traceback e travava o campo | `test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa`, `test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceback`, `test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica` |
+| Valor ou número enorme estourava o cálculo ou o SQLite | `test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento`, `test_numero_fora_da_faixa_e_recusado_pela_ferramenta` |
+| Banco sem tabelas de memória derrubava toda mensagem | `test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo`, `test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_traceback` |
+| Erro 5xx do servidor não recebia nova tentativa | `test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa`, `test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite` |
 
 As validações da carga (`tests/test_load_data.py`, testes `test_interrompe_a_carga_*`) também levam o marcador: cada uma impede que um dado inválido da origem entre no banco, o que foi corrigido nas issues #2 a #5.
 

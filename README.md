@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 No Linux ou macOS, use `source .venv/bin/activate` no lugar da segunda linha.
 
-Copie `.env.example` para `.env`, preencha `GOOGLE_API_KEY` e crie o banco local:
+Copie `.env.example` para `.env`, preencha `GOOGLE_API_KEY` e crie o banco local com a carga de dados (sem ela, o app indica este comando):
 
 ```bash
 python -m src.load_data

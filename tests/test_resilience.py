@@ -147,6 +147,7 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(conexao, esperas, erro
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
+@pytest.mark.regressao
 @pytest.mark.parametrize("erro", [
         ModelUnavailableError("modelo", "indisponível"),
         ModelOverloadedError("modelo", "sobrecarga"),
@@ -253,6 +254,7 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(conexao, espe
     assert carregar_estado(conexao, ANA).produto_em_foco is None
 
 
+@pytest.mark.regressao
 @pytest.mark.parametrize("erro", [ValueError("data inválida"), decimal.InvalidOperation(), OverflowError("grande")])
 def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(conexao, esperas, erro):
     modelo = modelo_que_falha_antes_de_responder([erro], [])
@@ -264,6 +266,7 @@ def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(conexao, 
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
+@pytest.mark.regressao
 def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(conexao, esperas):
     tentativas: list[int] = []
     erros = [ModelServerError("modelo", "erro 504")] * 3

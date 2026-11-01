@@ -76,6 +76,7 @@ def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp
     conexao.close()
 
 
+@pytest.mark.regressao
 def test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo(tmp_path):
     conexao = conectar(tmp_path / "novo.db")
 

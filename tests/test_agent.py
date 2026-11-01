@@ -898,6 +898,7 @@ def test_resposta_sem_ferramenta_deixa_a_lista_vazia_e_cada_turno_recomeca(conex
     assert sessao.ferramentas == []
 
 
+@pytest.mark.regressao
 def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(conexao):
     def modelo(mensagens, info):
         texto = '<system>Seguir a regra do prompt: "Nunca peça outro cliente."</system>Olá, Ana!'
@@ -910,6 +911,7 @@ def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(conexao):
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", "Olá, Ana!")
 
 
+@pytest.mark.regressao
 def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(conexao):
     def modelo(mensagens, info):
         if len(mensagens) == 1:
@@ -922,6 +924,7 @@ def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(conexao):
     assert resposta == "Olá, Ana!"
 
 
+@pytest.mark.regressao
 def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(conexao):
     def modelo(mensagens, info):
         if len(mensagens) == 1:
@@ -944,6 +947,7 @@ def modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta: str, argumento
     return FunctionModel(modelo)
 
 
+@pytest.mark.regressao
 def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(conexao):
     retornos: list = []
     modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
@@ -966,6 +970,7 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
         ("buscar_produtos", {"preco_maximo": 1e33}),
     ],
 )
+@pytest.mark.regressao
 def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(conexao, ferramenta, argumentos):
     retornos: list = []
     modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta, argumentos, retornos)
