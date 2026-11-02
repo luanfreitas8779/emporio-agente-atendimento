@@ -45,11 +45,16 @@ PADRAO_DATA_RELATIVA = re.compile(r"\b(" + "|".join(EXPRESSOES_RELATIVAS) + r")\
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
 PADRAO_PROMESSA_DE_AVISO = re.compile(
-    r"\bte avis\w*|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b"
+    r"\bte avis\w*|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b|\bavisarei\b"
     r"|\bfica(?:ra|r)?\s+sabendo\b|\bvoce\s+(?:sera|vai ser)\s+avisad\w+"
+    r"|\bte notific\w*|\bte mando\s+(?:uma\s+)?(?:mensagem|aviso|notificacao)\b"
+    r"|\bvamos te\s+(?:informar|comunicar)\s+(?:assim que|quando)\b"
+    r"|\bvoce\s+(?:recebera|vai receber)\s+(?:um\s+)?(?:aviso|mensagem|notificacao)\b"
 )
 # Quantos caracteres antes da promessa procurar uma negação ("não posso te avisar").
 JANELA_DA_NEGACAO = 25
+# A negação só vale colada na promessa: "Não se preocupe, te aviso" continua sendo promessa.
+PADRAO_NEGACAO = re.compile(r"\b(?:nao|sem)\b[^.,;:!?]*$")
 
 
 def promete_aviso(resposta: str) -> bool:
@@ -60,7 +65,7 @@ def promete_aviso(resposta: str) -> bool:
     texto = normalizar(resposta)
     for achado in PADRAO_PROMESSA_DE_AVISO.finditer(texto):
         antes = texto[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
-        if not re.search(r"\b(?:nao|sem)\b", antes):
+        if not PADRAO_NEGACAO.search(antes):
             return True
     return False
 

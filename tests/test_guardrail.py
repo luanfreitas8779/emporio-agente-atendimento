@@ -4,7 +4,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import RESPOSTA_SEGURA, Sessao, agente, responder
 from src.config import PASTA_DADOS
-from src.guardrail import valores_nao_confirmados
+from src.guardrail import promete_aviso, valores_nao_confirmados
 
 ANA = "(67) 99654-7821"
 
@@ -346,3 +346,25 @@ def test_data_curta_sem_ano_e_conferida_contra_as_datas_das_fontes():
 def test_horas_escritas_por_extenso_sao_conferidas_como_horario():
     assert valores_nao_confirmados("Abrimos às 7 horas.", [POLITICA_DE_HORARIOS]) == ["07:00"]
     assert valores_nao_confirmados("Abrimos às 9 horas.", [POLITICA_DE_HORARIOS]) == []
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "resposta",
+    [
+        "Te mando mensagem quando chegar.",
+        "Te notifico assim que chegar.",
+        "Vamos te informar assim que chegar.",
+        "Você receberá um aviso quando chegar.",
+        "Avisarei quando chegar.",
+        "Não se preocupe, te aviso.",
+    ],
+)
+def test_outras_formas_de_prometer_aviso_sao_barradas(resposta):
+    assert promete_aviso(resposta)
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("resposta", ["Não posso te avisar quando chegar.", "Sem te avisar, só anotamos o interesse."])
+def test_negar_a_promessa_de_aviso_continua_passando(resposta):
+    assert not promete_aviso(resposta)
