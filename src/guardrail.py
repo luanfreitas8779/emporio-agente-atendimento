@@ -53,7 +53,7 @@ PADRAO_DATA_RELATIVA = re.compile(r"\b(" + "|".join(EXPRESSOES_RELATIVAS) + r")\
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
 PADRAO_PROMESSA_DE_AVISO = re.compile(
-    r"\bte avis\w*|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b|\bavisarei\b"
+    r"\bte avis\w*|\bpara avisar\b|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b|\bavisarei\b"
     r"|\bfica(?:ra|r)?\s+sabendo\b|\bvoce\s+(?:sera|vai ser)\s+avisad\w+"
     r"|\bte notific\w*|\bte mando\s+(?:uma\s+)?(?:mensagem|aviso|notificacao)\b"
     r"|\bvamos te\s+(?:informar|comunicar)\s+(?:assim que|quando)\b"

@@ -367,7 +367,28 @@ def test_outras_formas_de_prometer_aviso_sao_barradas(resposta):
 
 
 @pytest.mark.regressao
-@pytest.mark.parametrize("resposta", ["Não posso te avisar quando chegar.", "Sem te avisar, só anotamos o interesse."])
+@pytest.mark.parametrize(
+    "resposta",
+    [
+        "Posso anotar seu interesse para avisar se ele voltar?",
+        "Anote seu interesse para avisar se ele voltar?",
+        "Registro o interesse para avisar quando ele estiver disponível.",
+    ],
+)
+def test_interesse_para_avisar_e_promessa_de_aviso(resposta):
+    assert promete_aviso(resposta)
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "resposta",
+    [
+        "Não posso te avisar quando chegar.",
+        "Sem te avisar, só anotamos o interesse.",
+        "Isso não garante aviso quando ele voltar.",
+        "O interesse não serve para avisar ninguém.",
+    ],
+)
 def test_negar_a_promessa_de_aviso_continua_passando(resposta):
     assert not promete_aviso(resposta)
 
