@@ -11,6 +11,9 @@ from src.memory import exibir_conversa
 from src.phone import normalizar_telefone
 
 
+SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar com produtos, pedidos, trocas e pagamentos."
+
+
 def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
     with st.chat_message(papel):
         # O Streamlit interpreta "$" como fórmula matemática, o que quebra os preços.
@@ -71,6 +74,10 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
     perguntas = [m["texto"] for m in sem_telefone if m["papel"] == "user"]
     if telefone_da_conversa and perguntas and st.session_state.get("pendente") is None:
         st.session_state.pendente = {"pergunta": perguntas[-1], "telefone": st.session_state.telefone}
+
+# A saudação é só da tela: não entra no histórico guardado nem na conversa enviada ao modelo.
+if not st.session_state.mensagens:
+    exibir("assistant", SAUDACAO)
 
 for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))

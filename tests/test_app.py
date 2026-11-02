@@ -162,3 +162,16 @@ def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone
     assert chamadas == [("Cadê meu pedido?", ""), ("Cadê meu pedido?", ANA)]
     assert [m["papel"] for m in tela.session_state["mensagens"]] == ["user", "assistant", "assistant"]
     assert tela.session_state["pendente"] is None
+
+
+@pytest.mark.regressao
+def test_tom_abre_a_conversa_com_uma_saudacao(tela):
+    assert tela.chat_message[0].markdown[0].value.startswith("Olá! Sou o Tom")
+
+
+def test_saudacao_some_quando_a_conversa_ja_tem_mensagens(tela):
+    tela.chat_input[0].set_value("Oi").run()
+
+    textos = [c.markdown[0].value for c in tela.chat_message]
+
+    assert not any(t.startswith("Olá! Sou o Tom") for t in textos)
