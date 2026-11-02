@@ -89,6 +89,26 @@ def test_violoes_disponiveis_ate_1000_reais_sao_12_sem_os_ids_96_e_113(conexao):
     assert 113 not in ids
 
 
+def test_somente_promocao_devolve_so_produtos_com_promocao_ativa(conexao):
+    produtos = buscar_produtos(conexao, somente_promocao=True)
+
+    assert len(produtos) == 4
+    assert all(produto.desconto_percentual for produto in produtos)
+    assert "Crafter CE-15" not in " ".join(produto.nome for produto in produtos)
+
+
+def test_somente_promocao_combina_com_a_categoria(conexao):
+    produtos = buscar_produtos(conexao, categoria="ukuleles", somente_promocao=True)
+
+    assert [produto.nome for produto in produtos] == [
+        "Kalani KAL-700T Tenor Natural",
+        "Ohana CK-20 Concert Natural",
+    ]
+    assert produtos[1].preco == "R$ 549,00"
+    assert produtos[1].desconto_percentual == 20
+    assert produtos[1].preco_final == "R$ 439,20"
+
+
 def test_pix_aplica_5_por_cento_sobre_o_preco_de_tabela(conexao):
     (produto,) = buscar_produtos(conexao, termo="Takamine GD20")
 

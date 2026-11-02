@@ -163,6 +163,7 @@ def buscar_produtos(
     preco_maximo: float | None = None,
     somente_disponiveis: bool = False,
     quantidade: int | None = None,
+    somente_promocao: bool = False,
 ) -> list[Produto]:
     linhas = conexao.execute(
         """
@@ -182,17 +183,20 @@ def buscar_produtos(
         return []
     categoria_normalizada = singularizar(normalizar(categoria or ""))
     produtos = _filtrar(
-        linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade
+        linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade,
+        somente_promocao,
     )
     if not produtos and palavras:
         produtos = _filtrar(
-            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, aproximado=True
+            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade,
+            somente_promocao, aproximado=True,
         )
     return produtos
 
 
 def _filtrar(
-    linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, aproximado=False
+    linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade,
+    somente_promocao, aproximado=False,
 ):
     produtos = []
     for linha in linhas:
@@ -211,6 +215,8 @@ def _filtrar(
         ):
             continue
         if categoria_normalizada not in categoria_do_produto:
+            continue
+        if somente_promocao and not linha["discount_percent"]:
             continue
         if preco_maximo is not None and calcular_preco_final(linha) > Decimal(str(preco_maximo)) * 100:
             continue
