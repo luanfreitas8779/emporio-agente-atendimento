@@ -185,3 +185,22 @@ def test_mil_reais_por_extenso_tambem_e_conferido(resposta, fonte, esperado):
 )
 def test_data_por_extenso_com_ano_e_conferida_com_o_ano(resposta, fonte, esperado):
     assert valores_nao_confirmados(resposta, [fonte]) == esperado
+
+
+POLITICA_DE_HORARIOS = "Segunda a sexta-feira: 09:00 às 18:00. Sábado: 09:00 às 13:00."
+
+
+@pytest.mark.regressao
+def test_horario_inventado_e_barrado():
+    assert valores_nao_confirmados("Abrimos às 10h.", [POLITICA_DE_HORARIOS]) == ["10:00"]
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("resposta", ["Abrimos das 9h às 18h.", "Das 09:00 às 18:00.", "Sábado fechamos às 13h."])
+def test_horario_da_politica_passa_em_qualquer_formato(resposta):
+    assert valores_nao_confirmados(resposta, [POLITICA_DE_HORARIOS]) == []
+
+
+@pytest.mark.regressao
+def test_cliente_nao_confirma_horario_da_loja():
+    assert valores_nao_confirmados("Abrimos às 22h.", [POLITICA_DE_HORARIOS], ["Vocês abrem às 22h?"]) == ["22:00"]

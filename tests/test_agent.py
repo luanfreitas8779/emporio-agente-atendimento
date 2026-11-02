@@ -1182,12 +1182,12 @@ def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(con
 @pytest.mark.regressao
 def test_resposta_pode_citar_a_data_de_amanha_da_sessao(conexao):
     def modelo(mensagens, info):
-        return ModelResponse(parts=[TextPart("Amanhã é quinta-feira, 26/03/2026, e abrimos às 9h.")])
+        return ModelResponse(parts=[TextPart("Amanhã é quinta-feira, 26/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
         resposta = responder("Vocês abrem amanhã?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
 
-    assert resposta == "Amanhã é quinta-feira, 26/03/2026, e abrimos às 9h."
+    assert resposta == "Amanhã é quinta-feira, 26/03/2026."
 
 
 @pytest.mark.regressao

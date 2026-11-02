@@ -18,6 +18,8 @@ PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+# Horários como "9h", "9h30", "09:00" e "18:00", comparados por hora e minuto.
+PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
 PADRAO_PROMESSA_DE_AVISO = re.compile(
@@ -67,8 +69,13 @@ def valores(texto: str) -> dict[str, set]:
             datas.add(_data(ano, str(MESES[mes]), dia))
         else:
             por_extenso.add(f"{int(dia):02d}/{MESES[mes]:02d}")
+    horarios = {
+        f"{int(hora):02d}:{minuto or minuto_com_pontos or '00'}"
+        for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(texto)
+    }
     return {
         "dinheiro": dinheiro,
+        "horario": horarios,
         "dia_mes": por_extenso,
         "percentual": percentuais,
         "data": datas - {None},
@@ -84,7 +91,7 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
 
 
 # Dinheiro e percentual só valem se vierem do sistema: o cliente pode "ditar" um preço ou desconto.
-TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual")
+TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario")
 
 
 def valores_nao_confirmados(
@@ -94,8 +101,7 @@ def valores_nao_confirmados(
 
     As fontes do cliente confirmam datas e rastreios, mas nunca dinheiro nem percentual.
     """
-    tipos = ("dinheiro", "percentual", "data", "rastreio", "dia_mes")
-    confirmados: dict[str, set] = {tipo: set() for tipo in tipos}
+    confirmados: dict[str, set] = {tipo: set() for tipo in valores("")}
     for fonte in fontes:
         for tipo, encontrados in valores(fonte).items():
             confirmados[tipo] |= encontrados
