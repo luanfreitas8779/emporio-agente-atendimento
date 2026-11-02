@@ -620,7 +620,7 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
                 ModelResponse(parts=[TextPart(texto)]),
             ],
         )
-    except sqlite3.Error:
+    except Exception:
         # Se o banco é a causa da falha, o cliente ainda recebe a mensagem.
         registro.exception("Não foi possível guardar a conversa")
     return texto

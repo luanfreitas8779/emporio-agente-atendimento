@@ -362,3 +362,18 @@ def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(conexao, esperas):
         resposta = responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("erro", [ValueError("dado inválido"), OSError("disco cheio")])
+def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(conexao, esperas, monkeypatch, erro):
+    def gravar_com_falha(*argumentos, **nomeados):
+        raise erro
+
+    monkeypatch.setattr("src.agent.memory.salvar_mensagens", gravar_com_falha)
+    modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
