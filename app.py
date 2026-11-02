@@ -56,13 +56,15 @@ st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
 # Um telefone inválido não tem conversa guardada, então a tela recomeça vazia.
 telefone_da_conversa = normalizar_telefone(st.session_state.telefone)
 if st.session_state.get("conversa_de") != telefone_da_conversa:
+    # Quem conversou antes de informar o telefone continua vendo o que foi dito (QA-15).
+    sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.mensagens
     st.session_state.conversa_de = telefone_da_conversa
     conexao = conectar(CAMINHO_BANCO)
     try:
         st.session_state.mensagens = [
             {"papel": papel, "texto": texto}
             for papel, texto in exibir_conversa(conexao, st.session_state.telefone)
-        ]
+        ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         conexao.close()
 

@@ -132,3 +132,15 @@ def test_falha_ao_abrir_o_banco_na_abertura_da_tela_orienta_sem_traceback(tmp_pa
     assert "banco de dados" in tela.error[0].value
     assert "/caminho/interno" not in tela.error[0].value
     assert len(tela.chat_input) == 0
+
+
+ANA = "(67) 99654-7821"
+
+
+@pytest.mark.regressao
+def test_informar_o_telefone_depois_da_primeira_pergunta_preserva_a_conversa(tela):
+    tela.chat_input[0].set_value("Cadê meu pedido?").run()
+
+    tela.sidebar.text_input[0].set_value(ANA).run()
+
+    assert [m["texto"] for m in tela.session_state["mensagens"]][:2] == ["Cadê meu pedido?", "Olá!"]
