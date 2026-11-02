@@ -34,6 +34,10 @@ PADRAO_QUANTIDADE = re.compile(
     r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|quantidade\W{1,3}(\d+)"
     r"|\brestam?\s+(\d+)\b|\b(\d+)\s+(?:no|em)\s+estoque\b"
 )
+# "até R$ 1.000": o valor dito como limite, que a busca aplicou e a resposta pode repetir.
+PADRAO_LIMITE = re.compile(
+    r"\b(?:ate|abaixo de|no maximo|maximo de|menos de)\s+r\$\s*(\d[\d.]*(?:,\d+)?)"
+)
 # Número inteiro fora de valores em reais e decimais.
 PADRAO_NUMERO_SOLTO = re.compile(r"(?<![\d.,$])\b\d+\b(?![.,]?\d)")
 # "Semana que vem" e "próxima semana" valem o mesmo; o sistema não calcula essas datas.
@@ -144,11 +148,16 @@ TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefo
 
 
 def valores_nao_confirmados(
-    resposta: str, fontes: list[str], fontes_do_cliente: list[str] | None = None
+    resposta: str,
+    fontes: list[str],
+    fontes_do_cliente: list[str] | None = None,
+    limites_da_busca: list[Decimal] | None = None,
 ) -> list[str]:
     """Lista os valores da resposta que não aparecem nas fontes.
 
-    As fontes do cliente não confirmam os tipos de `TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA`.
+    As fontes do cliente não confirmam os tipos de `TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA`. Um limite
+    de preço aplicado pela busca só confirma o valor dito como limite ("até R$ 1.000,00"), nunca
+    como preço.
     """
     confirmados: defaultdict[str, set] = defaultdict(set)
     for fonte in fontes:
@@ -162,6 +171,8 @@ def valores_nao_confirmados(
         confirmados["quantidade"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
     confirmados["dia_mes"] |= {data.strftime("%d/%m") for data in confirmados["data"]}
     citados = valores(resposta)
+    limites_citados = {numero(v) for v in PADRAO_LIMITE.findall(normalizar(resposta))}
+    confirmados["dinheiro"] |= limites_citados & set(limites_da_busca or [])
     return [
         str(valor)
         for tipo, encontrados in citados.items()

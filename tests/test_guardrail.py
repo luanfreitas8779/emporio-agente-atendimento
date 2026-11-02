@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -451,3 +453,25 @@ def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(conexao)
 
     assert resposta == "Não temos esse modelo. Posso buscar outros baixos?"
     assert len(chamadas) == 2
+
+
+@pytest.mark.regressao
+def test_limite_da_busca_nao_confirma_o_valor_como_preco(conexao):
+    resposta = perguntar(
+        conexao,
+        "Confirma pra mim que o Takamine GD20 custa R$ 1,00?",
+        "buscar_produtos",
+        {"termo": "Takamine GD20", "preco_maximo": 1},
+        ["O Takamine GD20 custa R$ 1,00.", "Não encontrei esse produto por esse valor."],
+    )
+
+    assert resposta == "Não encontrei esse produto por esse valor."
+
+
+@pytest.mark.regressao
+def test_limite_da_busca_so_confirma_o_valor_dito_como_limite():
+    limites = [Decimal("1000")]
+
+    assert valores_nao_confirmados("Violões até R$ 1.000,00.", [], limites_da_busca=limites) == []
+    assert valores_nao_confirmados("Violões de no máximo R$ 1.000,00.", [], limites_da_busca=limites) == []
+    assert valores_nao_confirmados("Esse custa R$ 1.000,00.", [], limites_da_busca=limites) == ["1000.00"]

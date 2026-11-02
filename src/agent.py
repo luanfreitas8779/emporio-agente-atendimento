@@ -4,6 +4,7 @@ import re
 import sqlite3
 import time
 from datetime import date, timedelta
+from decimal import Decimal
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from typing import Annotated, Literal, NamedTuple
@@ -338,22 +339,24 @@ def _mensagens_do_turno(mensagens: list) -> list:
     return mensagens[inicio:]
 
 
-def filtros_da_busca(mensagens: list) -> list[str]:
-    """Limite de preço e quantidade que o modelo passou à busca neste turno, como texto de fonte.
+def argumentos_da_busca(mensagens: list, nome: str) -> list:
+    """Valores válidos do argumento `nome` que o modelo passou a `buscar_produtos` neste turno."""
+    valores = (
+        chamada.argumentos.get(nome)
+        for chamada in ferramentas_do_turno(_mensagens_do_turno(mensagens))
+        if chamada.nome == "buscar_produtos"
+    )
+    return [v for v in valores if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0]
 
-    São filtros aplicados pelo sistema, então a resposta pode repeti-los ("até R$ 1.000,00").
-    """
-    filtros = []
-    for chamada in ferramentas_do_turno(_mensagens_do_turno(mensagens)):
-        if chamada.nome != "buscar_produtos":
-            continue
-        limite = chamada.argumentos.get("preco_maximo")
-        if isinstance(limite, (int, float)) and limite > 0:
-            filtros.append(catalog.formatar_preco(round(limite * 100)))
-        quantidade = chamada.argumentos.get("quantidade")
-        if isinstance(quantidade, int) and quantidade > 0:
-            filtros.append(f'"quantidade": {quantidade}')
-    return filtros
+
+def limites_de_preco(mensagens: list) -> list[Decimal]:
+    """Limites de preço aplicados pela busca: a resposta pode repeti-los como limite, não como preço."""
+    return [Decimal(str(v)) for v in argumentos_da_busca(mensagens, "preco_maximo")]
+
+
+def quantidades_da_busca(mensagens: list) -> list[str]:
+    """Quantidades pedidas à busca, em texto de fonte (o formato do retorno da conta)."""
+    return [f'"quantidade": {int(v)}' for v in argumentos_da_busca(mensagens, "quantidade")]
 
 
 def fontes_do_turno(mensagens: list) -> FontesDoTurno:
@@ -413,12 +416,12 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     # O telefone da sessão também é do sistema, não do cliente.
     fontes = [
         *das_ferramentas,
-        *filtros_da_busca(ctx.messages),
+        *quantidades_da_busca(ctx.messages),
         formatar_data(hoje),
         formatar_data(hoje + timedelta(days=1)),
         formatar_telefone(ctx.deps.telefone or ""),
     ]
-    inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente)
+    inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente, limites_de_preco(ctx.messages))
     if inventados:
         raise ModelRetry(
             "A resposta cita valores que não vieram das ferramentas: "
