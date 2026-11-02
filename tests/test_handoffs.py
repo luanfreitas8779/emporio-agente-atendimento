@@ -105,3 +105,17 @@ def test_depois_da_janela_o_mesmo_motivo_gera_novo_registro(conexao, relogio):
 
     assert resultado == Resultado.REGISTRADO
     assert len(encaminhamentos(conexao)) == 2
+
+
+@pytest.mark.regressao
+def test_reclamacao_sobre_outro_assunto_na_janela_gera_novo_registro(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente reclama que o pedido 8 atrasou.")
+
+    relogio.em(10)
+    resultado = registrar(
+        conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente diz que o vendedor da loja a destratou ontem."
+    )
+
+    assert resultado == Resultado.REGISTRADO
+    assert len(encaminhamentos(conexao)) == 2
