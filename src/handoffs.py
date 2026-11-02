@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timedelta
 from enum import StrEnum
 
 from src.memory import agora
@@ -6,6 +7,8 @@ from src.phone import normalizar_telefone
 
 
 MAX_RESUMO = 500
+# O modelo reescreve o resumo a cada tentativa; sem a janela o mesmo caso viraria vários registros.
+JANELA_DE_REPETICAO = timedelta(hours=1)
 
 
 class Motivo(StrEnum):
@@ -29,8 +32,8 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     if not resumo:
         return Resultado.RESUMO_INVALIDO
     repetido = conexao.execute(
-        "SELECT 1 FROM handoffs WHERE phone = ? AND reason = ? AND summary = ?",
-        (chave, motivo, resumo),
+        "SELECT 1 FROM handoffs WHERE phone = ? AND reason = ? AND (summary = ? OR created_at >= ?)",
+        (chave, motivo, resumo, (datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO).isoformat()),
     ).fetchone()
     if repetido:
         return Resultado.JA_REGISTRADO

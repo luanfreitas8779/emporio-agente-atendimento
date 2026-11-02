@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from src.handoffs import Motivo, Resultado, registrar
@@ -45,13 +47,20 @@ def test_repetir_o_mesmo_encaminhamento_nao_duplica(conexao):
     assert len(encaminhamentos(conexao)) == 1
 
 
-def test_motivo_ou_resumo_diferente_gera_novo_encaminhamento(conexao):
+def test_motivo_diferente_gera_novo_encaminhamento(conexao):
     registrar(conexao, TELEFONE, Motivo.RECLAMACAO, RESUMO)
 
     registrar(conexao, TELEFONE, Motivo.ATENDENTE_SOLICITADO, RESUMO)
-    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Outro assunto.")
 
-    assert len(encaminhamentos(conexao)) == 3
+    assert len(encaminhamentos(conexao)) == 2
+
+
+def test_outro_cliente_com_o_mesmo_motivo_gera_novo_encaminhamento(conexao):
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, RESUMO)
+
+    registrar(conexao, "(67) 99789-0123", Motivo.RECLAMACAO, "Outro assunto.")
+
+    assert len(encaminhamentos(conexao)) == 2
 
 
 def test_resumo_acima_de_500_caracteres_e_cortado(conexao):
@@ -59,3 +68,40 @@ def test_resumo_acima_de_500_caracteres_e_cortado(conexao):
 
     assert resultado == Resultado.REGISTRADO
     assert encaminhamentos(conexao)[0][2] == "a" * 500
+
+
+@pytest.fixture
+def relogio(monkeypatch):
+    """Relógio controlado: `relogio.em(minutos)` fixa o instante do próximo registro."""
+    inicio = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
+
+    class Relogio:
+        def em(self, minutos: int) -> None:
+            instante = (inicio + timedelta(minutes=minutos)).isoformat()
+            monkeypatch.setattr("src.handoffs.agora", lambda: instante)
+
+    return Relogio()
+
+
+@pytest.mark.regressao
+def test_mesmo_motivo_do_mesmo_cliente_na_janela_nao_gera_outro_registro_com_resumo_diferente(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.ATENDENTE_SOLICITADO, "Cliente quer falar com humano sobre o pedido 7.")
+
+    relogio.em(30)
+    resultado = registrar(conexao, TELEFONE, Motivo.ATENDENTE_SOLICITADO, "Cliente exige atendente por causa do atraso.")
+
+    assert resultado == Resultado.JA_REGISTRADO
+    assert len(encaminhamentos(conexao)) == 1
+
+
+@pytest.mark.regressao
+def test_depois_da_janela_o_mesmo_motivo_gera_novo_registro(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Violão chegou com defeito.")
+
+    relogio.em(61)
+    resultado = registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cabo veio sem o conector.")
+
+    assert resultado == Resultado.REGISTRADO
+    assert len(encaminhamentos(conexao)) == 2
