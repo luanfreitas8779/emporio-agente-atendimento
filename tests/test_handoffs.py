@@ -119,3 +119,15 @@ def test_reclamacao_sobre_outro_assunto_na_janela_gera_novo_registro(conexao, re
 
     assert resultado == Resultado.REGISTRADO
     assert len(encaminhamentos(conexao)) == 2
+
+
+@pytest.mark.regressao
+def test_reclamacao_sobre_outro_pedido_na_janela_gera_novo_registro(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente insatisfeita: o pedido 8 chegou atrasado.")
+
+    relogio.em(10)
+    resultado = registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente insatisfeita: o pedido 12 chegou atrasado.")
+
+    assert resultado == Resultado.REGISTRADO
+    assert len(encaminhamentos(conexao)) == 2

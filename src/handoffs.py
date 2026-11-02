@@ -23,6 +23,16 @@ def _assunto(resumo: str) -> set[str]:
     return {p for p in palavras if (len(p) >= 5 or p.isdigit()) and p not in PALAVRAS_SEM_ASSUNTO}
 
 
+def _mesmo_assunto(anterior: str, resumo: str) -> bool:
+    """Dois resumos de reclamação tratam do mesmo caso quando citam o mesmo pedido ou, sem
+    pedidos citados nos dois, compartilham alguma palavra do assunto."""
+    pedidos_anterior = {p for p in _assunto(anterior) if p.isdigit()}
+    pedidos = {p for p in _assunto(resumo) if p.isdigit()}
+    if pedidos_anterior and pedidos:
+        return bool(pedidos_anterior & pedidos)
+    return bool(_assunto(anterior) & _assunto(resumo))
+
+
 class Motivo(StrEnum):
     RECLAMACAO = "reclamacao"
     SEM_RESPOSTA_SEGURA = "sem_resposta_segura"
@@ -52,7 +62,7 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     repetido = any(
         anterior == resumo
         or datetime.fromisoformat(criado_em) >= corte
-        and (motivo != Motivo.RECLAMACAO or _assunto(anterior) & _assunto(resumo))
+        and (motivo != Motivo.RECLAMACAO or _mesmo_assunto(anterior, resumo))
         for anterior, criado_em in anteriores
     )
     if repetido:
