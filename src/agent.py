@@ -337,7 +337,12 @@ def fontes_do_turno(mensagens: list) -> FontesDoTurno:
     return FontesDoTurno(das_ferramentas, do_cliente)
 
 
-BLOCO_INTERNO = re.compile(r"<system>.*?</system>", re.DOTALL)
+# Raciocínio do modelo que vazou no texto: em qualquer caixa e com espaços dentro da tag.
+NOMES_DE_BLOCO_INTERNO = r"system|thinking|thought|reasoning"
+BLOCO_INTERNO = re.compile(
+    rf"<\s*({NOMES_DE_BLOCO_INTERNO})\s*>.*?<\s*/\s*\1\s*>", re.DOTALL | re.IGNORECASE
+)
+TAG_INTERNA = re.compile(rf"<\s*/?\s*(?:{NOMES_DE_BLOCO_INTERNO})\s*>", re.IGNORECASE)
 
 
 def sem_bloco_interno(texto: str) -> str:
@@ -357,7 +362,7 @@ def limpar_texto_das_respostas(mensagens: list) -> None:
 def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     # O raciocínio interno do modelo não é para o cliente.
     resposta = sem_bloco_interno(resposta)
-    if not resposta or "<system>" in resposta or "</system>" in resposta:
+    if not resposta or TAG_INTERNA.search(resposta):
         raise ModelRetry("A resposta contém texto interno. Escreva só a mensagem para o cliente.")
     # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
     if guardrail.promete_aviso(resposta):

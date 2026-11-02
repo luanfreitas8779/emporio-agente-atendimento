@@ -1433,3 +1433,26 @@ def test_conta_abaixo_de_r_500_traz_a_taxa_fixa(conexao):
     resultado = conta_pela_ferramenta(conexao, ("Kalani KAL-500C", 1))
 
     assert resultado.frete == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "abertura, fechamento",
+    [
+        ("<SYSTEM>", "</SYSTEM>"),
+        ("<System>", "</System>"),
+        ("< system >", "< / system >"),
+        ("<thinking>", "</thinking>"),
+        ("<thought>", "</thought>"),
+        ("<reasoning>", "</reasoning>"),
+    ],
+)
+def test_bloco_interno_em_qualquer_forma_nao_chega_ao_cliente_nem_ao_historico(conexao, abertura, fechamento):
+    def modelo(mensagens, info):
+        return ModelResponse(parts=[TextPart(f"{abertura}Raciocínio interno.{fechamento}Olá, Ana!")])
+
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Olá, Ana!"
+    assert exibir_conversa(conexao, ANA)[-1] == ("assistant", "Olá, Ana!")
