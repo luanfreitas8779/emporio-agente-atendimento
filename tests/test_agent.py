@@ -67,6 +67,22 @@ def test_agente_lista_os_12_violoes_disponiveis_ate_1000_reais(conexao):
     assert resposta == "12"
 
 
+def modelo_que_lista_as_promocoes_ativas(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    if len(mensagens) == 1:
+        return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"somente_promocao": True})])
+    produtos = mensagens[-1].parts[0].content
+    linhas = [f"{p.nome}: {p.preco}, {p.desconto_percentual}%, {p.preco_final}" for p in produtos]
+    return ModelResponse(parts=[TextPart("\n".join(linhas))])
+
+
+def test_agente_lista_os_4_produtos_em_promocao_com_preco_original_percentual_e_preco_final(conexao):
+    with agente.override(model=FunctionModel(modelo_que_lista_as_promocoes_ativas)):
+        resposta = responder("Quais produtos estão em promoção agora?", Sessao(conexao))
+
+    assert len(resposta.splitlines()) == 4
+    assert "Crafter HT-100 Folk Aço Natural: R$ 2.399,00, 18%, R$ 1.967,18" in resposta
+
+
 def modelo_que_sugere_alternativas_ao_produto_indisponivel(
     mensagens: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
