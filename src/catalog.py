@@ -44,6 +44,18 @@ PALAVRAS_DE_LIGACAO = frozenset(
 
 
 @dataclass(frozen=True)
+class Filtros:
+    """O que o cliente pediu na busca, já normalizado."""
+
+    palavras: list[str]
+    categoria: str
+    preco_maximo: float | None
+    somente_disponiveis: bool
+    quantidade: int | None
+    somente_promocao: bool
+
+
+@dataclass(frozen=True)
 class Produto:
     id: int
     nome: str
@@ -182,22 +194,16 @@ def buscar_produtos(
         # Só palavras de ligação não dizem o que o cliente procura.
         return []
     categoria_normalizada = singularizar(normalizar(categoria or ""))
-    produtos = _filtrar(
-        linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade,
-        somente_promocao,
+    filtros = Filtros(
+        palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, somente_promocao
     )
+    produtos = _filtrar(linhas, filtros)
     if not produtos and palavras:
-        produtos = _filtrar(
-            linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade,
-            somente_promocao, aproximado=True,
-        )
+        produtos = _filtrar(linhas, filtros, aproximado=True)
     return produtos
 
 
-def _filtrar(
-    linhas, palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade,
-    somente_promocao, aproximado=False,
-):
+def _filtrar(linhas, filtros: Filtros, aproximado: bool = False):
     produtos = []
     for linha in linhas:
         nome = normalizar(linha["name"])
@@ -211,17 +217,20 @@ def _filtrar(
             casa(palavra, nome)
             or _contem(palavra.replace("-", ""), nome_sem_hifen)
             or singularizar(palavra) in palavras_da_categoria
-            for palavra in palavras
+            for palavra in filtros.palavras
         ):
             continue
-        if categoria_normalizada not in categoria_do_produto:
+        if filtros.categoria not in categoria_do_produto:
             continue
-        if somente_promocao and not linha["discount_percent"]:
+        if filtros.somente_promocao and not linha["discount_percent"]:
             continue
-        if preco_maximo is not None and calcular_preco_final(linha) > Decimal(str(preco_maximo)) * 100:
+        if (
+            filtros.preco_maximo is not None
+            and calcular_preco_final(linha) > Decimal(str(filtros.preco_maximo)) * 100
+        ):
             continue
-        produto = montar_produto(linha, quantidade)
-        if somente_disponiveis and produto.disponibilidade != DISPONIVEL:
+        produto = montar_produto(linha, filtros.quantidade)
+        if filtros.somente_disponiveis and produto.disponibilidade != DISPONIVEL:
             continue
         produtos.append(produto)
     return produtos
