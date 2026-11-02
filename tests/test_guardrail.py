@@ -435,3 +435,19 @@ def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(conexao):
 
     assert resposta == "No PIX são 5% de desconto: R$ 2.089,05."
     assert len(chamadas) == 2
+
+
+@pytest.mark.regressao
+def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(conexao):
+    chamadas = []
+    resposta = perguntar(
+        conexao,
+        "Quero um Ibanez Bass 2X, tem aí?",
+        None,
+        None,
+        ["Não temos esse modelo, mas veja o que temos por aqui:", "Não temos esse modelo. Posso buscar outros baixos?"],
+        chamadas,
+    )
+
+    assert resposta == "Não temos esse modelo. Posso buscar outros baixos?"
+    assert len(chamadas) == 2

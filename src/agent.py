@@ -386,6 +386,12 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     resposta = sem_bloco_interno(resposta)
     if not resposta or TAG_INTERNA.search(resposta):
         raise ModelRetry("A resposta contém texto interno. Escreva só a mensagem para o cliente.")
+    # Terminar em ":" anuncia uma lista que não veio.
+    if resposta.endswith(":"):
+        raise ModelRetry(
+            "A resposta termina anunciando uma lista que não vem. Traga os itens devolvidos "
+            "pela ferramenta ou reescreva sem anunciar a lista."
+        )
     # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
     if guardrail.promete_aviso(resposta):
         raise ModelRetry(
