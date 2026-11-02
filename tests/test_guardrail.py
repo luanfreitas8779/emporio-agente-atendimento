@@ -397,3 +397,19 @@ def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(conexao):
     )
 
     assert resposta == "Posso buscar violões para você."
+
+
+@pytest.mark.regressao
+def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(conexao):
+    chamadas = []
+    resposta = perguntar(
+        conexao,
+        "Quanto fica 2 Giannini GF-3D?",
+        "buscar_produtos",
+        {"termo": "Giannini GF-3D", "quantidade": 2},
+        ["Não consigo garantir 2 unidades do Giannini GF-3D."],
+        chamadas,
+    )
+
+    assert resposta == "Não consigo garantir 2 unidades do Giannini GF-3D."
+    assert len(chamadas) == 2

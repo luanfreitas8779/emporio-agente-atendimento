@@ -330,7 +330,7 @@ def _mensagens_do_turno(mensagens: list) -> list:
 
 
 def filtros_da_busca(mensagens: list) -> list[str]:
-    """Limite de preço e quantidade que o modelo passou à busca neste turno, como texto.
+    """Limite de preço e quantidade que o modelo passou à busca neste turno, como texto de fonte.
 
     São filtros aplicados pelo sistema, então a resposta pode repeti-los ("até R$ 1.000,00").
     """
@@ -341,6 +341,9 @@ def filtros_da_busca(mensagens: list) -> list[str]:
         limite = chamada.argumentos.get("preco_maximo")
         if isinstance(limite, (int, float)) and limite > 0:
             filtros.append(catalog.formatar_preco(round(limite * 100)))
+        quantidade = chamada.argumentos.get("quantidade")
+        if isinstance(quantidade, int) and quantidade > 0:
+            filtros.append(f'"quantidade": {quantidade}')
     return filtros
 
 
