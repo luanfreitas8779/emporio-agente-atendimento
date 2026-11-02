@@ -22,6 +22,7 @@ from pydantic_ai.models.function import FunctionModel
 from src.agent import (
     MENSAGEM_DE_ERRO_TECNICO,
     MENSAGEM_DE_LIMITE,
+    MENSAGEM_DE_LIMITE_DIARIO,
     MENSAGEM_DE_TIMEOUT,
     ChamadaDeFerramenta,
     RESPOSTA_SEGURA_SEM_REGISTRO,
@@ -277,3 +278,30 @@ def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(co
 
     assert resposta == MENSAGEM_DE_ERRO_TECNICO
     assert len(tentativas) == 3
+
+
+def limite_do_provedor(cota: str, retry_delay: str | None = None) -> ModelRateLimitError:
+    """429 no formato do Gemini: a violação de cota e, às vezes, o RetryInfo."""
+    detalhes = [{"violations": [{"quotaId": cota, "quotaValue": "15"}]}]
+    if retry_delay:
+        detalhes.append({"retryDelay": retry_delay})
+    return ModelHTTPError.for_category(
+        ModelRateLimitError,
+        status_code=429,
+        model_name="gemini-3.5-flash-lite",
+        body={"error": {"details": detalhes}},
+    )
+
+
+@pytest.mark.regressao
+def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(conexao, esperas):
+    tentativas: list[int] = []
+    erro = limite_do_provedor("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], tentativas)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert len(tentativas) == 1
+    assert esperas == []
+    assert resposta == MENSAGEM_DE_LIMITE_DIARIO

@@ -31,3 +31,8 @@ def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
     }
     with caminho.open("a", encoding="utf-8") as arquivo:
         arquivo.write(json.dumps(evento, ensure_ascii=False) + "\n")
+
+
+def e_limite_diario(erro: ModelAPIError) -> bool:
+    """A cota por dia só volta no dia seguinte, então esperar alguns segundos não resolve."""
+    return "PerDay" in (_violacao(erro.body).get("quotaId") or "")

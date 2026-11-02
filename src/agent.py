@@ -221,6 +221,10 @@ MENSAGEM_DE_LIMITE = (
     "O serviço de IA está no limite de uso ou sobrecarregado agora. Tente novamente em alguns minutos."
 )
 
+MENSAGEM_DE_LIMITE_DIARIO = (
+    "Atingimos o limite de atendimentos de hoje. Tente novamente amanhã ou fale com a loja pelos contatos de atendimento."
+)
+
 MENSAGEM_DE_TIMEOUT = "O serviço demorou para responder. Tente novamente."
 
 MENSAGEM_DE_ERRO_TECNICO = "Tive um problema técnico para atender agora. Tente novamente em instantes."
@@ -583,7 +587,7 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
         try:
             return execucao.result()
         except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as erro:
-            if espera is None:
+            if espera is None or limits.e_limite_diario(erro):
                 raise
             # O provedor pode indicar quando tentar de novo; um teto evita travar o chat.
             _aguardar(min(erro.retry_after, ESPERA_MAXIMA) if erro.retry_after else espera)
@@ -623,7 +627,10 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         except OSError:
             registro.exception("Não foi possível registrar o limite do provedor")
         # Cota esgotada não se resolve esperando: não há nova tentativa, só a mesma mensagem.
-        return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_LIMITE)
+        diario = limits.e_limite_diario(erro)
+        return _responder_sem_modelo(
+            mensagem, sessao, MENSAGEM_DE_LIMITE_DIARIO if diario else MENSAGEM_DE_LIMITE
+        )
     except (ModelTimeoutError, ModelRequestTimeout):
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_TIMEOUT)
     except UnexpectedModelBehavior:
