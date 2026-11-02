@@ -310,3 +310,9 @@ def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta
     politica = (PASTA_DADOS / "politicas.md").read_text(encoding="utf-8")
 
     assert valores_nao_confirmados(resposta, [politica]) == []
+
+
+@pytest.mark.regressao
+def test_percentual_por_extenso_e_conferido():
+    assert valores_nao_confirmados("São 50 por cento de desconto.", ["O PIX tem 5% de desconto."]) != []
+    assert valores_nao_confirmados("São 5 por cento de desconto.", ["O PIX tem 5% de desconto."]) == []
