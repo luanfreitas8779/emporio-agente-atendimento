@@ -29,11 +29,12 @@ def _assunto(resumo: str) -> set[str]:
 def _mesmo_assunto(anterior: str, resumo: str) -> bool:
     """Dois resumos de reclamação tratam do mesmo caso quando citam o mesmo pedido ou, sem
     pedidos citados nos dois, compartilham alguma palavra do assunto."""
-    pedidos_anterior = {p for p in _assunto(anterior) if p.isdigit()}
-    pedidos = {p for p in _assunto(resumo) if p.isdigit()}
+    assunto_anterior, assunto = _assunto(anterior), _assunto(resumo)
+    pedidos_anterior = {p for p in assunto_anterior if p.isdigit()}
+    pedidos = {p for p in assunto if p.isdigit()}
     if pedidos_anterior and pedidos:
         return bool(pedidos_anterior & pedidos)
-    return bool(_assunto(anterior) & _assunto(resumo))
+    return bool(assunto_anterior & assunto)
 
 
 class Motivo(StrEnum):
@@ -64,8 +65,10 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     # reclamação, só se for sobre o mesmo assunto.
     repetido = any(
         anterior == resumo
-        or datetime.fromisoformat(criado_em) >= corte
-        and (motivo != Motivo.RECLAMACAO or _mesmo_assunto(anterior, resumo))
+        or (
+            datetime.fromisoformat(criado_em) >= corte
+            and (motivo != Motivo.RECLAMACAO or _mesmo_assunto(anterior, resumo))
+        )
         for anterior, criado_em in anteriores
     )
     if repetido:
