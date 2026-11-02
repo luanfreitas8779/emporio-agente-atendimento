@@ -413,3 +413,10 @@ def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(con
 
     assert resposta == "Não consigo garantir 2 unidades do Giannini GF-3D."
     assert len(chamadas) == 2
+
+
+@pytest.mark.regressao
+def test_numero_dito_pelo_cliente_confirma_quantidade_mas_nao_dinheiro():
+    assert valores_nao_confirmados("Consigo atender 13 unidades.", [], ["Tem 13 Yamaha C40? E 12?"]) == []
+    assert valores_nao_confirmados("Consigo atender 12 unidades.", [], ["Tem 13 Yamaha C40? E 12?"]) == []
+    assert valores_nao_confirmados("Custa R$ 13,00.", [], ["Tem 13 Yamaha C40?"]) == ["13.00"]

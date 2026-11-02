@@ -34,6 +34,8 @@ PADRAO_QUANTIDADE = re.compile(
     r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|quantidade\W{1,3}(\d+)"
     r"|\brestam?\s+(\d+)\b|\b(\d+)\s+(?:no|em)\s+estoque\b"
 )
+# Número inteiro fora de valores em reais e decimais.
+PADRAO_NUMERO_SOLTO = re.compile(r"(?<![\d.,$])\b\d+\b(?![.,]?\d)")
 # "Semana que vem" e "próxima semana" valem o mesmo; o sistema não calcula essas datas.
 EXPRESSOES_RELATIVAS = {
     "semana que vem": "próxima semana",
@@ -156,6 +158,8 @@ def valores_nao_confirmados(
         for tipo, encontrados in valores(fonte).items():
             if tipo not in TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA:
                 confirmados[tipo] |= encontrados
+        # "Tem 13 Yamaha C40? E 12?": o número solto também é a quantidade que ele pediu.
+        confirmados["quantidade"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
     confirmados["dia_mes"] |= {data.strftime("%d/%m") for data in confirmados["data"]}
     citados = valores(resposta)
     return [
