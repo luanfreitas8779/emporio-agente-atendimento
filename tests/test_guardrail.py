@@ -316,3 +316,17 @@ def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta
 def test_percentual_por_extenso_e_conferido():
     assert valores_nao_confirmados("São 50 por cento de desconto.", ["O PIX tem 5% de desconto."]) != []
     assert valores_nao_confirmados("São 5 por cento de desconto.", ["O PIX tem 5% de desconto."]) == []
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "resposta",
+    ["Dá para parcelar em 6 vezes.", "Fica em 6 x de R$ 87,48.", "Restam 3 no estoque.", "Temos apenas 3 em estoque."],
+)
+def test_quantidade_em_outros_formatos_e_barrada(resposta):
+    assert valores_nao_confirmados(resposta, ["O máximo é de 4x de R$ 87,48."]) == ["3" if "3" in resposta else "6"]
+
+
+@pytest.mark.regressao
+def test_quantidade_em_outros_formatos_passa_quando_vem_da_fonte():
+    assert valores_nao_confirmados("Em 4 vezes.", ["O máximo é de 4x de R$ 87,48."]) == []

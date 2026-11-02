@@ -24,8 +24,12 @@ PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)
 # Telefones com hífen ("3341-4444", "(67) 99654-7821"), comparados pelos 8 últimos dígitos
 # para valer com ou sem DDD.
 PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
-# "3 unidades", "6 parcelas" e "4x" na resposta; "quantidade": 2 no retorno da conta.
-PADRAO_QUANTIDADE = re.compile(r"\b(\d+)\s*(?:unidades?|parcelas?)\b|\b(\d+)x\b|quantidade\W{1,3}(\d+)")
+# "3 unidades", "6 parcelas", "6 vezes", "4x"/"4 x", "restam 3" e "3 em estoque" na resposta;
+# "quantidade": 2 no retorno da conta.
+PADRAO_QUANTIDADE = re.compile(
+    r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|quantidade\W{1,3}(\d+)"
+    r"|\brestam?\s+(\d+)\b|\b(\d+)\s+(?:no|em)\s+estoque\b"
+)
 # "Semana que vem" e "próxima semana" valem o mesmo; o sistema não calcula essas datas.
 EXPRESSOES_RELATIVAS = {
     "semana que vem": "próxima semana",
