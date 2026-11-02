@@ -305,3 +305,17 @@ def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(conexao, 
     assert len(tentativas) == 1
     assert esperas == []
     assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("retry_delay, esperado", [("27s", [15]), ("7.5s", [7.5]), ("lixo", [2])])
+def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
+    conexao, esperas, retry_delay, esperado
+):
+    erro = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", retry_delay)
+    modelo = modelo_que_falha_antes_de_responder([erro], [])
+
+    with agente.override(model=modelo):
+        responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert esperas == esperado

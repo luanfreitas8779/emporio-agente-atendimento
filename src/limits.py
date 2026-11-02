@@ -36,3 +36,16 @@ def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
 def e_limite_diario(erro: ModelAPIError) -> bool:
     """A cota por dia só volta no dia seguinte, então esperar alguns segundos não resolve."""
     return "PerDay" in (_violacao(erro.body).get("quotaId") or "")
+
+
+def espera_indicada(erro: ModelAPIError) -> float | None:
+    """Segundos do `retryDelay` ("27s") no corpo do erro, ou None se ausente ou ilegível."""
+    erro_do_corpo = erro.body.get("error", {}) if isinstance(erro.body, dict) else {}
+    for detalhe in erro_do_corpo.get("details", []):
+        atraso = detalhe.get("retryDelay")
+        if isinstance(atraso, str) and atraso.endswith("s"):
+            try:
+                return float(atraso[:-1])
+            except ValueError:
+                return None
+    return None

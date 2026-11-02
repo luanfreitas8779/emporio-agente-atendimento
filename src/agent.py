@@ -590,7 +590,8 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
             if espera is None or limits.e_limite_diario(erro):
                 raise
             # O provedor pode indicar quando tentar de novo; um teto evita travar o chat.
-            _aguardar(min(erro.retry_after, ESPERA_MAXIMA) if erro.retry_after else espera)
+            indicada = erro.retry_after or limits.espera_indicada(erro)
+            _aguardar(min(indicada, ESPERA_MAXIMA) if indicada else espera)
 
 
 def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
