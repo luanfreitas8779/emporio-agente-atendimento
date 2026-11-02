@@ -319,3 +319,14 @@ def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
         responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert esperas == esperado
+
+
+@pytest.mark.regressao
+def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(conexao, esperas):
+    erro = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "20s")
+    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], [])
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."

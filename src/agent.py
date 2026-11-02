@@ -218,7 +218,7 @@ RESPOSTA_SEGURA_SEM_TELEFONE = (
 )
 
 MENSAGEM_DE_LIMITE = (
-    "O serviço de IA está no limite de uso ou sobrecarregado agora. Tente novamente em alguns minutos."
+    "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."
 )
 
 MENSAGEM_DE_LIMITE_DIARIO = (
