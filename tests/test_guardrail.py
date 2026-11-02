@@ -241,3 +241,26 @@ def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(conexao):
         resposta = responder("Qual número vocês têm de mim?", Sessao(conexao, telefone="67996547821"))
 
     assert resposta == "Tenho o (67) 99654-7821."
+
+
+@pytest.mark.regressao
+def test_quantidade_de_unidades_inventada_e_barrada():
+    assert valores_nao_confirmados("Temos 3 unidades.", ["Takamine GD20 disponível"]) == ["3"]
+
+
+@pytest.mark.regressao
+def test_quantidade_da_conta_e_aceita_como_fonte():
+    assert valores_nao_confirmados("São 2 unidades.", ['{"quantidade":2,"subtotal":"R$ 4.398,00"}']) == []
+
+
+@pytest.mark.regressao
+def test_parcelas_da_ferramenta_passam_e_outras_sao_barradas():
+    fonte = "O parcelamento sem juros tem máximo de 4x de R$ 87,48."
+
+    assert valores_nao_confirmados("Em até 4x de R$ 87,48.", [fonte]) == []
+    assert valores_nao_confirmados("Em até 6 parcelas de R$ 87,48.", [fonte]) == ["6"]
+
+
+@pytest.mark.regressao
+def test_cliente_confirma_a_quantidade_que_ele_mesmo_pediu():
+    assert valores_nao_confirmados("Anotei 10 unidades.", [], ["Preciso de 10 unidades"]) == []

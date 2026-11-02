@@ -22,6 +22,8 @@ PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 # Telefones com hífen ("3341-4444", "(67) 99654-7821"), comparados pelos 8 últimos dígitos
 # para valer com ou sem DDD.
 PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
+# "3 unidades", "6 parcelas" e "4x" na resposta; "quantidade": 2 no retorno da conta.
+PADRAO_QUANTIDADE = re.compile(r"\b(\d+)\s*(?:unidades?|parcelas?)\b|\b(\d+)x\b|quantidade\W{1,3}(\d+)")
 PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
@@ -77,8 +79,12 @@ def valores(texto: str) -> dict[str, set]:
         for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(texto)
     }
     telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(texto)}
+    quantidades = {
+        int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizar(texto)) for numero_ in achado if numero_
+    }
     return {
         "dinheiro": dinheiro,
+        "quantidade": quantidades,
         "horario": horarios,
         "telefone": telefones,
         "dia_mes": por_extenso,
