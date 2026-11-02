@@ -88,17 +88,12 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
 
 
 @pytest.mark.regressao
-def test_falha_ao_abrir_o_banco_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
-    aberturas = []
-    conectar_de_verdade = src.database.conectar
+def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
+    # Abrir o banco para a sessão é a parte que falha; a verificação inicial da tela já passou.
+    def sessao_com_falha(*argumentos, **nomeados):
+        raise OSError("disco indisponível")
 
-    def conectar_com_falha_depois_da_verificacao_inicial(caminho):
-        aberturas.append(caminho)
-        if len(aberturas) == 2:
-            raise OSError("disco indisponível")
-        return conectar_de_verdade(caminho)
-
-    monkeypatch.setattr("src.database.conectar", conectar_com_falha_depois_da_verificacao_inicial)
+    monkeypatch.setattr("src.agent.Sessao", sessao_com_falha)
     tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": ""}
 
     tela.run()
