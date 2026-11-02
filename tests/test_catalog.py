@@ -164,8 +164,31 @@ def test_busca_nao_confunde_modelos_distintos_com_codigo_parecido(conexao, termo
 def test_expoe_as_especificacoes_cadastradas_do_produto(conexao):
     produto = buscar_produtos(conexao, termo="Takamine GD20")[0]
 
-    assert produto.especificacoes["back_sides"] == "Sapele"
-    assert produto.especificacoes["neck"] == "Mogno"
+    assert produto.especificacoes["fundo e laterais"] == "Sapele"
+    assert produto.especificacoes["braço"] == "Mogno"
+
+
+@pytest.mark.regressao
+def test_especificacoes_chegam_com_nomes_e_valores_em_portugues(conexao):
+    produto = buscar_produtos(conexao, termo="Taylor 110e")[0]
+
+    assert produto.especificacoes == {
+        "tampo": "Sitka Spruce Sólido",
+        "fundo e laterais": "Walnut",
+        "braço": "Tropical Mahogany",
+        "cordas": "aço",
+        "escala": "648mm",
+        "eletrônica": "sim",
+        "cor": "Natural",
+    }
+
+
+@pytest.mark.regressao
+def test_bateria_traz_ferragens_incluidas_em_portugues(conexao):
+    produto = buscar_produtos(conexao, termo="Yamaha Kit 1")[0]
+
+    assert produto.especificacoes["ferragens"] == "incluídas"
+    assert produto.especificacoes["peças"] == "5"
 
 
 @pytest.mark.regressao
@@ -173,8 +196,8 @@ def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conex
     # Descrição e especificações do id 137 discordam (DQ-05): o dado não é confiável.
     produto = buscar_produtos(conexao, termo="Yamaha Bass 3X")[0]
 
-    assert "strings" not in produto.especificacoes
-    assert produto.especificacoes["neck"] == "Maple"
+    assert "cordas" not in produto.especificacoes
+    assert produto.especificacoes["braço"] == "Maple"
 
 
 @pytest.mark.regressao

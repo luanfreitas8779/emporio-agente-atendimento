@@ -12,6 +12,30 @@ PERCENTUAL_PIX = 5
 OBSERVACAO_PIX_EM_PROMOCAO = "O PIX não soma ao desconto da promoção."
 # Campos que o cadastro contradiz em outra coluna (DQ-05); o modelo não deve afirmá-los.
 CAMPOS_DIVERGENTES = {137: {"strings"}}
+# O cadastro traz as chaves de `specs` e alguns valores em inglês; o cliente lê em português.
+NOMES_DAS_ESPECIFICACOES = {
+    "top": "tampo",
+    "back_sides": "fundo e laterais",
+    "neck": "braço",
+    "strings": "cordas",
+    "scale": "escala",
+    "electronics": "eletrônica",
+    "color": "cor",
+    "body": "corpo",
+    "shells": "cascos",
+    "pieces": "peças",
+    "hardware": "ferragens",
+    "keys": "teclas",
+    "type": "tipo",
+    "polyphony": "polifonia",
+}
+VALORES_DAS_ESPECIFICACOES = {
+    "yes": "sim",
+    "no": "não",
+    "steel": "aço",
+    "nylon": "náilon",
+    "included": "incluídas",
+}
 TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
 # Palavras de ligação que o cliente escreve e que não fazem parte de nenhum nome.
 PALAVRAS_DE_LIGACAO = frozenset(
@@ -120,7 +144,7 @@ def montar_produto(linha: sqlite3.Row, quantidade: int | None = None) -> Produto
         pix,
         disponibilidade,
         {
-            chave: valor
+            NOMES_DAS_ESPECIFICACOES.get(chave, chave): VALORES_DAS_ESPECIFICACOES.get(valor, valor)
             for chave, valor in json.loads(linha["specs"]).items()
             if chave not in CAMPOS_DIVERGENTES.get(linha["product_id"], ())
         },
