@@ -131,3 +131,27 @@ def test_reclamacao_sobre_outro_pedido_na_janela_gera_novo_registro(conexao, rel
 
     assert resultado == Resultado.REGISTRADO
     assert len(encaminhamentos(conexao)) == 2
+
+
+@pytest.mark.regressao
+def test_reclamacao_reescrita_sobre_o_mesmo_pedido_na_janela_nao_gera_outro_registro(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente insatisfeita: o pedido 8 atrasou.")
+
+    relogio.em(10)
+    resultado = registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Reclamação do pedido 8, que chegou fora do prazo.")
+
+    assert resultado == Resultado.JA_REGISTRADO
+    assert len(encaminhamentos(conexao)) == 1
+
+
+@pytest.mark.regressao
+def test_atendente_solicitado_com_resumos_sem_relacao_na_janela_continua_um_registro(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.ATENDENTE_SOLICITADO, "Cliente quer falar com um atendente.")
+
+    relogio.em(5)
+    resultado = registrar(conexao, TELEFONE, Motivo.ATENDENTE_SOLICITADO, "Solicitação de contato humano sobre troca de violão.")
+
+    assert resultado == Resultado.JA_REGISTRADO
+    assert len(encaminhamentos(conexao)) == 1
