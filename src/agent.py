@@ -320,15 +320,34 @@ class FontesDoTurno(NamedTuple):
     do_cliente: list[str]
 
 
-def fontes_do_turno(mensagens: list) -> FontesDoTurno:
-    """Textos que podem sustentar a resposta: o retorno das ferramentas e a fala do cliente."""
+def _mensagens_do_turno(mensagens: list) -> list:
     inicio = max(
         (i for i, m in enumerate(mensagens)
          if isinstance(m, ModelRequest) and any(isinstance(p, UserPromptPart) for p in m.parts)),
         default=0,
     )
+    return mensagens[inicio:]
+
+
+def filtros_da_busca(mensagens: list) -> list[str]:
+    """Limite de preço e quantidade que o modelo passou à busca neste turno, como texto.
+
+    São filtros aplicados pelo sistema, então a resposta pode repeti-los ("até R$ 1.000,00").
+    """
+    filtros = []
+    for chamada in ferramentas_do_turno(_mensagens_do_turno(mensagens)):
+        if chamada.nome != "buscar_produtos":
+            continue
+        limite = chamada.argumentos.get("preco_maximo")
+        if isinstance(limite, (int, float)) and limite > 0:
+            filtros.append(catalog.formatar_preco(round(limite * 100)))
+    return filtros
+
+
+def fontes_do_turno(mensagens: list) -> FontesDoTurno:
+    """Textos que podem sustentar a resposta: o retorno das ferramentas e a fala do cliente."""
     das_ferramentas, do_cliente = [], []
-    for mensagem in mensagens[inicio:]:
+    for mensagem in _mensagens_do_turno(mensagens):
         for parte in mensagem.parts:
             if isinstance(parte, UserPromptPart):
                 do_cliente.append(str(parte.content))
@@ -376,6 +395,7 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     # O telefone da sessão também é do sistema, não do cliente.
     fontes = [
         *das_ferramentas,
+        *filtros_da_busca(ctx.messages),
         formatar_data(hoje),
         formatar_data(hoje + timedelta(days=1)),
         formatar_telefone(ctx.deps.telefone or ""),

@@ -368,3 +368,32 @@ def test_outras_formas_de_prometer_aviso_sao_barradas(resposta):
 @pytest.mark.parametrize("resposta", ["Não posso te avisar quando chegar.", "Sem te avisar, só anotamos o interesse."])
 def test_negar_a_promessa_de_aviso_continua_passando(resposta):
     assert not promete_aviso(resposta)
+
+
+@pytest.mark.regressao
+def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(conexao):
+    chamadas = []
+    resposta = perguntar(
+        conexao,
+        "Quais opções de violões disponíveis custando até R$1000?",
+        "buscar_produtos",
+        {"categoria": "violão", "preco_maximo": 1000},
+        ["Estas são as opções de violão até R$ 1.000,00."],
+        chamadas,
+    )
+
+    assert resposta == "Estas são as opções de violão até R$ 1.000,00."
+    assert len(chamadas) == 2
+
+
+@pytest.mark.regressao
+def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(conexao):
+    resposta = perguntar(
+        conexao,
+        "Tem violão até R$1000?",
+        None,
+        None,
+        ["Tenho violões até R$ 1.000,00.", "Posso buscar violões para você."],
+    )
+
+    assert resposta == "Posso buscar violões para você."
