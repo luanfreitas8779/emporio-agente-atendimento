@@ -19,6 +19,10 @@ PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+# "15/12" sem ano: conferimos só o dia e o mês, como na data por extenso.
+PADRAO_DATA_CURTA = re.compile(r"(?<![\d/])(\d{1,2})/(\d{1,2})(?![\d/])")
+# "7 horas" vale "07:00".
+PADRAO_HORAS = re.compile(r"\b([01]?\d|2[0-3])\s*horas\b")
 # Horários como "9h", "9h30", "09:00" e "18:00", comparados por hora e minuto ("HH:MM").
 PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 # Telefones com hífen ("3341-4444", "(67) 99654-7821"), comparados pelos 8 últimos dígitos
@@ -93,10 +97,14 @@ def valores(texto: str) -> dict[str, set]:
             datas.add(_data(ano, str(MESES[mes]), dia))
         else:
             por_extenso.add(f"{int(dia):02d}/{MESES[mes]:02d}")
+    for dia, mes in PADRAO_DATA_CURTA.findall(texto):
+        if _data(2000, mes, dia):
+            por_extenso.add(f"{int(dia):02d}/{int(mes):02d}")
     horarios = {
         f"{int(hora):02d}:{minuto or minuto_com_pontos or '00'}"
         for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(texto)
     }
+    horarios |= {f"{int(hora):02d}:00" for hora in PADRAO_HORAS.findall(texto)}
     telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(texto)}
     quantidades = {
         int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizado) for numero_ in achado if numero_

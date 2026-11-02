@@ -330,3 +330,19 @@ def test_quantidade_em_outros_formatos_e_barrada(resposta):
 @pytest.mark.regressao
 def test_quantidade_em_outros_formatos_passa_quando_vem_da_fonte():
     assert valores_nao_confirmados("Em 4 vezes.", ["O máximo é de 4x de R$ 87,48."]) == []
+
+
+@pytest.mark.regressao
+def test_data_curta_sem_ano_e_conferida_contra_as_datas_das_fontes():
+    fonte = "Previsão de entrega: 2026-12-15."
+
+    assert valores_nao_confirmados("Chega em 15/12.", [fonte]) == []
+    assert valores_nao_confirmados("Chega em 20/12.", [fonte]) == ["20/12"]
+    # A data completa continua sendo conferida como data, não como "dia/mês".
+    assert valores_nao_confirmados("Chega em 15/12/2026.", [fonte]) == []
+
+
+@pytest.mark.regressao
+def test_horas_escritas_por_extenso_sao_conferidas_como_horario():
+    assert valores_nao_confirmados("Abrimos às 7 horas.", [POLITICA_DE_HORARIOS]) == ["07:00"]
+    assert valores_nao_confirmados("Abrimos às 9 horas.", [POLITICA_DE_HORARIOS]) == []
