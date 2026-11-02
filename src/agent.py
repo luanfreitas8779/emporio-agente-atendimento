@@ -204,6 +204,9 @@ Regras de catálogo:
 - "fora_de_catalogo": informe que o produto saiu do catálogo e sugira modelos
   equivalentes, mesmo que haja estoque.
 - "lancamento": não confirme disponibilidade.
+- Quando o cliente perguntar quais produtos estão em promoção, use buscar_produtos com
+  somente_promocao em vez de consultar a seção promocoes, e mostre cada produto com preço
+  original, percentual e preço final.
 - Com desconto_percentual, mostre o preço original, o percentual e o preço final.
 - Informe o preço com PIX (preco_pix) quando houver, e só então. Se ele for nulo, não cite
   preço no PIX e repita a observacao_pix. Só fale que o PIX não soma ao desconto quando o
