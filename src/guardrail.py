@@ -24,6 +24,14 @@ PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
 # "3 unidades", "6 parcelas" e "4x" na resposta; "quantidade": 2 no retorno da conta.
 PADRAO_QUANTIDADE = re.compile(r"\b(\d+)\s*(?:unidades?|parcelas?)\b|\b(\d+)x\b|quantidade\W{1,3}(\d+)")
+# "Semana que vem" e "próxima semana" valem o mesmo; o sistema não calcula essas datas.
+EXPRESSOES_RELATIVAS = {
+    "semana que vem": "próxima semana",
+    "proxima semana": "próxima semana",
+    "mes que vem": "próximo mês",
+    "proximo mes": "próximo mês",
+}
+PADRAO_DATA_RELATIVA = re.compile(r"\b(" + "|".join(EXPRESSOES_RELATIVAS) + r")\b")
 PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
@@ -82,8 +90,10 @@ def valores(texto: str) -> dict[str, set]:
     quantidades = {
         int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizar(texto)) for numero_ in achado if numero_
     }
+    relativas = {EXPRESSOES_RELATIVAS[achado] for achado in PADRAO_DATA_RELATIVA.findall(normalizar(texto))}
     return {
         "dinheiro": dinheiro,
+        "data_relativa": relativas,
         "quantidade": quantidades,
         "horario": horarios,
         "telefone": telefones,

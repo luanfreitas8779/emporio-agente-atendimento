@@ -264,3 +264,31 @@ def test_parcelas_da_ferramenta_passam_e_outras_sao_barradas():
 @pytest.mark.regressao
 def test_cliente_confirma_a_quantidade_que_ele_mesmo_pediu():
     assert valores_nao_confirmados("Anotei 10 unidades.", [], ["Preciso de 10 unidades"]) == []
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "resposta",
+    ["Seu pedido chega semana que vem.", "Passe na próxima semana.", "Volta ao normal no mês que vem.", "No próximo mês."],
+)
+def test_data_relativa_inventada_e_barrada(resposta):
+    assert len(valores_nao_confirmados(resposta, ["Prazo de 1 a 3 dias úteis."])) == 1
+
+
+@pytest.mark.regressao
+def test_data_relativa_dita_pela_ferramenta_ou_pelo_cliente_passa():
+    assert valores_nao_confirmados("Na próxima semana.", ["Chega na próxima semana."]) == []
+    assert valores_nao_confirmados("Semana que vem, então.", [], ["Passo aí semana que vem"]) == []
+
+
+@pytest.mark.regressao
+def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(conexao):
+    resposta = perguntar(
+        conexao,
+        "A que horas vocês abrem na segunda?",
+        "consultar_politicas",
+        {"secao": "horarios"},
+        ["Abrimos às 10h.", "De segunda a sexta, das 9h às 18h."],
+    )
+
+    assert resposta == "De segunda a sexta, das 9h às 18h."
