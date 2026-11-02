@@ -475,3 +475,11 @@ def test_limite_da_busca_so_confirma_o_valor_dito_como_limite():
     assert valores_nao_confirmados("Violões até R$ 1.000,00.", [], limites_da_busca=limites) == []
     assert valores_nao_confirmados("Violões de no máximo R$ 1.000,00.", [], limites_da_busca=limites) == []
     assert valores_nao_confirmados("Esse custa R$ 1.000,00.", [], limites_da_busca=limites) == ["1000.00"]
+
+
+@pytest.mark.regressao
+def test_numero_do_cliente_e_quantidade_da_busca_nao_confirmam_estoque():
+    assert valores_nao_confirmados("Restam 3 no estoque.", [], ["Tem 3?"]) == ["3"]
+    assert valores_nao_confirmados("Temos 3 em estoque.", ['{"quantidade": 3}'], ["Preciso de 3 unidades"]) == ["3"]
+    # Quantidade pedida continua podendo ser repetida.
+    assert valores_nao_confirmados("Consigo atender 3 unidades.", [], ["Tem 3?"]) == []

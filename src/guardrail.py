@@ -32,8 +32,10 @@ PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
 # "quantidade": 2 no retorno da conta.
 PADRAO_QUANTIDADE = re.compile(
     r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|quantidade\W{1,3}(\d+)"
-    r"|\brestam?\s+(\d+)\b|\b(\d+)\s+(?:no|em)\s+estoque\b"
 )
+# "Restam 3" e "3 em estoque" afirmam o estoque, que nenhuma ferramenta informa e o cliente não
+# confirma: pedir 3 unidades não prova que existem 3.
+PADRAO_ESTOQUE = re.compile(r"\brestam?\s+(\d+)\b|\b(\d+)\s+(?:no|em)\s+estoque\b")
 # "até R$ 1.000": o valor dito como limite, que a busca aplicou e a resposta pode repetir.
 PADRAO_LIMITE = re.compile(
     r"\b(?:ate|abaixo de|no maximo|maximo de|menos de)\s+r\$\s*(\d[\d.]*(?:,\d+)?)"
@@ -120,11 +122,13 @@ def valores(texto: str) -> dict[str, set]:
     quantidades = {
         int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizado) for numero_ in achado if numero_
     }
+    estoque = {int(n) for achado in PADRAO_ESTOQUE.findall(normalizado) for n in achado if n}
     relativas = {EXPRESSOES_RELATIVAS[achado] for achado in PADRAO_DATA_RELATIVA.findall(normalizado)}
     return {
         "dinheiro": dinheiro,
         "data_relativa": relativas,
         "quantidade": quantidades,
+        "estoque": estoque,
         "horario": horarios,
         "telefone": telefones,
         "dia_mes": por_extenso,
@@ -142,9 +146,9 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
 
 
 # Só valem se vierem do sistema: o cliente pode "ditar" um preço, um desconto, um horário de
-# funcionamento ou um telefone da loja. Datas, rastreios, quantidades e datas relativas ditados
-# por ele podem ser repetidos.
-TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefone")
+# funcionamento, um telefone da loja ou o estoque. Datas, rastreios, quantidades e datas relativas
+# ditados por ele podem ser repetidos.
+TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefone", "estoque")
 
 
 def valores_nao_confirmados(
