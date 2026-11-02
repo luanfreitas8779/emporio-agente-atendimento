@@ -144,3 +144,21 @@ def test_informar_o_telefone_depois_da_primeira_pergunta_preserva_a_conversa(tel
     tela.sidebar.text_input[0].set_value(ANA).run()
 
     assert [m["texto"] for m in tela.session_state["mensagens"]][:2] == ["Cadê meu pedido?", "Olá!"]
+
+
+@pytest.mark.regressao
+def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone_novo(tela, monkeypatch):
+    chamadas: list = []
+
+    def responder_observando(mensagem, sessao):
+        chamadas.append((mensagem, sessao.telefone))
+        return "Olá!"
+
+    monkeypatch.setattr("src.agent.responder", responder_observando)
+    tela.chat_input[0].set_value("Cadê meu pedido?").run()
+
+    tela.sidebar.text_input[0].set_value(ANA).run()
+
+    assert chamadas == [("Cadê meu pedido?", ""), ("Cadê meu pedido?", ANA)]
+    assert [m["papel"] for m in tela.session_state["mensagens"]] == ["user", "assistant", "assistant"]
+    assert tela.session_state["pendente"] is None

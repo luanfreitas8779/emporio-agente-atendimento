@@ -67,6 +67,10 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         conexao.close()
+    # A última pergunta feita sem telefone é respondida de novo, agora com o telefone informado.
+    perguntas = [m["texto"] for m in sem_telefone if m["papel"] == "user"]
+    if telefone_da_conversa and perguntas and st.session_state.get("pendente") is None:
+        st.session_state.pendente = {"pergunta": perguntas[-1], "telefone": st.session_state.telefone}
 
 for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))
