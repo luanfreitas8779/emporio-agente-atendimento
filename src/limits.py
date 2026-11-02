@@ -7,13 +7,18 @@ from pydantic_ai.exceptions import ModelAPIError
 from src import config
 
 
+def _detalhes(corpo: object) -> list[dict]:
+    erro = corpo.get("error", {}) if isinstance(corpo, dict) else {}
+    return [d for d in erro.get("details", []) if isinstance(d, dict)]
+
+
+def _violacoes(corpo: object) -> list[dict]:
+    return [v for d in _detalhes(corpo) for v in d.get("violations", [])]
+
+
 def _violacao(corpo: object) -> dict:
     """Primeira violação de cota do corpo do erro do Gemini, ou um dicionário vazio."""
-    erro = corpo.get("error", {}) if isinstance(corpo, dict) else {}
-    for detalhe in erro.get("details", []):
-        for violacao in detalhe.get("violations", []):
-            return violacao
-    return {}
+    return next(iter(_violacoes(corpo)), {})
 
 
 def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
@@ -35,13 +40,12 @@ def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
 
 def e_limite_diario(erro: ModelAPIError) -> bool:
     """A cota por dia só volta no dia seguinte, então esperar alguns segundos não resolve."""
-    return "PerDay" in (_violacao(erro.body).get("quotaId") or "")
+    return any("PerDay" in (v.get("quotaId") or "") for v in _violacoes(erro.body))
 
 
 def espera_indicada(erro: ModelAPIError) -> float | None:
     """Segundos do `retryDelay` ("27s") no corpo do erro, ou None se ausente ou ilegível."""
-    erro_do_corpo = erro.body.get("error", {}) if isinstance(erro.body, dict) else {}
-    for detalhe in erro_do_corpo.get("details", []):
+    for detalhe in _detalhes(erro.body):
         atraso = detalhe.get("retryDelay")
         if isinstance(atraso, str) and atraso.endswith("s"):
             try:

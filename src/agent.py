@@ -643,7 +643,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         except OSError:
             registro.exception("Não foi possível registrar o limite do provedor")
         # Cota esgotada não se resolve esperando: não há nova tentativa, só a mesma mensagem.
-        diario = limits.e_limite_diario(erro)
+        # Cota esgotada também só volta no dia seguinte.
+        diario = isinstance(erro, ModelQuotaExceededError) or limits.e_limite_diario(erro)
         return _responder_sem_modelo(
             mensagem, sessao, MENSAGEM_DE_LIMITE_DIARIO if diario else MENSAGEM_DE_LIMITE
         )

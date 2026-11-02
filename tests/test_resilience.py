@@ -172,7 +172,7 @@ def test_cota_esgotada_nao_repete_e_informa_o_limite(conexao, esperas):
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(conexao, telefone=ANA))
 
-    assert resposta == MENSAGEM_DE_LIMITE
+    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
     assert len(tentativas) == 1
     assert esperas == []
 
@@ -330,3 +330,35 @@ def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(conexao, e
         resposta = responder("Oi", Sessao(conexao, telefone=ANA))
 
     assert resposta == "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."
+
+
+@pytest.mark.regressao
+def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_minuto(conexao, esperas):
+    violacoes = [
+        {"quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"},
+        {"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"},
+    ]
+    erro = ModelHTTPError.for_category(
+        ModelRateLimitError,
+        status_code=429,
+        model_name="gemini-3.5-flash-lite",
+        body={"error": {"details": [{"violations": violacoes}]}},
+    )
+    tentativas: list[int] = []
+    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], tentativas)
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert len(tentativas) == 1
+    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+
+
+@pytest.mark.regressao
+def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(conexao, esperas):
+    modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
+
+    with agente.override(model=modelo):
+        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+
+    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
