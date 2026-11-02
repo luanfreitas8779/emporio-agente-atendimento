@@ -32,7 +32,7 @@ from pydantic_ai.messages import (
 from src import calculos, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
 from src.datas import dia_da_semana, formatar_data
-from src.phone import normalizar_telefone
+from src.phone import formatar_telefone
 
 MAX_INTERESSES_NO_CONTEXTO = 5
 
@@ -349,12 +349,6 @@ def limpar_texto_das_respostas(mensagens: list) -> None:
                     parte.content = sem_bloco_interno(parte.content)
 
 
-def telefone_formatado(telefone: str) -> str:
-    """"(67) 99654-7821" a partir de qualquer forma digitada, ou vazio se não for um telefone."""
-    digitos = normalizar_telefone(telefone)
-    return f"({digitos[:2]}) {digitos[2:-4]}-{digitos[-4:]}" if digitos else ""
-
-
 @agente.output_validator
 def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     # O raciocínio interno do modelo não é para o cliente.
@@ -375,7 +369,7 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
         *das_ferramentas,
         formatar_data(hoje),
         formatar_data(hoje + timedelta(days=1)),
-        telefone_formatado(ctx.deps.telefone or ""),
+        formatar_telefone(ctx.deps.telefone or ""),
     ]
     inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente)
     if inventados:
