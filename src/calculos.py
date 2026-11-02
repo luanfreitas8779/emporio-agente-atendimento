@@ -38,6 +38,24 @@ class CalculoDaCompra:
     aviso: str | None = None
     # Produto em promoção: o PIX não soma ao desconto, então não há economia nele.
     observacao_pix: str | None = None
+    frete: str = ""
+
+
+# data/politicas.md, seção entregas: grátis acima de R$ 500,00 e taxa fixa abaixo disso.
+LIMITE_DO_FRETE_GRATIS = 50_000
+TAXA_DO_FRETE_FIXO = 3_500
+
+
+def frete_na_regiao_metropolitana(total: int) -> str:
+    """O frete da política para o total em centavos; o valor exato do limite não está definido."""
+    if total > LIMITE_DO_FRETE_GRATIS:
+        return "Frete grátis na região metropolitana de Campo Grande."
+    if total < LIMITE_DO_FRETE_GRATIS:
+        return f"Taxa fixa de {catalog.formatar_preco(TAXA_DO_FRETE_FIXO)} na região metropolitana de Campo Grande."
+    return (
+        f"A política não define o frete para um pedido de exatamente {catalog.formatar_preco(LIMITE_DO_FRETE_GRATIS)}: "
+        "confirme com a loja."
+    )
 
 
 AVISO_DA_DISPONIBILIDADE = {
@@ -96,4 +114,5 @@ def calcular_compra(
         catalog.formatar_preco(abs(subtotais[0] - subtotais[1])) if len(subtotais) == 2 else None,
         " ".join(avisos) or None,
         " ".join(observacoes_do_pix) or None,
+        frete_na_regiao_metropolitana(total),
     )

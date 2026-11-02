@@ -5,7 +5,7 @@ import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from src import catalog
+from src import calculos, catalog
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import conectar
 from src.interests import listar_pendentes, registrar
@@ -1406,3 +1406,30 @@ def test_pergunta_geral_de_pagamento_sem_produto_em_foco_traz_so_a_politica(cone
 
     assert "Cálculo para esta compra" not in retorno.content
     assert "informe o produto ou o valor" not in retorno.content
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "centavos, esperado",
+    [
+        (50001, "Frete grátis na região metropolitana de Campo Grande."),
+        (49999, "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."),
+        (50000, "A política não define o frete para um pedido de exatamente R$ 500,00: confirme com a loja."),
+    ],
+)
+def test_frete_da_regiao_metropolitana_pela_regra_da_politica(centavos, esperado):
+    assert calculos.frete_na_regiao_metropolitana(centavos) == esperado
+
+
+@pytest.mark.regressao
+def test_conta_acima_de_r_500_traz_frete_gratis(conexao):
+    resultado = conta_pela_ferramenta(conexao, ("Takamine GD20", 1))
+
+    assert resultado.frete == "Frete grátis na região metropolitana de Campo Grande."
+
+
+@pytest.mark.regressao
+def test_conta_abaixo_de_r_500_traz_a_taxa_fixa(conexao):
+    resultado = conta_pela_ferramenta(conexao, ("Kalani KAL-500C", 1))
+
+    assert resultado.frete == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
