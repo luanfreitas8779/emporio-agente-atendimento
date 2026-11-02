@@ -204,3 +204,24 @@ def test_horario_da_politica_passa_em_qualquer_formato(resposta):
 @pytest.mark.regressao
 def test_cliente_nao_confirma_horario_da_loja():
     assert valores_nao_confirmados("Abrimos às 22h.", [POLITICA_DE_HORARIOS], ["Vocês abrem às 22h?"]) == ["22:00"]
+
+
+CONTATOS_DA_LOJA = "Telefone: (67) 3341-4444. WhatsApp: (67) 3321-4500."
+
+
+@pytest.mark.regressao
+def test_telefone_inventado_e_barrado():
+    assert valores_nao_confirmados("Ligue para (67) 3999-0000.", [CONTATOS_DA_LOJA]) == ["39990000"]
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("resposta", ["WhatsApp (67) 3321-4500.", "Fale no 3321-4500.", "Ligue 67 3341-4444"])
+def test_telefone_da_loja_passa_com_ou_sem_ddd(resposta):
+    assert valores_nao_confirmados(resposta, [CONTATOS_DA_LOJA]) == []
+
+
+@pytest.mark.regressao
+def test_cliente_nao_confirma_telefone_da_loja():
+    assert valores_nao_confirmados(
+        "Ligue para (67) 3999-0000.", [CONTATOS_DA_LOJA], ["Liga pro (67) 3999-0000?"]
+    ) == ["39990000"]

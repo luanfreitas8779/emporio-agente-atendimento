@@ -19,6 +19,9 @@ PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 # Horários como "9h", "9h30", "09:00" e "18:00", comparados por hora e minuto.
+# Telefones com hífen ("3341-4444", "(67) 99654-7821"), comparados pelos 8 últimos dígitos
+# para valer com ou sem DDD.
+PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
 PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
@@ -73,9 +76,11 @@ def valores(texto: str) -> dict[str, set]:
         f"{int(hora):02d}:{minuto or minuto_com_pontos or '00'}"
         for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(texto)
     }
+    telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(texto)}
     return {
         "dinheiro": dinheiro,
         "horario": horarios,
+        "telefone": telefones,
         "dia_mes": por_extenso,
         "percentual": percentuais,
         "data": datas - {None},
@@ -91,7 +96,7 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
 
 
 # Dinheiro e percentual só valem se vierem do sistema: o cliente pode "ditar" um preço ou desconto.
-TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario")
+TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefone")
 
 
 def valores_nao_confirmados(
