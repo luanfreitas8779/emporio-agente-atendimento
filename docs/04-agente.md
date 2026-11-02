@@ -28,7 +28,7 @@ O agente se apresenta como assistente virtual, não se passa por uma pessoa e po
 | Intenção | Ação |
 |---|---|
 | Produto, preço, estoque ou promoção | `buscar_produtos` |
-| Total, soma, diferença de preço ou economia no PIX | `calcular_compra` |
+| Total, soma, diferença de preço, economia no PIX ou frete de uma compra em Campo Grande | `calcular_compra` |
 | Horário, endereço, pagamento, troca, frete, garantia ou privacidade | `consultar_politicas` |
 | Status, rastreio ou detalhes do pedido | `consultar_meus_pedidos` |
 | Troca, devolução ou defeito de um pedido | `avaliar_devolucao` |
