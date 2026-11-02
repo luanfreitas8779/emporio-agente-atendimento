@@ -94,7 +94,7 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         st.session_state.pendente = {"pergunta": perguntas[-1], "telefone": st.session_state.telefone}
 
 # No celular a barra lateral começa recolhida e o campo de telefone fica escondido.
-if telefone_da_conversa is None:
+if not st.session_state.telefone.strip():
     st.caption("Para consultar seus pedidos, informe o telefone cadastrado no menu lateral (ícone no canto superior esquerdo).")
 
 # A saudação é só da tela: não entra no histórico guardado nem na conversa enviada ao modelo.

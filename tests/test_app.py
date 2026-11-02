@@ -242,3 +242,10 @@ def test_configuracao_do_streamlit_esconde_as_opcoes_de_desenvolvedor_do_cliente
     configuracao = tomllib.loads((Path(APP).parent / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
 
     assert configuracao["client"]["toolbarMode"] == "viewer"
+
+
+@pytest.mark.regressao
+def test_com_telefone_invalido_so_o_aviso_aparece_sem_a_dica_do_menu_lateral(tela):
+    tela.sidebar.text_input[0].set_value("123").run()
+
+    assert not any("menu lateral" in c.value for c in tela.caption)
