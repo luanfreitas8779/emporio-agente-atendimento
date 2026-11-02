@@ -175,3 +175,18 @@ def test_saudacao_some_quando_a_conversa_ja_tem_mensagens(tela):
     textos = [c.markdown[0].value for c in tela.chat_message]
 
     assert not any(t.startswith("Olá! Sou o Tom") for t in textos)
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize("telefone", ["123", "(67) 9965", "abc"])
+def test_telefone_invalido_gera_aviso_na_barra_lateral(tela, telefone):
+    tela.sidebar.text_input[0].set_value(telefone).run()
+
+    assert "telefone" in tela.sidebar.warning[0].value.lower()
+
+
+@pytest.mark.parametrize("telefone", ["", ANA])
+def test_telefone_vazio_ou_valido_nao_gera_aviso(tela, telefone):
+    tela.sidebar.text_input[0].set_value(telefone).run()
+
+    assert len(tela.sidebar.warning) == 0

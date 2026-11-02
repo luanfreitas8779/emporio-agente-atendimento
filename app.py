@@ -58,6 +58,8 @@ st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
 # Ao informar (ou trocar) o telefone, a tela mostra a conversa guardada para ele.
 # Um telefone inválido não tem conversa guardada, então a tela recomeça vazia.
 telefone_da_conversa = normalizar_telefone(st.session_state.telefone)
+if st.session_state.telefone.strip() and telefone_da_conversa is None:
+    st.sidebar.warning("Telefone inválido. Informe o DDD e o número, por exemplo (67) 99999-9999.")
 if st.session_state.get("conversa_de") != telefone_da_conversa:
     # Quem conversou antes de informar o telefone continua vendo o que foi dito (QA-15).
     sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.mensagens
