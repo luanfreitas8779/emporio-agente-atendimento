@@ -103,7 +103,7 @@ Esse volume reduz o tempo disponível para atendimentos que exigem análise huma
 - A data de referência do sistema é configurável, com valor padrão 2026-03-25.
 - O telefone informado na interface representa o identificador que seria entregue pelo canal de mensagens.
 - `products.csv` é a fonte oficial do catálogo.
-- A cota gratuita do Gemini é planejada de forma conservadora, com 20 requisições por dia.
+- A cota gratuita do Gemini foi medida em 01/11/2026: 15 requisições por minuto e 500 por dia, por projeto e modelo.
 
 ### Restrições
 
