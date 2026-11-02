@@ -16,7 +16,7 @@ A suíte automática não exige chave de API. A avaliação manual usa a cota re
 
 A cota gratuita foi medida em 01/11/2026: **15 requisições por minuto e 500 por dia**, por projeto e modelo. Cada mensagem consome de 2 a 3 requisições, então a loja inteira atende cerca de 7 mensagens por minuto.
 
-- Uma mensagem com ferramenta consome ao menos 2 requisições, o que representa cerca de 10 mensagens por dia.
+- Uma mensagem com ferramenta consome ao menos 2 requisições, o que representa cerca de 250 mensagens por dia e 7 por minuto para a loja inteira.
 - A cota diária reinicia à meia-noite no horário do Pacífico.
 - Respostas 429 serão registradas para identificar o limite efetivo.
 - As conversas de referência podem ser distribuídas em mais de um ciclo de cota.

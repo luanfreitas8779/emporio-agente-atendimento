@@ -31,10 +31,15 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     resumo = resumo.strip()[:MAX_RESUMO].strip()
     if not resumo:
         return Resultado.RESUMO_INVALIDO
-    repetido = conexao.execute(
-        "SELECT 1 FROM handoffs WHERE phone = ? AND reason = ? AND (summary = ? OR created_at >= ?)",
-        (chave, motivo, resumo, (datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO).isoformat()),
-    ).fetchone()
+    corte = datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO
+    anteriores = conexao.execute(
+        "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (chave, motivo)
+    ).fetchall()
+    # O mesmo resumo é repetido a qualquer tempo; outro resumo só dentro da janela.
+    repetido = any(
+        anterior == resumo or datetime.fromisoformat(criado_em) >= corte
+        for anterior, criado_em in anteriores
+    )
     if repetido:
         return Resultado.JA_REGISTRADO
     conexao.execute(
