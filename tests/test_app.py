@@ -190,3 +190,16 @@ def test_telefone_vazio_ou_valido_nao_gera_aviso(tela, telefone):
     tela.sidebar.text_input[0].set_value(telefone).run()
 
     assert len(tela.sidebar.warning) == 0
+
+
+@pytest.mark.regressao
+def test_sem_telefone_a_tela_indica_onde_informar_no_menu_lateral(tela):
+    legendas = [c.value for c in tela.caption]
+
+    assert any("menu lateral" in l for l in legendas)
+
+
+def test_com_telefone_valido_a_indicacao_do_menu_lateral_some(tela):
+    tela.sidebar.text_input[0].set_value(ANA).run()
+
+    assert not any("menu lateral" in c.value for c in tela.caption)
