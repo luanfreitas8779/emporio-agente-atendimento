@@ -296,3 +296,11 @@ def test_produto_em_promocao_explica_que_o_pix_nao_soma_ao_desconto(conexao):
     assert promocional.preco_pix is None
     assert promocional.observacao_pix == "O PIX não soma ao desconto da promoção."
     assert sem_promocao.observacao_pix is None
+
+
+def test_produto_sem_promocao_informa_o_percentual_do_pix(conexao):
+    (sem_promocao,) = buscar_produtos(conexao, termo="Takamine GD20")
+    (promocional,) = buscar_produtos(conexao, termo="Crafter HT-100")
+
+    assert sem_promocao.percentual_pix == "5%"
+    assert promocional.percentual_pix is None

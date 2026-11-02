@@ -58,6 +58,8 @@ class Produto:
     atende_quantidade: bool | None = None
     # Presente só quando há promoção ativa, que não se soma ao desconto do PIX.
     observacao_pix: str | None = None
+    # O desconto do PIX ("5%"), presente junto com preco_pix; a resposta pode citá-lo.
+    percentual_pix: str | None = None
 
 
 def formatar_preco(centavos: int) -> str:
@@ -150,6 +152,7 @@ def montar_produto(linha: sqlite3.Row, quantidade: int | None = None) -> Produto
         },
         atende,
         OBSERVACAO_PIX_EM_PROMOCAO if desconto else None,
+        None if desconto else f"{PERCENTUAL_PIX}%",
     )
 
 

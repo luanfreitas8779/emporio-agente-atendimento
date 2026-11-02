@@ -420,3 +420,18 @@ def test_numero_dito_pelo_cliente_confirma_quantidade_mas_nao_dinheiro():
     assert valores_nao_confirmados("Consigo atender 13 unidades.", [], ["Tem 13 Yamaha C40? E 12?"]) == []
     assert valores_nao_confirmados("Consigo atender 12 unidades.", [], ["Tem 13 Yamaha C40? E 12?"]) == []
     assert valores_nao_confirmados("Custa R$ 13,00.", [], ["Tem 13 Yamaha C40?"]) == ["13.00"]
+
+
+@pytest.mark.regressao
+def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(conexao):
+    chamadas = []
+    resposta = perguntar(
+        conexao,
+        "Quanto é o desconto do PIX no Takamine GD20?",
+        *TAKAMINE,
+        ["No PIX são 5% de desconto: R$ 2.089,05."],
+        chamadas,
+    )
+
+    assert resposta == "No PIX são 5% de desconto: R$ 2.089,05."
+    assert len(chamadas) == 2
