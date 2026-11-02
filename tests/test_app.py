@@ -244,3 +244,38 @@ def test_com_telefone_invalido_so_o_aviso_aparece_sem_a_dica_do_menu_lateral(tel
     tela.sidebar.text_input[0].set_value("123").run()
 
     assert not any("menu lateral" in c.value for c in tela.caption)
+
+
+@pytest.mark.regressao
+def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, monkeypatch):
+    chamadas: list = []
+
+    def responder_com_catalogo(mensagem, sessao):
+        chamadas.append(sessao.telefone)
+        sessao.ferramentas = [ChamadaDeFerramenta("buscar_produtos", {"termo": "violão"})]
+        return "Custa R$ 100,00."
+
+    monkeypatch.setattr("src.agent.responder", responder_com_catalogo)
+    tela.chat_input[0].set_value("Quanto custa o violão?").run()
+
+    tela.sidebar.text_input[0].set_value(ANA).run()
+
+    assert chamadas == [""]
+    assert [m["papel"] for m in tela.session_state["mensagens"]] == ["user", "assistant"]
+
+
+@pytest.mark.regressao
+def test_pergunta_que_dependia_do_cadastro_e_refeita_com_o_telefone(tela, monkeypatch):
+    chamadas: list = []
+
+    def responder_com_pedidos(mensagem, sessao):
+        chamadas.append(sessao.telefone)
+        sessao.ferramentas = [ChamadaDeFerramenta("consultar_meus_pedidos", {})]
+        return "Telefone sem cadastro."
+
+    monkeypatch.setattr("src.agent.responder", responder_com_pedidos)
+    tela.chat_input[0].set_value("Cadê meu pedido?").run()
+
+    tela.sidebar.text_input[0].set_value(ANA).run()
+
+    assert chamadas == ["", ANA]

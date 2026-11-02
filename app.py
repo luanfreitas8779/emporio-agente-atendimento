@@ -26,6 +26,10 @@ ROTULOS_DAS_FERRAMENTAS = {
 }
 
 
+# Consultas que respondem igual com ou sem telefone cadastrado.
+FERRAMENTAS_SEM_CADASTRO = frozenset({"buscar_produtos", "consultar_politicas", "calcular_compra"})
+
+
 def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
     with st.chat_message(papel):
         if papel == "user":
@@ -88,9 +92,16 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         conexao.close()
-    # A última pergunta feita sem telefone é respondida de novo, agora com o telefone informado.
+    # A última pergunta feita sem telefone é respondida de novo, agora com o telefone informado,
+    # a menos que a resposta tenha usado só consultas que não dependem do cadastro.
     perguntas = [m["texto"] for m in sem_telefone if m["papel"] == "user"]
-    if telefone_da_conversa and perguntas and st.session_state.get("pendente") is None:
+    usadas = {c["nome"] for m in sem_telefone[-1:] for c in m.get("ferramentas") or []}
+    if (
+        telefone_da_conversa
+        and perguntas
+        and not (usadas and usadas <= FERRAMENTAS_SEM_CADASTRO)
+        and st.session_state.get("pendente") is None
+    ):
         st.session_state.pendente = {"pergunta": perguntas[-1], "telefone": st.session_state.telefone}
 
 # No celular a barra lateral começa recolhida e o campo de telefone fica escondido.
