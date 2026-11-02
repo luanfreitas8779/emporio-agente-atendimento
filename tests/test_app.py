@@ -172,7 +172,7 @@ def test_tom_abre_a_conversa_com_uma_saudacao(tela):
 def test_saudacao_some_quando_a_conversa_ja_tem_mensagens(tela):
     tela.chat_input[0].set_value("Oi").run()
 
-    textos = [c.markdown[0].value for c in tela.chat_message]
+    textos = [m.value for c in tela.chat_message for m in c.markdown]
 
     assert not any(t.startswith("Olá! Sou o Tom") for t in textos)
 
@@ -203,3 +203,14 @@ def test_com_telefone_valido_a_indicacao_do_menu_lateral_some(tela):
     tela.sidebar.text_input[0].set_value(ANA).run()
 
     assert not any("menu lateral" in c.value for c in tela.caption)
+
+
+@pytest.mark.regressao
+def test_texto_do_cliente_e_exibido_literal_sem_interpretar_markdown(tela):
+    pergunta = "# TITULO ![x](http://exemplo.com/a.png) :red[colorido] $10"
+
+    tela.chat_input[0].set_value(pergunta).run()
+
+    do_cliente = [c for c in tela.chat_message if c.name == "user"][0]
+    assert [t.value for t in do_cliente.text] == [pergunta]
+    assert len(do_cliente.markdown) == 0

@@ -16,8 +16,12 @@ SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar
 
 def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
     with st.chat_message(papel):
-        # O Streamlit interpreta "$" como fórmula matemática, o que quebra os preços.
-        st.markdown(texto.replace("$", r"\$"))
+        if papel == "user":
+            # O que o cliente digita não é interpretado: título, imagem externa e cor viram texto.
+            st.text(texto)
+        else:
+            # O Streamlit interpreta "$" como fórmula matemática, o que quebra os preços.
+            st.markdown(texto.replace("$", r"\$"))
         # O painel só existe nas respostas desta tela; o histórico recarregado não o traz.
         if ferramentas is not None:
             with st.expander("Ferramentas usadas"):
