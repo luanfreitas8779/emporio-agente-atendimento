@@ -14,7 +14,10 @@ JANELA_DE_REPETICAO = timedelta(hours=1)
 
 
 # Palavras que aparecem em quase todo resumo e não dizem qual é o assunto.
-PALAVRAS_SEM_ASSUNTO = {"cliente", "pedido"}
+PALAVRAS_SEM_ASSUNTO = {
+    "cliente", "pedido", "reclama", "reclamou", "reclamacao", "reclamando", "relata", "informa",
+    "afirma", "insatisfeito", "insatisfeita", "outro", "outra",
+}
 
 
 def _assunto(resumo: str) -> set[str]:

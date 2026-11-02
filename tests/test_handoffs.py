@@ -155,3 +155,14 @@ def test_atendente_solicitado_com_resumos_sem_relacao_na_janela_continua_um_regi
 
     assert resultado == Resultado.JA_REGISTRADO
     assert len(encaminhamentos(conexao)) == 1
+
+
+@pytest.mark.regressao
+def test_verbo_de_reclamacao_em_comum_nao_faz_dois_assuntos_virarem_um(conexao, relogio):
+    relogio.em(0)
+    registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente reclama que o pedido 8 atrasou.")
+
+    relogio.em(10)
+    resultado = registrar(conexao, TELEFONE, Motivo.RECLAMACAO, "Cliente reclama que o vendedor a destratou.")
+
+    assert resultado == Resultado.REGISTRADO
