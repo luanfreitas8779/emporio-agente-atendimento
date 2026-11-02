@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
@@ -18,7 +19,8 @@ PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
-# Horários como "9h", "9h30", "09:00" e "18:00", comparados por hora e minuto.
+# Horários como "9h", "9h30", "09:00" e "18:00", comparados por hora e minuto ("HH:MM").
+PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 # Telefones com hífen ("3341-4444", "(67) 99654-7821"), comparados pelos 8 últimos dígitos
 # para valer com ou sem DDD.
 PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
@@ -32,7 +34,6 @@ EXPRESSOES_RELATIVAS = {
     "proximo mes": "próximo mês",
 }
 PADRAO_DATA_RELATIVA = re.compile(r"\b(" + "|".join(EXPRESSOES_RELATIVAS) + r")\b")
-PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 
 # Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
 PADRAO_PROMESSA_DE_AVISO = re.compile(
@@ -62,6 +63,12 @@ def numero(texto: str) -> Decimal:
 
 
 def valores(texto: str) -> dict[str, set]:
+    """Valores do texto por tipo, em formato canônico para comparar com as fontes.
+
+    Dinheiro, horário, telefone e rastreio usam o texto como veio; datas por extenso, quantidades
+    e datas relativas usam o texto sem acento e em minúsculas.
+    """
+    normalizado = normalizar(texto)
     # Em percentual o ponto e a vírgula são decimais: "18.5%" e "18,5%" valem 18,5.
     percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(texto)}
     percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(texto)}
@@ -77,7 +84,7 @@ def valores(texto: str) -> dict[str, set]:
     # "15 de dezembro" não traz o ano: conferimos só o dia e o mês ("DD/MM").
     # Com o ano ("3 de março de 2026"), a data inteira é conferida.
     por_extenso = set()
-    for dia, mes, ano in PADRAO_DATA_EXTENSO.findall(normalizar(texto)):
+    for dia, mes, ano in PADRAO_DATA_EXTENSO.findall(normalizado):
         if ano:
             datas.add(_data(ano, str(MESES[mes]), dia))
         else:
@@ -88,9 +95,9 @@ def valores(texto: str) -> dict[str, set]:
     }
     telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(texto)}
     quantidades = {
-        int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizar(texto)) for numero_ in achado if numero_
+        int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizado) for numero_ in achado if numero_
     }
-    relativas = {EXPRESSOES_RELATIVAS[achado] for achado in PADRAO_DATA_RELATIVA.findall(normalizar(texto))}
+    relativas = {EXPRESSOES_RELATIVAS[achado] for achado in PADRAO_DATA_RELATIVA.findall(normalizado)}
     return {
         "dinheiro": dinheiro,
         "data_relativa": relativas,
@@ -111,7 +118,9 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
         return None
 
 
-# Dinheiro e percentual só valem se vierem do sistema: o cliente pode "ditar" um preço ou desconto.
+# Só valem se vierem do sistema: o cliente pode "ditar" um preço, um desconto, um horário de
+# funcionamento ou um telefone da loja. Datas, rastreios, quantidades e datas relativas ditados
+# por ele podem ser repetidos.
 TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefone")
 
 
@@ -120,9 +129,9 @@ def valores_nao_confirmados(
 ) -> list[str]:
     """Lista os valores da resposta que não aparecem nas fontes.
 
-    As fontes do cliente confirmam datas e rastreios, mas nunca dinheiro nem percentual.
+    As fontes do cliente não confirmam os tipos de `TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA`.
     """
-    confirmados: dict[str, set] = {tipo: set() for tipo in valores("")}
+    confirmados: defaultdict[str, set] = defaultdict(set)
     for fonte in fontes:
         for tipo, encontrados in valores(fonte).items():
             confirmados[tipo] |= encontrados

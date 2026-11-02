@@ -3,6 +3,7 @@ from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import RESPOSTA_SEGURA, Sessao, agente, responder
+from src.config import PASTA_DADOS
 from src.guardrail import valores_nao_confirmados
 
 ANA = "(67) 99654-7821"
@@ -292,3 +293,20 @@ def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(conexao):
     )
 
     assert resposta == "De segunda a sexta, das 9h às 18h."
+
+
+@pytest.mark.regressao
+@pytest.mark.parametrize(
+    "resposta",
+    [
+        "Atendemos de segunda a sexta, das 9h às 18h, e aos sábados, das 9h às 13h.",
+        "Pode ligar para (67) 3341-4444 ou chamar no WhatsApp 3321-4500.",
+        "Parcelamos sem juros em até 12x, e a entrega local leva de 1 a 3 dias úteis.",
+        "Frete grátis acima de R$ 500,00; abaixo disso, taxa fixa de R$ 35,00.",
+    ],
+)
+def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta):
+    # Formatos diferentes dos do arquivo (9h x 09:00, telefone sem DDD) contra data/politicas.md.
+    politica = (PASTA_DADOS / "politicas.md").read_text(encoding="utf-8")
+
+    assert valores_nao_confirmados(resposta, [politica]) == []
