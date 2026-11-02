@@ -14,6 +14,18 @@ from src.phone import normalizar_telefone
 SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar com produtos, pedidos, trocas e pagamentos."
 
 
+# Nomes e argumentos das ferramentas são internos: o cliente vê só o que foi consultado.
+ROTULOS_DAS_FERRAMENTAS = {
+    "buscar_produtos": "Consulta ao catálogo",
+    "consultar_politicas": "Consulta às políticas da loja",
+    "calcular_compra": "Cálculo da compra",
+    "consultar_meus_pedidos": "Consulta aos seus pedidos",
+    "avaliar_devolucao": "Avaliação de devolução",
+    "registrar_interesse": "Registro de interesse no produto",
+    "encaminhar_para_atendente": "Encaminhamento para a equipe",
+}
+
+
 def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
     with st.chat_message(papel):
         if papel == "user":
@@ -24,10 +36,10 @@ def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> Non
             st.markdown(texto.replace("$", r"\$"))
         # O painel só existe nas respostas desta tela; o histórico recarregado não o traz.
         if ferramentas is not None:
-            with st.expander("Ferramentas usadas"):
+            with st.expander("Como o Tom chegou a essa resposta"):
                 if ferramentas:
                     for chamada in ferramentas:
-                        st.code(f"{chamada['nome']}({chamada['argumentos']})", language="python")
+                        st.caption(ROTULOS_DAS_FERRAMENTAS.get(chamada["nome"], "Consulta interna"))
                 else:
                     st.caption("Nenhuma ferramenta.")
 

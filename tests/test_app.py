@@ -7,7 +7,7 @@ from pydantic_ai.models.function import FunctionModel
 from streamlit.testing.v1 import AppTest
 
 import src.database
-from src.agent import MENSAGEM_DE_ERRO_TECNICO, agente
+from src.agent import MENSAGEM_DE_ERRO_TECNICO, ChamadaDeFerramenta, agente
 
 APP = str(Path(__file__).parent.parent / "app.py")
 
@@ -214,3 +214,22 @@ def test_texto_do_cliente_e_exibido_literal_sem_interpretar_markdown(tela):
     do_cliente = [c for c in tela.chat_message if c.name == "user"][0]
     assert [t.value for t in do_cliente.text] == [pergunta]
     assert len(do_cliente.markdown) == 0
+
+
+@pytest.mark.regressao
+def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(tela, monkeypatch):
+    def responder_com_ferramentas(mensagem, sessao):
+        sessao.ferramentas = [
+            ChamadaDeFerramenta("buscar_produtos", {"termo": "violão"}),
+            ChamadaDeFerramenta("consultar_meus_pedidos", {"customer_id": 1}),
+        ]
+        return "Olá!"
+
+    monkeypatch.setattr("src.agent.responder", responder_com_ferramentas)
+
+    tela.chat_input[0].set_value("Oi").run()
+
+    painel = tela.expander[0]
+    assert painel.label == "Como o Tom chegou a essa resposta"
+    assert [c.value for c in painel.caption] == ["Consulta ao catálogo", "Consulta aos seus pedidos"]
+    assert len(painel.code) == 0
