@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -233,3 +234,11 @@ def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(
     assert painel.label == "Como o Tom chegou a essa resposta"
     assert [c.value for c in painel.caption] == ["Consulta ao catálogo", "Consulta aos seus pedidos"]
     assert len(painel.code) == 0
+
+
+@pytest.mark.regressao
+def test_configuracao_do_streamlit_esconde_as_opcoes_de_desenvolvedor_do_cliente():
+    # O AppTest não renderiza a barra do navegador: o que se confere é a configuração (docs/05, seção 8).
+    configuracao = tomllib.loads((Path(APP).parent / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
+
+    assert configuracao["client"]["toolbarMode"] == "viewer"
