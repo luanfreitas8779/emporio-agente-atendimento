@@ -225,3 +225,19 @@ def test_cliente_nao_confirma_telefone_da_loja():
     assert valores_nao_confirmados(
         "Ligue para (67) 3999-0000.", [CONTATOS_DA_LOJA], ["Liga pro (67) 3999-0000?"]
     ) == ["39990000"]
+
+
+@pytest.mark.regressao
+def test_resposta_pode_citar_o_telefone_da_propria_sessao(conexao):
+    resposta = perguntar(conexao, "Qual número vocês têm de mim?", None, None, ["Tenho o (67) 99654-7821."])
+
+    assert resposta == "Tenho o (67) 99654-7821."
+
+
+@pytest.mark.regressao
+def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(conexao):
+    modelo = modelo_com_respostas(None, None, ["Tenho o (67) 99654-7821."])
+    with agente.override(model=FunctionModel(modelo)):
+        resposta = responder("Qual número vocês têm de mim?", Sessao(conexao, telefone="67996547821"))
+
+    assert resposta == "Tenho o (67) 99654-7821."
