@@ -1,55 +1,55 @@
-# Empório da Música: agente de atendimento
+# Empório da Música: customer service agent
 
-Agente de atendimento por texto para a Empório da Música, loja de instrumentos musicais em Campo Grande/MS. O sistema responde perguntas recorrentes sobre produtos, pedidos e políticas, e encaminha para a equipe os casos que exigem análise humana.
+Text-based customer service agent for Empório da Música, a musical instrument store in Campo Grande, Brazil. The system answers recurring questions about products, orders, and store policies, and hands off to the store team the cases that need human judgment.
 
-> **Status:** MVP funcional. O chat atende produtos, pedidos, políticas, devoluções, interesses e encaminhamentos, e a suíte automática roda sem chave de API.
+> **Status:** working MVP. The chat handles products, orders, policies, returns, product interests, and handoffs, and the automated test suite runs without an API key.
 
-## Funcionalidades
+## Features
 
-- Persona alinhada ao tom de voz da loja.
-- Consulta de produtos, preços, estoque e promoções.
-- Consulta de pedidos do cliente identificado.
-- Aplicação das políticas de pagamento, entrega, troca e garantia.
-- Tratamento de assuntos fora do escopo.
-- Histórico persistente e retomada de interesses em novas conversas.
-- Avaliação de trocas e devoluções com prazos calculados em código.
-- Registro de interesse em produtos indisponíveis.
-- Encaminhamento de reclamações e de casos sem resposta segura para a equipe.
-- Busca de produtos que tolera um erro de digitação em palavras longas.
-- Nova tentativa e mensagens claras quando o provedor recusa por limite de uso ou não responde.
-- Painel "Como o Tom chegou a essa resposta" em cada resposta da interface, com rótulos como "Consulta ao catálogo".
-- Indicador de que o Tom está digitando e campo de mensagem bloqueado até a resposta.
+- Persona aligned with the store's tone of voice.
+- Product, price, stock, and promotion lookup.
+- Order lookup for the identified customer.
+- Payment, delivery, exchange, and warranty policies applied to each answer.
+- Handling of out-of-scope requests.
+- Persistent history and resumption of product interests in new conversations.
+- Exchange and return assessment, with deadlines calculated in code.
+- Interest registration for unavailable products.
+- Handoff of complaints, and of cases without a safe answer, to the store team.
+- Product search that tolerates one typo in long words, in product names and categories.
+- Retries and clear messages when the provider refuses a request due to rate limits or does not respond.
+- A "Como o Tom chegou a essa resposta" ("How Tom reached this answer") panel under each answer in the interface, with labels such as "Consulta ao catálogo" ("Catalog lookup").
+- Typing indicator, with the message field locked until the answer arrives.
 
-## Arquitetura
+## Architecture
 
-O modelo interpreta a mensagem, escolhe a ação e redige a resposta. O código Python consulta os dados, calcula valores e aplica as regras de privacidade.
+The model interprets the message, chooses the action, and writes the answer. The Python code queries the data, calculates values, and enforces the privacy rules.
 
 ```mermaid
 flowchart LR
-    C[Cliente] --> UI[Streamlit]
-    UI --> A[Agente Pydantic AI]
+    C[Customer] --> UI[Streamlit]
+    UI --> A[Pydantic AI agent]
     A <--> G[Gemini API]
-    A --> T[Ferramentas]
+    A --> T[Tools]
     T --> DB[(SQLite)]
-    T --> P[Políticas em Markdown]
+    T --> P[Policies in Markdown]
 ```
 
 ## Stack
 
-| Camada | Tecnologia |
+| Layer | Technology |
 |---|---|
-| Linguagem | Python |
-| Framework de agente | Pydantic AI |
-| Modelo | Gemini 3.5 Flash-Lite |
-| Dados e persistência | SQLite |
+| Language | Python |
+| Agent framework | Pydantic AI |
+| Model | Gemini 3.5 Flash-Lite |
+| Data and persistence | SQLite |
 | Interface | Streamlit |
-| Testes | pytest |
+| Tests | pytest |
 
-## Como executar
+## How to run
 
-Requer Python 3.12 ou superior e uma chave do [Google AI Studio](https://aistudio.google.com/apikey).
+Requires Python 3.12 or later and a [Google AI Studio](https://aistudio.google.com/apikey) API key.
 
-No Windows, crie o ambiente e instale as dependências:
+On Windows, create the environment and install the dependencies:
 
 ```bash
 python -m venv .venv
@@ -57,91 +57,100 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-No Linux ou macOS, use `source .venv/bin/activate` no lugar da segunda linha.
+On Linux or macOS, use `source .venv/bin/activate` instead of the second line.
 
-Copie `.env.example` para `.env`, preencha `GOOGLE_API_KEY` e crie o banco local com a carga de dados (sem ela, o app indica este comando):
+Copy `.env.example` to `.env`, fill in `GOOGLE_API_KEY`, and create the local database by loading the data (without it, the app shows this command):
 
 ```bash
 python -m src.load_data
 ```
 
-Inicie o chat:
+Start the chat:
 
 ```bash
 streamlit run app.py
 ```
 
-Execute os testes, que não exigem chave de API:
+Run the tests, which do not require an API key:
 
 ```bash
 python -m pytest
 ```
 
-## Decisões técnicas
+## Technical decisions
 
-| Tema | Decisão | Justificativa |
+| Topic | Decision | Rationale |
 |---|---|---|
-| Abordagem | Function calling com ferramentas especializadas | O modelo decide a ação, e o código garante dados e cálculos |
-| Framework | Pydantic AI | Ferramentas tipadas e pouca estrutura para um único agente |
-| Modelo | Gemini 3.5 Flash-Lite, no plano gratuito | Atende ao function calling com baixa latência e sem custo inicial |
-| Dados | CSVs validados e carregados em SQLite | Consultas confiáveis, sem servidor |
-| Retrieval | Políticas revisadas em Markdown, consultadas por seção | Recuperação previsível para um manual curto |
-| Prompt | Instruções fixas e contexto dinâmico | Comportamento estável, com menor consumo de tokens |
-| Interface | Streamlit | Chat web simples, mantido em Python |
-| Histórico | Mensagens e interesses em SQLite | Continuidade entre conversas |
+| Approach | Function calling with specialized tools | The model chooses the action, and the code guarantees data and calculations |
+| Framework | Pydantic AI | Typed tools and little structure for a single agent |
+| Model | Gemini 3.5 Flash-Lite, on the free tier | Supports function calling with low latency and no upfront cost |
+| Data | CSVs validated and loaded into SQLite | Reliable queries, no server |
+| Retrieval | Reviewed policies in Markdown, looked up by section | Predictable retrieval for a short handbook |
+| Prompt | Fixed instructions and dynamic context | Stable behavior with lower token usage |
+| Interface | Streamlit | Simple web chat, built in Python |
+| History | Messages and interests in SQLite | Continuity across conversations |
 
-As decisões completas estão em [Arquitetura](docs/02-architecture.md).
+The full decisions are in [Architecture](docs/02-architecture.md).
 
-## Exemplos de conversa
+## Example conversations
 
-As conversas de referência estão em [`examples/`](examples/) e foram geradas com o Gemini real:
+The reference conversations are in [`examples/`](examples/) and were generated with the real Gemini model. They are in Portuguese, as the agent serves Brazilian customers:
 
-| Conversa | Mostra |
+| Conversation | Shows |
 |---|---|
-| [Produto indisponível e interesse](examples/01-produto-indisponivel-e-interesse.md) | Busca com erro de digitação e registro sem promessa de data |
-| [Devolução fora do prazo](examples/02-devolucao-fora-do-prazo.md) | Pergunta do canal, prazo em código e oferta de atendente |
-| [Parcelamento](examples/03-parcelamento-sem-juros.md) | Duas ferramentas na mesma pergunta |
-| [Reclamação encaminhada](examples/04-reclamacao-encaminhada.md) | Acolhimento e registro no mesmo turno |
-| [Orçamento, escopo e pedido](examples/05-busca-por-orcamento-e-fora-de-escopo.md) | Linguagem coloquial, recusa de acessórios e status do pedido |
+| [Unavailable product and interest](examples/01-produto-indisponivel-e-interesse.md) | Search with a typo and interest registration without promising a date |
+| [Return after the deadline](examples/02-devolucao-fora-do-prazo.md) | Question about the purchase channel, deadline calculated in code, and offer of a human agent |
+| [Installments](examples/03-parcelamento-sem-juros.md) | Two tools in the same question |
+| [Complaint handed off](examples/04-reclamacao-encaminhada.md) | Empathy and registration in the same turn |
+| [Budget, scope, and order](examples/05-busca-por-orcamento-e-fora-de-escopo.md) | Colloquial language, refusal of accessories, and order status |
 
-## Limitações conhecidas
+## Known limitations
 
-- O telefone digitado na interface não é uma autenticação real.
-- Os dados não informam o canal da compra nem a data real de entrega.
-- Não há previsão de reposição, então o agente informa apenas o estoque atual. O número exato de unidades não é informado: o agente só confirma se a loja atende a quantidade pedida.
-- Os limites do plano gratuito do Gemini restringem o volume de uso: cada pergunta consome de 2 a 3 requisições.
-- A busca aproximada corrige apenas um erro de digitação por palavra e só vale para nomes com 5 letras ou mais e sem dígitos; códigos de modelo precisam estar corretos.
-- O campo de mensagem fica bloqueado enquanto o Tom responde, e recarregar a página nesse intervalo perde a pergunta pendente (ADR-020).
-- Os testes com o Gemini real cobrem poucos fluxos, e o comportamento do modelo depende do prompt. As pendências estão em [Testes](docs/05-test-plan.md), seção 8.
-- O SQLite atende ao MVP, mas não a um uso concorrente de produção.
+- The phone number typed in the interface is not real authentication.
+- The data does not include the purchase channel or the actual delivery date.
+- There is no restock forecast, so the agent only reports current stock. The exact number of units is not disclosed: the agent only confirms whether the store can meet the requested quantity.
+- The Gemini free tier limits restrict usage volume: each question consumes 2 to 3 requests.
+- Fuzzy search corrects only one typo per word and only applies to words with 5 or more letters and no digits; model codes must be spelled correctly.
+- The message field is locked while Tom answers, and reloading the page during that interval loses the pending question (ADR-020).
+- Tests with the real Gemini model cover a limited set of flows, and the model's behavior depends on the prompt. Open items are listed in [Test plan](docs/05-test-plan.md), section 8.
+- SQLite is enough for the MVP, but not for concurrent production use.
 
-## Próximos passos
+## Next steps
 
-- Integrar com a API oficial do WhatsApp e usar o número autenticado pelo canal.
-- Agrupar mensagens enviadas em sequência pelo mesmo telefone antes de chamar o agente, ao integrar um canal como o WhatsApp.
-- Notificar clientes quando um produto voltar ao estoque e dar à equipe uma tela para ler os encaminhamentos.
-- Integrar com os sistemas de catálogo e pedidos da loja.
-- Adotar avaliações contínuas e observabilidade das respostas.
-- Migrar para um banco com suporte a uso concorrente.
+- Integrate with the official WhatsApp API and use the phone number authenticated by the channel.
+- Group messages sent in quick succession by the same phone number before calling the agent, when integrating a channel such as WhatsApp.
+- Notify customers when a product is back in stock, and give the team a screen to read the handoffs.
+- Integrate with the store's catalog and order systems.
+- Adopt continuous evaluation and observability of the answers.
+- Migrate to a database that supports concurrent use.
 
-## Desenvolvimento assistido por IA
+## AI-assisted development
 
-O Claude Code apoia a análise dos dados, a comparação de alternativas, a documentação e a implementação. As decisões e a revisão final são feitas pelo responsável do projeto.
+Claude Code wrote the Python code and recommended the agent framework (Pydantic AI). The project owner led the work: asked for the documentation before any code, required tests, analyzed the alternatives, and approved the decisions recorded in the ADRs.
 
-- **Desenvolvimento:** cada funcionalidade nasceu de um teste que falha, com a implementação mínima em seguida, e passou por revisão de padrões e de aderência à especificação antes de ir para a `main`.
-- **Em execução:** o Gemini interpreta a mensagem e redige a resposta. Preços, estoque, prazos e datas são calculados em código, e uma guarda confere os valores citados contra o retorno das ferramentas (ADR-013).
-- **Avaliação:** as conversas de `examples/` vêm de execuções reais, feitas em poucas requisições por causa da cota.
+- **Development:** each feature started from a failing test, followed by the minimal implementation, and went through a review of coding standards and of adherence to the specification before reaching `main`.
+- **At runtime:** Gemini interprets the message and writes the answer. Prices, stock, deadlines, and dates are calculated in code, and a guardrail checks the values cited in the answer against the tool results (ADR-013).
+- **Evaluation:** the conversations in `examples/` come from real runs, made with few requests because of the quota.
 
-## Dados
+## Data
 
-Os arquivos em `data/` são fictícios e estão versionados para permitir a reprodução do projeto. O tratamento aplicado está descrito em [Dados](docs/03-data.md).
+The files in `data/` are fictitious and versioned so the project can be reproduced. The processing applied to them is described in [Data](docs/03-data.md).
 
-## Documentação
+## Documentation
 
-| Documento | Conteúdo |
+| Document | Content |
 |---|---|
-| [Visão e escopo](docs/01-scope.md) | Objetivos, requisitos, critérios de aceite e riscos |
-| [Arquitetura](docs/02-architecture.md) | Componentes, fluxos, modelo de dados e ADRs |
-| [Dados](docs/03-data.md) | Fontes, qualidade dos dados e regras de negócio |
-| [Especificação do agente](docs/04-agent.md) | Persona, ferramentas e regras de resposta |
-| [Plano de testes e cronograma](docs/05-test-plan.md) | Casos de teste, cota, etapas e release |
+| [Vision and scope](docs/01-scope.md) | Goals, requirements, acceptance criteria, and risks |
+| [Architecture](docs/02-architecture.md) | Components, flows, data model, and ADRs |
+| [Data](docs/03-data.md) | Sources, data quality, and business rules |
+| [Agent specification](docs/04-agent.md) | Persona, tools, and answer rules |
+| [Test plan and schedule](docs/05-test-plan.md) | Test cases, quota, milestones, and release |
+
+## Assumptions
+
+The case was provided in Portuguese, but the recruiting email required all responses in English. Therefore, all documentation is in English, while the agent itself converses in Brazilian Portuguese, since it serves a Brazilian store's customers. The system prompt and the example conversations stay in Portuguese for the same reason.
+
+- **Text the model reads stays in Portuguese.** Besides the system prompt, this covers the tool descriptions, the retry messages sent by the guardrail, and the fixed texts returned by the tools. The store policies (`data/politicas.md`), the CSV files, and the Portuguese expressions the guardrail looks for in the answers are also unchanged.
+- **The database is not migrated.** The schema (tables, columns, and `CHECK` values), the stored values, and the enumeration values the model reads (such as `arrependimento` or `disponivel`) keep their original names.
+
+Commit messages were translated into English at the end of the project to meet the English requirement. Commit contents, order, and dates are unchanged.
