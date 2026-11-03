@@ -1,130 +1,130 @@
-# Visão e escopo
+# Vision and scope
 
-| Campo | Valor |
+| Field | Value |
 |---|---|
-| Projeto | Agente de atendimento da Empório da Música |
-| Versão do documento | 0.2 |
-| Situação | Em revisão |
-| Data-alvo de entrega | 02/11/2026, 18:00 (UTC-3) |
+| Project | Empório da Música customer service agent |
+| Document version | 0.2 |
+| Status | Under review |
+| Target delivery date | 11/02/2026, 18:00 (UTC-3) |
 
-## 1. Contexto
+## 1. Context
 
-A Empório da Música é uma loja especializada em instrumentos musicais, fundada em 2008 em Campo Grande/MS. O atendimento é feito pela equipe da loja, que concentra boa parte do tempo em perguntas recorrentes sobre horários, status de pedidos, preços e disponibilidade.
+Empório da Música is a store specialized in musical instruments, founded in 2008 in Campo Grande, Mato Grosso do Sul, Brazil. Customer service is handled by the store team, which spends much of its time on recurring questions about opening hours, order status, prices, and availability.
 
-Esse volume reduz o tempo disponível para atendimentos que exigem análise humana e aumenta o risco de respostas inconsistentes.
+This volume reduces the time available for cases that require human judgment and increases the risk of inconsistent answers.
 
-## 2. Objetivos
+## 2. Goals
 
-| ID | Objetivo |
+| ID | Goal |
 |---|---|
-| OBJ-01 | Responder perguntas recorrentes por texto, com base nos dados e políticas da loja |
-| OBJ-02 | Reduzir a carga da equipe, sem substituir o atendimento humano em casos sensíveis |
-| OBJ-03 | Garantir que preços, estoque, pedidos e prazos venham de fontes verificadas |
-| OBJ-04 | Dar continuidade ao atendimento quando o cliente retorna em outro dia |
+| OBJ-01 | Answer recurring questions by text, based on the store's data and policies |
+| OBJ-02 | Reduce the team's workload without replacing human service in sensitive cases |
+| OBJ-03 | Ensure that prices, stock, orders, and deadlines come from verified sources |
+| OBJ-04 | Provide continuity when the customer returns on another day |
 
-## 3. Partes interessadas
+## 3. Stakeholders
 
-| Parte | Interesse |
+| Stakeholder | Interest |
 |---|---|
-| Clientes | Respostas rápidas, corretas e acolhedoras |
-| Equipe de atendimento | Menos perguntas repetitivas e casos encaminhados com contexto |
-| Gestão da loja | Consistência com as políticas e proteção dos dados de clientes |
-| Equipe técnica | Solução simples de operar, testar e evoluir |
+| Customers | Fast, correct, and friendly answers |
+| Customer service team | Fewer repetitive questions and cases handed off with context |
+| Store management | Consistency with the policies and protection of customer data |
+| Technical team | A solution that is simple to operate, test, and evolve |
 
-## 4. Escopo
+## 4. Scope
 
-### 4.1 Incluído no MVP
+### 4.1 Included in the MVP
 
-- Atendimento por texto em interface web.
-- Consulta de produtos, preços, estoque e promoções ativas.
-- Consulta de pedidos do cliente identificado.
-- Consulta das políticas da loja.
-- Tratamento de pedidos fora do escopo.
-- Persistência do histórico e de interesses por produto.
-- Registro de reclamações e encaminhamentos para a equipe.
+- Text-based customer service in a web interface.
+- Lookup of products, prices, stock, and active promotions.
+- Lookup of the identified customer's orders.
+- Lookup of the store policies.
+- Handling of out-of-scope requests.
+- Persistence of the history and of product interests.
+- Registration of complaints and handoffs to the team.
 
-### 4.2 Fora do MVP
+### 4.2 Out of the MVP
 
-- Integração com o WhatsApp.
-- Autenticação forte de clientes.
-- Compra, pagamento ou alteração de pedidos pelo chat.
-- Notificação automática de reposição de estoque.
-- Integração com sistemas de produção da loja.
-- Painel administrativo.
-- Implantação em produção.
+- WhatsApp integration.
+- Strong customer authentication.
+- Purchases, payments, or order changes through the chat.
+- Automatic restock notifications.
+- Integration with the store's production systems.
+- Admin dashboard.
+- Production deployment.
 
-## 5. Requisitos funcionais
+## 5. Functional requirements
 
-| ID | Requisito | Prioridade |
+| ID | Requirement | Priority |
 |---|---|---|
-| RF-01 | O agente deve assumir a persona definida na [especificação do agente](04-agent.md) | Alta |
-| RF-02 | O agente deve decidir entre responder, consultar dados, consultar políticas ou encaminhar | Alta |
-| RF-03 | O sistema deve buscar produtos por nome, categoria e preço máximo | Alta |
-| RF-04 | O sistema deve calcular preço final segundo as regras de promoção e PIX | Alta |
-| RF-05 | O sistema deve mostrar somente pedidos do cliente identificado | Alta |
-| RF-06 | O agente deve aplicar políticas de troca, devolução, garantia, pagamento e frete | Alta |
-| RF-07 | O agente deve recusar assuntos fora do escopo e redirecionar pedidos de acessórios | Alta |
-| RF-08 | O sistema deve persistir o histórico por telefone | Alta |
-| RF-09 | O sistema deve registrar e recuperar interesses em produtos indisponíveis | Alta |
-| RF-10 | O agente deve encaminhar reclamações e casos sem resposta segura | Média |
-| RF-11 | A interface deve mostrar as ferramentas usadas em cada resposta | Baixa |
+| RF-01 | The agent must adopt the persona defined in the [agent specification](04-agent.md) | High |
+| RF-02 | The agent must decide between answering, querying data, looking up policies, or handing off | High |
+| RF-03 | The system must search products by name, category, and maximum price | High |
+| RF-04 | The system must calculate the final price according to the promotion and PIX rules | High |
+| RF-05 | The system must show only the identified customer's orders | High |
+| RF-06 | The agent must apply the exchange, return, warranty, payment, and shipping policies | High |
+| RF-07 | The agent must decline out-of-scope topics and redirect requests for accessories | High |
+| RF-08 | The system must persist the history by phone number | High |
+| RF-09 | The system must register and retrieve interests in unavailable products | High |
+| RF-10 | The agent must hand off complaints and cases without a safe answer | Medium |
+| RF-11 | The interface must show the tools used in each answer | Low |
 
-## 6. Requisitos não funcionais
+## 6. Non-functional requirements
 
-| ID | Categoria | Requisito |
+| ID | Category | Requirement |
 |---|---|---|
-| RNF-01 | Confiabilidade | Dados factuais devem vir de ferramentas, nunca da memória do modelo |
-| RNF-02 | Privacidade | O isolamento de dados por cliente deve ser garantido em código |
-| RNF-03 | Segurança | Chaves de API não podem ser versionadas |
-| RNF-04 | Manutenibilidade | O provedor e o modelo devem ser configuráveis |
-| RNF-05 | Testabilidade | A suíte padrão deve rodar sem chave de API e sem consumir cota |
-| RNF-06 | Custo | O MVP deve operar dentro do plano gratuito do Gemini |
-| RNF-07 | Resiliência | Limites de uso devem gerar nova tentativa ou mensagem clara ao cliente |
-| RNF-08 | Portabilidade | O ambiente deve ser recriado a partir do repositório e de um único comando de carga |
+| RNF-01 | Reliability | Factual data must come from tools, never from the model's memory |
+| RNF-02 | Privacy | Data isolation between customers must be enforced in code |
+| RNF-03 | Security | API keys must not be committed |
+| RNF-04 | Maintainability | The provider and the model must be configurable |
+| RNF-05 | Testability | The default suite must run without an API key and without consuming quota |
+| RNF-06 | Cost | The MVP must operate within the Gemini free tier |
+| RNF-07 | Resilience | Rate limits must trigger a retry or a clear message to the customer |
+| RNF-08 | Portability | The environment must be recreated from the repository and a single load command |
 
-## 7. Critérios de aceite
+## 7. Acceptance criteria
 
-| ID | Critério | Requisitos |
+| ID | Criterion | Requirements |
 |---|---|---|
-| CA-01 | A busca por violões até R$ 1.000 retorna 12 opções disponíveis, sem itens esgotados ou descontinuados | RF-03 |
-| CA-02 | O endereço da loja é informado a partir da política revisada | RF-06 |
-| CA-03 | O preço do Takamine GD20 é informado como R$ 2.199,00 | RF-03, RF-04 |
-| CA-04 | Pedidos de devolução consideram status, datas, motivo e canal de compra | RF-06 |
-| CA-05 | Uma mensagem não consegue acessar pedidos de outro cliente | RF-05, RNF-02 |
-| CA-06 | Pedidos fora do escopo são recusados sem informações inventadas | RF-07 |
-| CA-07 | O agente nunca informa uma data de reposição sem dado de origem | RF-09, RNF-01 |
-| CA-08 | Em nova sessão, "chegou o violão?" é associado ao interesse salvo e ao estoque atual | RF-08, RF-09 |
-| CA-09 | A suíte automatizada padrão passa sem chave de API | RNF-05 |
+| CA-01 | The search for acoustic guitars up to R$ 1,000 returns 12 available options, without out-of-stock or discontinued items | RF-03 |
+| CA-02 | The store address is provided from the reviewed policy | RF-06 |
+| CA-03 | The price of the Takamine GD20 is given as R$ 2.199,00 | RF-03, RF-04 |
+| CA-04 | Return requests take into account status, dates, reason, and purchase channel | RF-06 |
+| CA-05 | A message cannot access another customer's orders | RF-05, RNF-02 |
+| CA-06 | Out-of-scope requests are declined without invented information | RF-07 |
+| CA-07 | The agent never gives a restock date without source data | RF-09, RNF-01 |
+| CA-08 | In a new session, "chegou o violão?" ("has the guitar arrived?") is linked to the saved interest and to the current stock | RF-08, RF-09 |
+| CA-09 | The default automated suite passes without an API key | RNF-05 |
 
-## 8. Premissas e restrições
+## 8. Assumptions and constraints
 
-### Premissas
+### Assumptions
 
-- A data de referência do sistema é configurável, com valor padrão 2026-03-25.
-- O telefone informado na interface representa o identificador que seria entregue pelo canal de mensagens.
-- `products.csv` é a fonte oficial do catálogo.
-- A cota gratuita do Gemini foi medida em 01/11/2026: 15 requisições por minuto e 500 por dia, por projeto e modelo.
+- The system's reference date is configurable, with a default value of 2026-03-25.
+- The phone number entered in the interface stands for the identifier the messaging channel would provide.
+- `products.csv` is the official catalog source.
+- The Gemini free quota was measured on 11/01/2026: 15 requests per minute and 500 per day, per project and model.
 
-### Restrições
+### Constraints
 
-- Python como linguagem principal.
-- Esforço estimado entre 10 e 15 horas.
-- Uso do plano gratuito do Gemini.
+- Python as the main language.
+- Estimated effort between 10 and 15 hours.
+- Use of the Gemini free tier.
 
-## 9. Riscos
+## 9. Risks
 
-| ID | Risco | Probabilidade | Impacto | Mitigação |
+| ID | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|---|
-| R-01 | Cota gratuita insuficiente | Alta | Alto | Testes com modelo simulado, histórico limitado, nova tentativa e modelo configurável |
-| R-02 | Modelo inventar dados | Média | Alto | Dados obtidos por ferramentas e regras explícitas de resposta |
-| R-03 | Exposição de dados de clientes | Baixa | Alto | Cliente definido pela sessão e consultas parametrizadas |
-| R-04 | Manipulação por prompt injection | Média | Alto | Regras críticas aplicadas em código, não apenas no prompt |
-| R-05 | Dependências incompatíveis com Python 3.14 | Média | Médio | Validar versões na configuração do ambiente |
-| R-06 | Inconsistências nos dados de origem | Alta | Médio | Regras de tratamento descritas em [Dados](03-data.md) |
+| R-01 | Insufficient free quota | High | High | Tests with a simulated model, limited history, retries, and a configurable model |
+| R-02 | The model invents data | Medium | High | Data obtained through tools and explicit answer rules |
+| R-03 | Exposure of customer data | Low | High | Customer defined by the session and parameterized queries |
+| R-04 | Manipulation through prompt injection | Medium | High | Critical rules enforced in code, not only in the prompt |
+| R-05 | Dependencies incompatible with Python 3.14 | Medium | Medium | Validate versions when setting up the environment |
+| R-06 | Inconsistencies in the source data | High | Medium | Handling rules described in [Data](03-data.md) |
 
-## 10. Documentos relacionados
+## 10. Related documents
 
-- [Arquitetura](02-architecture.md)
-- [Dados](03-data.md)
-- [Especificação do agente](04-agent.md)
-- [Plano de testes e cronograma](05-test-plan.md)
+- [Architecture](02-architecture.md)
+- [Data](03-data.md)
+- [Agent specification](04-agent.md)
+- [Test plan and schedule](05-test-plan.md)
