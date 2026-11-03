@@ -1,33 +1,33 @@
 # Issue tracker: GitHub
 
-Specs e tickets deste repositório ficam no GitHub Issues. Todas as operações usam o `gh`.
+Specs and tickets for this repository live in GitHub Issues. All operations use `gh`.
 
-## Convenções
+## Conventions
 
-- **Criar:** `gh issue create --title "..." --body "..."`.
-- **Ler:** `gh issue view <número> --json number,title,body,labels,comments`.
-- **Listar:** `gh issue list --state open --json number,title,body,labels`.
-- **Criar ticket de uma spec:** `gh issue create --parent <spec> ...`.
-- **Declarar bloqueio:** `gh issue create --blocked-by <n>,<n> ...` ou `gh issue edit <ticket> --add-blocked-by <bloqueador>`.
-- **Contar bloqueios abertos:** `gh api repos/{owner}/{repo}/issues/<n> --jq .issue_dependencies_summary.blocked_by`.
-- **Comentar:** `gh issue comment <número> --body "..."`.
-- **Alterar rótulos:** `gh issue edit <número> --add-label "..."` ou `--remove-label "..."`.
-- **Fechar:** comentar a resolução e depois executar `gh issue close <número>`.
+- **Create:** `gh issue create --title "..." --body "..."`.
+- **Read:** `gh issue view <number> --json number,title,body,labels,comments`.
+- **List:** `gh issue list --state open --json number,title,body,labels`.
+- **Create a ticket from a spec:** `gh issue create --parent <spec> ...`.
+- **Declare a blocker:** `gh issue create --blocked-by <n>,<n> ...` or `gh issue edit <ticket> --add-blocked-by <blocker>`.
+- **Count open blockers:** `gh api repos/{owner}/{repo}/issues/<n> --jq .issue_dependencies_summary.blocked_by`.
+- **Comment:** `gh issue comment <number> --body "..."`.
+- **Change labels:** `gh issue edit <number> --add-label "..."` or `--remove-label "..."`.
+- **Close:** comment the resolution, then run `gh issue close <number>`.
 
-Um ticket está desbloqueado quando todos os bloqueadores estão fechados.
+A ticket is unblocked when all of its blockers are closed.
 
-## Rótulos
+## Labels
 
-Specs e tickets prontos usam o rótulo `ready-for-agent`.
+Ready specs and tickets use the `ready-for-agent` label.
 
-## Pull requests como entrada
+## Pull requests as input
 
-**Não.** Pull requests externos não entram na fila de tickets.
+**No.** External pull requests do not enter the ticket queue.
 
-## Quando uma skill pedir para publicar
+## When a skill asks to publish
 
-Criar uma issue neste repositório.
+Create an issue in this repository.
 
-## Quando uma skill pedir o ticket relacionado
+## When a skill asks for the related ticket
 
-Ler a issue conforme a seção de convenções.
+Read the issue as described in the conventions section.

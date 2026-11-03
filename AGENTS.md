@@ -1,9 +1,9 @@
-# Instruções para agentes
+# Instructions for agents
 
-As convenções gerais do projeto estão em [CLAUDE.md](CLAUDE.md). Este arquivo registra regras que valem para qualquer agente de código.
+The general project conventions are in [CLAUDE.md](CLAUDE.md). This file records rules that apply to any coding agent.
 
-## Commits e pull requests
+## Commits and pull requests
 
-- Não incluir a linha `Co-Authored-By` nem outra atribuição de coautoria em mensagens de commit.
-- Não incluir rodapés de atribuição, como "Generated with", em descrições de pull request.
-- Mensagens de commit seguem as convenções do `CLAUDE.md`: português, tom técnico, Conventional Commits e commits pequenos.
+- Do not include a `Co-Authored-By` line or any other co-authorship attribution in commit messages.
+- Do not include attribution footers, such as "Generated with", in pull request descriptions.
+- Commit messages follow the conventions in `CLAUDE.md`: English, technical tone, Conventional Commits, and small commits.

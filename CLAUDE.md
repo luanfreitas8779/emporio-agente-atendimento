@@ -1,21 +1,22 @@
-# Empório da Música: agente de atendimento
+# Empório da Música: customer service agent
 
-Agente de atendimento por texto em Python. Consulte o [README](README.md) e a pasta `docs/` antes de propor mudanças.
+Text-based customer service agent in Python. Read the [README](README.md) and the `docs/` folder before proposing changes.
 
-## Convenções
+## Conventions
 
-- Escrever documentação, tickets e mensagens de commit em português, em tom técnico.
-- Seguir as decisões registradas em `docs/02-architecture.md`.
-- Fazer commits pequenos, no padrão Conventional Commits.
-- Desenvolver toda issue com a skill `tdd`: invocá-la antes de começar e trabalhar em ciclos de um teste que falha, a implementação mínima e a repetição. Nenhum teste é escrito depois do código.
-- Nunca versionar chaves de API ou o banco local.
+- Write documentation, code (identifiers, comments, and docstrings), tickets, and commit messages in English, in a technical tone.
+- Keep in Brazilian Portuguese everything the customer or the model reads: answers, fixed messages, interface text, the system prompt, tool descriptions, and fixed tool returns (see the README, Assumptions).
+- Follow the decisions recorded in `docs/02-architecture.md`.
+- Make small commits, following Conventional Commits.
+- Develop every issue with the `tdd` skill: invoke it before starting and work in cycles of one failing test, the minimal implementation, and repetition. No test is written after the code.
+- Never commit API keys or the local database.
 
 ## Agent skills
 
 ### Issue tracker
 
-Specs e tickets ficam no GitHub Issues deste repositório. Consulte `docs/agents/issue-tracker.md`.
+Specs and tickets live in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
-Repositório de contexto único, com as ADRs em `docs/02-architecture.md`. Consulte `docs/agents/domain.md`.
+Single-context repository, with the ADRs in `docs/02-architecture.md`. See `docs/agents/domain.md`.

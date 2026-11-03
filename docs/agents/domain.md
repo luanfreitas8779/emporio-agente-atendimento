@@ -1,21 +1,21 @@
-# Documentação de domínio
+# Domain documentation
 
-Este repositório tem um único contexto de domínio.
+This repository has a single domain context.
 
-## Leitura inicial
+## Getting started
 
-Antes de explorar o código, consulte:
+Before exploring the code, read:
 
-- `docs/01-scope.md` para requisitos e critérios de aceite.
-- `docs/02-architecture.md` para componentes e ADRs.
-- `docs/03-data.md` para regras de negócio e qualidade dos dados.
-- `docs/04-agent.md` para persona, ferramentas e regras de resposta.
-- `docs/05-test-plan.md` para os casos de teste.
+- `docs/01-scope.md` for requirements and acceptance criteria.
+- `docs/02-architecture.md` for components and ADRs.
+- `docs/03-data.md` for business rules and data quality.
+- `docs/04-agent.md` for persona, tools, and answer rules.
+- `docs/05-test-plan.md` for the test cases.
 
-## Vocabulário
+## Vocabulary
 
-Use os termos da documentação em nomes de testes, tickets e propostas. Se faltar um termo, registre a lacuna em `docs/03-data.md` ou `docs/04-agent.md`.
+Use the documentation's terms in test names, tickets, and proposals. If a term is missing, record the gap in `docs/03-data.md` or `docs/04-agent.md`.
 
-## Conflitos com ADRs
+## Conflicts with ADRs
 
-Se uma proposta contrariar uma ADR, informe isso explicitamente e indique o motivo para reabrir a decisão.
+If a proposal contradicts an ADR, say so explicitly and state the reason for reopening the decision.
