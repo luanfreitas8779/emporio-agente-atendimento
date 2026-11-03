@@ -220,7 +220,7 @@ def _filtrar(linhas, filtros: Filtros, aproximado: bool = False):
             for palavra in filtros.palavras
         ):
             continue
-        # Só a categoria tolera erro de digitação; a comparação exata continua valendo.
+        # A categoria também tolera erro de digitação, mas só depois da comparação exata.
         if filtros.categoria not in categoria_do_produto and not (
             aproximado
             and all(_palavra_aproximada(palavra, categoria_do_produto) for palavra in filtros.categoria.split())
