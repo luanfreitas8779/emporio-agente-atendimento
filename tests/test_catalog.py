@@ -138,6 +138,19 @@ def test_categoria_com_erro_de_digitacao_devolve_os_produtos_da_categoria_certa(
     assert buscar_produtos(conexao, categoria=errada) == esperados
 
 
+@pytest.mark.parametrize("categoria", ["Saxofones", "Flautas", "Violinos", "Banjos"])
+def test_categoria_que_a_loja_nao_tem_continua_vazia_mesmo_com_tolerancia(conexao, categoria):
+    assert buscar_produtos(conexao, categoria=categoria) == []
+
+
+def test_tolerancia_da_categoria_nao_inventa_promocao(conexao):
+    assert buscar_produtos(conexao, categoria="Guitarras", somente_promocao=True) == []
+
+
+def test_tolerancia_da_categoria_nao_afrouxa_o_preco_maximo(conexao):
+    assert buscar_produtos(conexao, categoria="Ukelele", preco_maximo=100) == []
+
+
 def test_pix_aplica_5_por_cento_sobre_o_preco_de_tabela(conexao):
     (produto,) = buscar_produtos(conexao, termo="Takamine GD20")
 
