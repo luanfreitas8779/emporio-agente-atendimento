@@ -315,19 +315,27 @@ Operational tables:
 ```text
 .
 ├── app.py                  # Streamlit interface
+├── .streamlit/config.toml  # Streamlit settings that hide developer options
 ├── src/
-│   ├── agent.py            # Agent, prompt, and tools
+│   ├── agent.py            # Agent, prompt, tools, and retries
+│   ├── calculos.py         # Purchase calculations: totals, PIX, and shipping
 │   ├── catalog.py          # Search, availability, and prices
 │   ├── config.py           # Settings
 │   ├── database.py         # Database connection
+│   ├── datas.py            # Date formatting for the customer
+│   ├── guardrail.py        # Output guardrail: values and notice promises
+│   ├── handoffs.py         # Handoffs to the team
+│   ├── interests.py        # Product interests per phone number
+│   ├── limits.py           # Log of the limits reported by the provider
 │   ├── load_data.py        # Data validation and load
 │   ├── memory.py           # History and conversation state per phone number
-│   ├── limits.py           # Log of the limits reported by the provider
-│   ├── returns.py          # Exchange and return deadline verdict
-│   ├── datas.py            # Date formatting for the customer
-│   └── policies.py         # Policy lookup
+│   ├── orders.py           # Customer identification and orders
+│   ├── phone.py            # Phone number normalization and formatting
+│   ├── policies.py         # Policy lookup and installments
+│   ├── restock.py          # Simulated restock
+│   └── returns.py          # Exchange and return deadline verdict
 ├── scripts/
-│   └── simulate_restock.py # Simulates a stock restock
+│   └── simulate_restock.py # Command line for the simulated restock
 ├── data/
 │   ├── *.csv               # Source data
 │   ├── políticas_da_loja.pdf
