@@ -5,7 +5,7 @@
 | Project | Empório da Música customer service agent |
 | Document version | 0.2 |
 | Status | Under review |
-| Target delivery date | 11/02/2026, 18:00 (UTC-3) |
+| Target delivery date | November 2, 2026, 18:00 (UTC-3) |
 
 ## 1. Context
 
@@ -86,7 +86,7 @@ This volume reduces the time available for cases that require human judgment and
 
 | ID | Criterion | Requirements |
 |---|---|---|
-| CA-01 | The search for acoustic guitars up to R$ 1,000 returns 12 available options, without out-of-stock or discontinued items | RF-03 |
+| CA-01 | The search for acoustic guitars up to R$ 1.000 returns 12 available options, without out-of-stock or discontinued items | RF-03 |
 | CA-02 | The store address is provided from the reviewed policy | RF-06 |
 | CA-03 | The price of the Takamine GD20 is given as R$ 2.199,00 | RF-03, RF-04 |
 | CA-04 | Return requests take into account status, dates, reason, and purchase channel | RF-06 |
@@ -103,7 +103,7 @@ This volume reduces the time available for cases that require human judgment and
 - The system's reference date is configurable, with a default value of 2026-03-25.
 - The phone number entered in the interface stands for the identifier the messaging channel would provide.
 - `products.csv` is the official catalog source.
-- The Gemini free quota was measured on 11/01/2026: 15 requests per minute and 500 per day, per project and model.
+- The Gemini free quota was measured on November 1, 2026: 15 requests per minute and 500 per day, per project and model.
 
 ### Constraints
 
