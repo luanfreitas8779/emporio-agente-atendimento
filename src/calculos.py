@@ -1,4 +1,4 @@
-"""Contas da compra feitas em código, para o modelo repassar o resultado sem calcular (ADR-013)."""
+"""Purchase calculations made in code, so the model passes the result on without calculating (ADR-013)."""
 
 import sqlite3
 from typing import Annotated
@@ -32,22 +32,22 @@ class CalculoDaCompra:
     total: str
     total_no_pix: str
     economia_no_pix: str
-    # Só existe quando a conta tem exatamente dois itens: a diferença entre os subtotais.
+    # Only present when the calculation has exactly two items: the difference between the subtotals.
     diferenca: str | None = None
-    # Produto que não pode ser vendido agora: a conta é só uma referência de preço.
+    # A product that cannot be sold now: the calculation is only a price reference.
     aviso: str | None = None
-    # Produto em promoção: o PIX não soma ao desconto, então não há economia nele.
+    # A product on promotion: PIX does not stack with the discount, so there are no savings on it.
     observacao_pix: str | None = None
     frete: str = ""
 
 
-# data/politicas.md, seção entregas: grátis acima de R$ 500,00 e taxa fixa abaixo disso.
+# data/politicas.md, entregas section: free above R$ 500,00 and a flat fee below that.
 LIMITE_DO_FRETE_GRATIS = 50_000
 TAXA_DO_FRETE_FIXO = 3_500
 
 
 def frete_na_regiao_metropolitana(total: int) -> str:
-    """O frete da política para o total em centavos; o valor exato do limite não está definido."""
+    """The policy's shipping for the total in cents; the exact limit amount is not defined."""
     if total > LIMITE_DO_FRETE_GRATIS:
         return "Frete grátis na região metropolitana de Campo Grande."
     if total < LIMITE_DO_FRETE_GRATIS:
@@ -68,7 +68,7 @@ AVISO_DA_DISPONIBILIDADE = {
 def calcular_compra(
     conexao: sqlite3.Connection, itens: list[ItemDaCompra]
 ) -> CalculoDaCompra | str:
-    # O mesmo produto citado duas vezes vira uma linha só, com a quantidade somada.
+    # The same product cited twice becomes a single line, with the quantity summed.
     quantidades: dict[int, int] = {}
     for item in itens:
         quantidades[item.product_id] = quantidades.get(item.product_id, 0) + item.quantidade

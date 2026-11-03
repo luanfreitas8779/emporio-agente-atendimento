@@ -2,7 +2,7 @@ from datetime import date
 
 
 def formatar_data(data: date | str | None) -> str | None:
-    """Datas apresentadas ao cliente saem em código, no formato brasileiro (ADR-012)."""
+    """Dates shown to the customer are formatted in code, in the Brazilian format (ADR-012)."""
     if data is None:
         return None
     if isinstance(data, str):

@@ -15,8 +15,8 @@ from pydantic_ai.messages import (
 
 from src.phone import normalizar_telefone
 
-# Diferente das tabelas de origem, estas nunca são recriadas pela carga: guardam
-# o que os clientes disseram. Por isso o esquema é idempotente.
+# Unlike the source tables, these are never recreated by the load: they store
+# what the customers said. That is why the schema is idempotent.
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS conversations (
     id INTEGER PRIMARY KEY,
@@ -62,7 +62,7 @@ MAX_MENSAGENS_NO_HISTORICO = 30
 
 @dataclass
 class Estado:
-    """O que precisa atravessar mensagens, guardado em código e não na memória do modelo."""
+    """What needs to carry across messages, kept in code and not in the model's memory."""
 
     pedido_em_analise: int | None = None
     produto_em_foco: int | None = None
@@ -77,8 +77,8 @@ def agora() -> str:
 
 
 def _inicia_um_turno(mensagem: ModelMessage) -> bool:
-    # Um pedido com a fala do cliente e sem retorno de ferramenta não responde a
-    # nenhuma chamada anterior: é um ponto seguro para começar o histórico.
+    # A request with the customer's message and no tool result does not answer
+    # any previous call: it is a safe point to start the history.
     return isinstance(mensagem, ModelRequest) and (
         any(isinstance(p, UserPromptPart) for p in mensagem.parts)
         and not any(isinstance(p, ToolReturnPart) for p in mensagem.parts)
@@ -86,10 +86,10 @@ def _inicia_um_turno(mensagem: ModelMessage) -> bool:
 
 
 def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
-    """Mantém as últimas mensagens sem separar uma chamada de ferramenta do retorno.
+    """Keeps the latest messages without separating a tool call from its result.
 
-    O corte começa no primeiro turno inteiro que cabe no limite; um turno que
-    estoura o limite é descartado por completo.
+    The cut starts at the first whole turn that fits the limit; a turn that
+    exceeds the limit is discarded entirely.
     """
     inicio = max(0, len(mensagens) - MAX_MENSAGENS_NO_HISTORICO)
     for i in range(inicio, len(mensagens)):
@@ -115,8 +115,8 @@ def _ler_mensagens(conexao: sqlite3.Connection, telefone: str | None) -> list[Mo
         try:
             mensagens.extend(ModelMessagesTypeAdapter.validate_json(linha["content"]))
         except ValidationError:
-            # Uma linha ilegível não pode travar o atendimento nem deixar um turno
-            # pela metade: o histórico recomeça depois dela.
+            # An unreadable row cannot block the service or leave a turn
+            # half-done: the history starts again after it.
             mensagens = []
     return mensagens
 
@@ -126,7 +126,7 @@ def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> lis
 
 
 def exibir_conversa(conexao: sqlite3.Connection, telefone: str | None) -> list[tuple[str, str]]:
-    """Fala do cliente e resposta final de cada turno, como o cliente as viu."""
+    """The customer's message and the final answer of each turn, as the customer saw them."""
     conversa: list[tuple[str, str]] = []
     resposta: str | None = None
     for mensagem in _ler_mensagens(conexao, telefone):
@@ -141,7 +141,7 @@ def exibir_conversa(conexao: sqlite3.Connection, telefone: str | None) -> list[t
         elif isinstance(mensagem, ModelResponse):
             textos = [p.content for p in mensagem.parts if isinstance(p, TextPart)]
             if textos:
-                # Respostas rejeitadas pela guarda são sobrescritas pela seguinte.
+                # Answers rejected by the guardrail are overwritten by the next one.
                 resposta = " ".join(textos)
     if resposta is not None:
         conversa.append(("assistant", resposta))

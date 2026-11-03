@@ -81,7 +81,7 @@ class ErroDeCarga(Exception):
 
 
 def para_centavos(valor: str) -> int:
-    """Converte reais em centavos, recusando negativos e frações de centavo."""
+    """Converts reais to cents, rejecting negative values and fractions of a cent."""
     centavos = Decimal(valor) * 100
     if centavos < 0 or centavos != centavos.to_integral_value():
         raise ValueError(valor)
@@ -148,7 +148,7 @@ def preparar_promocao(
 def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     categorias = ler_csv(pasta_dados / "categories.csv")
     ids_categorias = {categoria["category_id"] for categoria in categorias}
-    # A validação vem antes do esquema para uma falha não apagar o banco atual.
+    # Validation comes before the schema so that a failure does not erase the current database.
     linhas_produtos = ler_csv(pasta_dados / "products.csv")
     vistos: set[str] = set()
     produtos = [preparar_produto(produto, ids_categorias, vistos) for produto in linhas_produtos]
@@ -196,7 +196,7 @@ def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[s
     if telefone in telefones:
         raise ErroDeCarga(f"cliente {identificador}: telefone duplicado")
     telefones.add(telefone)
-    # E-mail e cidade não são carregados: o agente não precisa deles (privacidade).
+    # E-mail and city are not loaded: the agent does not need them (privacy).
     return (numero, cliente["name"].strip(), telefone)
 
 
@@ -259,7 +259,7 @@ def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -
 def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
     clientes = {linha[0] for linha in conexao.execute("SELECT customer_id FROM customers")}
     produtos = {linha[0] for linha in conexao.execute("SELECT product_id FROM products")}
-    # A validação vem antes do esquema para uma falha não apagar o banco atual.
+    # Validation comes before the schema so that a failure does not erase the current database.
     vistos: set[str] = set()
     pedidos = [
         preparar_pedido(pedido, clientes, vistos)
@@ -287,7 +287,7 @@ def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
 
 
 def carregar_dados(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
-    # A ordem respeita as chaves estrangeiras: pedidos dependem de clientes e produtos.
+    # The order follows the foreign keys: orders depend on customers and products.
     carregar_catalogo(conexao, pasta_dados)
     carregar_clientes(conexao, pasta_dados)
     carregar_pedidos(conexao, pasta_dados)
@@ -297,13 +297,13 @@ TABELAS_DA_CARGA = ("categories", "products", "promotions", "customers", "orders
 
 
 def banco_carregado(conexao: sqlite3.Connection) -> bool:
-    """Diz se a carga de dados já criou as tabelas de catálogo, clientes e pedidos."""
+    """Says whether the data load has already created the catalog, customer, and order tables."""
     existentes = {
         linha[0] for linha in conexao.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
     }
     if not set(TABELAS_DA_CARGA) <= existentes:
         return False
-    # Uma carga anterior às especificações não tem a coluna e exige nova carga.
+    # A load from before the specifications lacks the column and requires a new load.
     colunas = {linha[1] for linha in conexao.execute("PRAGMA table_info(products)")}
     return "specs" in colunas
 

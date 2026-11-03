@@ -14,7 +14,7 @@ from src.phone import normalizar_telefone
 SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar com produtos, pedidos, trocas e pagamentos."
 
 
-# Nomes e argumentos das ferramentas são internos: o cliente vê só o que foi consultado.
+# Tool names and arguments are internal: the customer only sees what was looked up.
 ROTULOS_DAS_FERRAMENTAS = {
     "buscar_produtos": "Consulta ao catálogo",
     "consultar_politicas": "Consulta às políticas da loja",
@@ -26,19 +26,19 @@ ROTULOS_DAS_FERRAMENTAS = {
 }
 
 
-# Consultas que respondem igual com ou sem telefone cadastrado.
+# Lookups that answer the same with or without a registered phone number.
 FERRAMENTAS_SEM_CADASTRO = frozenset({"buscar_produtos", "consultar_politicas", "calcular_compra"})
 
 
 def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
     with st.chat_message(papel):
         if papel == "user":
-            # O que o cliente digita não é interpretado: título, imagem externa e cor viram texto.
+            # What the customer types is not interpreted: headings, external images, and colors become text.
             st.text(texto)
         else:
-            # O Streamlit interpreta "$" como fórmula matemática, o que quebra os preços.
+            # Streamlit interprets "$" as a math formula, which breaks the prices.
             st.markdown(texto.replace("$", r"\$"))
-        # O painel só existe nas respostas desta tela; o histórico recarregado não o traz.
+        # The panel only exists for answers on this screen; the reloaded history does not bring it.
         if ferramentas is not None:
             with st.expander("Como o Tom chegou a essa resposta"):
                 if ferramentas:
@@ -52,7 +52,7 @@ st.set_page_config(page_title="Empório da Música", page_icon="🎸")
 st.title("Empório da Música")
 st.caption("Sua música começa aqui.")
 
-# Sem a carga de dados não há catálogo nem pedidos para consultar.
+# Without the data load there is no catalog or orders to look up.
 try:
     _conexao = conectar(CAMINHO_BANCO)
     try:
@@ -70,18 +70,18 @@ if not _carregado:
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
-# O telefone identifica a sessão. Digitá-lo não prova identidade (ADR-009).
-# O key mantém o mesmo campo entre execuções; mudar o value a cada uma o recriava vazio.
+# The phone number identifies the session. Typing it does not prove identity (ADR-009).
+# The key keeps the same field across runs; changing the value on each run recreated it empty.
 st.sidebar.text_input("Seu telefone", key="telefone", placeholder="(67) 99999-9999")
 st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
 
-# Ao informar (ou trocar) o telefone, a tela mostra a conversa guardada para ele.
-# Um telefone inválido não tem conversa guardada, então a tela recomeça vazia.
+# When the phone number is entered (or changed), the screen shows the conversation stored for it.
+# An invalid phone number has no stored conversation, so the screen starts empty.
 telefone_da_conversa = normalizar_telefone(st.session_state.telefone)
 if st.session_state.telefone.strip() and telefone_da_conversa is None:
     st.sidebar.warning("Telefone inválido. Informe o DDD e o número, por exemplo (67) 99999-9999.")
 if st.session_state.get("conversa_de") != telefone_da_conversa:
-    # Quem conversou antes de informar o telefone continua vendo o que foi dito (QA-15).
+    # Whoever chatted before entering the phone number keeps seeing what was said (QA-15).
     sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.mensagens
     st.session_state.conversa_de = telefone_da_conversa
     conexao = conectar(CAMINHO_BANCO)
@@ -92,8 +92,8 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         conexao.close()
-    # A última pergunta feita sem telefone é respondida de novo, agora com o telefone informado,
-    # a menos que a resposta tenha usado só consultas que não dependem do cadastro.
+    # The last question asked without a phone number is answered again, now with the phone number,
+    # unless the answer only used lookups that do not depend on the customer record.
     perguntas = [m["texto"] for m in sem_telefone if m["papel"] == "user"]
     usadas = {c["nome"] for m in sem_telefone[-1:] for c in m.get("ferramentas") or []}
     if (
@@ -104,20 +104,20 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
     ):
         st.session_state.pendente = {"pergunta": perguntas[-1], "telefone": st.session_state.telefone}
 
-# No celular a barra lateral começa recolhida e o campo de telefone fica escondido.
+# On mobile the sidebar starts collapsed and the phone field is hidden.
 if not st.session_state.telefone.strip():
     st.caption("Para consultar seus pedidos, informe o telefone cadastrado no menu lateral (ícone no canto superior esquerdo).")
 
-# A saudação é só da tela: não entra no histórico guardado nem na conversa enviada ao modelo.
+# The greeting belongs only to the screen: it is not stored in the history or sent to the model.
 if not st.session_state.mensagens:
     exibir("assistant", SAUDACAO)
 
 for mensagem in st.session_state.mensagens:
     exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))
 
-# Uma nova mensagem durante a resposta interrompe a execução e deixa a anterior sem resposta.
-# Por isso o campo fica bloqueado enquanto há uma pergunta pendente (ADR-020). A pergunta
-# guarda o telefone de quem a enviou, que não muda se o campo da barra lateral for alterado.
+# A new message during the answer interrupts the run and leaves the previous one unanswered.
+# That is why the field is locked while there is a pending question (ADR-020). The question
+# keeps the phone number of whoever sent it, which does not change if the sidebar field changes.
 pendente = st.session_state.get("pendente")
 if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
     st.session_state.mensagens.append({"papel": "user", "texto": pergunta})
@@ -132,11 +132,11 @@ if pendente is not None:
             with st.spinner("O Tom está digitando..."):
                 resposta = responder(pendente["pergunta"], sessao)
         except Exception:
-            # Sem isto o traceback apareceria ao cliente e o campo ficaria bloqueado (ADR-020).
+            # Without this the traceback would reach the customer and the field would stay locked (ADR-020).
             logging.getLogger(__name__).exception("Falha ao responder na tela")
             resposta = MENSAGEM_DE_ERRO_TECNICO
-        # Se o telefone da tela mudou, a resposta já foi guardada para quem perguntou e
-        # não deve aparecer na conversa de outro número.
+        # If the screen's phone number changed, the answer was already stored for whoever asked and
+        # must not appear in another number's conversation.
         if normalizar_telefone(pendente["telefone"]) == st.session_state.get("conversa_de"):
             st.session_state.mensagens.append(
                 {

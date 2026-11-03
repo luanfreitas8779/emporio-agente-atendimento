@@ -10,9 +10,9 @@ FORA_DE_CATALOGO = "fora_de_catalogo"
 LANCAMENTO = "lancamento"
 PERCENTUAL_PIX = 5
 OBSERVACAO_PIX_EM_PROMOCAO = "O PIX não soma ao desconto da promoção."
-# Campos que o cadastro contradiz em outra coluna (DQ-05); o modelo não deve afirmá-los.
+# Fields that the record contradicts in another column (DQ-05); the model must not state them.
 CAMPOS_DIVERGENTES = {137: {"strings"}}
-# O cadastro traz as chaves de `specs` e alguns valores em inglês; o cliente lê em português.
+# The record has the `specs` keys and some values in English; the customer reads Portuguese.
 NOMES_DAS_ESPECIFICACOES = {
     "top": "tampo",
     "back_sides": "fundo e laterais",
@@ -37,7 +37,7 @@ VALORES_DAS_ESPECIFICACOES = {
     "included": "incluídas",
 }
 TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
-# Palavras de ligação que o cliente escreve e que não fazem parte de nenhum nome.
+# Connecting words the customer writes that are not part of any name.
 PALAVRAS_DE_LIGACAO = frozenset(
     "a as o os um uma e ou da das de do dos com para pra no na em".split()
 )
@@ -45,7 +45,7 @@ PALAVRAS_DE_LIGACAO = frozenset(
 
 @dataclass(frozen=True)
 class Filtros:
-    """O que o cliente pediu na busca, já normalizado."""
+    """What the customer asked for in the search, already normalized."""
 
     palavras: list[str]
     categoria: str
@@ -66,11 +66,11 @@ class Produto:
     preco_pix: str | None
     disponibilidade: str
     especificacoes: dict[str, str]
-    # Só existe quando o cliente pediu uma quantidade; o estoque exato nunca é exposto.
+    # Only present when the customer asked for a quantity; the exact stock is never exposed.
     atende_quantidade: bool | None = None
-    # Presente só quando há promoção ativa, que não se soma ao desconto do PIX.
+    # Only present when there is an active promotion, which does not stack with the PIX discount.
     observacao_pix: str | None = None
-    # O desconto do PIX ("5%"), presente junto com preco_pix; a resposta pode citá-lo.
+    # The PIX discount ("5%"), present together with preco_pix; the answer may cite it.
     percentual_pix: str | None = None
 
 
@@ -85,7 +85,7 @@ def normalizar(texto: str) -> str:
 
 
 def singularizar(texto: str) -> str:
-    """Reduz cada palavra normalizada ao singular, para "violão" casar com "Violões"."""
+    """Reduces each normalized word to the singular, so that "violão" matches "Violões"."""
     palavras = []
     for palavra in texto.split():
         if len(palavra) > 3:
@@ -98,7 +98,7 @@ def singularizar(texto: str) -> str:
 
 
 def _difere_em_ate_um_caractere(a: str, b: str) -> bool:
-    """Diz se duas palavras diferem em no máximo uma inserção, remoção ou troca."""
+    """Says whether two words differ by at most one insertion, deletion, or substitution."""
     if abs(len(a) - len(b)) > 1:
         return False
     if len(a) == len(b):
@@ -112,7 +112,7 @@ def _contem(palavra: str, nome: str) -> bool:
 
 
 def _palavra_aproximada(palavra: str, nome: str) -> bool:
-    """Aceita um erro de digitação só em nomes longos; códigos de modelo ficam exatos."""
+    """Accepts a typo only in long names; model codes stay exact."""
     if palavra in nome:
         return True
     comprida = len(palavra) >= TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO
@@ -122,7 +122,7 @@ def _palavra_aproximada(palavra: str, nome: str) -> bool:
 
 
 def classificar(status: str, estoque: int) -> str:
-    # O status tem prioridade sobre o estoque.
+    # The status takes precedence over the stock.
     if status == "discontinued":
         return FORA_DE_CATALOGO
     if status == "coming_soon":
@@ -142,7 +142,7 @@ def calcular_preco_final(linha: sqlite3.Row) -> int:
 def montar_produto(linha: sqlite3.Row, quantidade: int | None = None) -> Produto:
     desconto = linha["discount_percent"]
     centavos = linha["price_cents"]
-    # O PIX incide sobre o preço de tabela e não se soma a promoções.
+    # PIX applies to the list price and does not stack with promotions.
     pix = None if desconto else formatar_preco(aplicar_desconto(centavos, PERCENTUAL_PIX))
     disponibilidade = classificar(linha["status"], linha["stock_quantity"])
     atende = None
@@ -191,7 +191,7 @@ def buscar_produtos(
     palavras_do_cliente = normalizar(termo or "").split()
     palavras = [p for p in palavras_do_cliente if p not in PALAVRAS_DE_LIGACAO]
     if palavras_do_cliente and not palavras:
-        # Só palavras de ligação não dizem o que o cliente procura.
+        # Only connecting words do not say what the customer is looking for.
         return []
     categoria_normalizada = singularizar(normalizar(categoria or ""))
     filtros = Filtros(
@@ -210,8 +210,8 @@ def _filtrar(linhas, filtros: Filtros, aproximado: bool = False):
         categoria_do_produto = singularizar(normalizar(linha["categoria"]))
         palavras_da_categoria = set(categoria_do_produto.split())
         casa = _palavra_aproximada if aproximado else _contem
-        # "violão takamine": a palavra da categoria não está no nome do produto.
-        # "GF3D" e "GF-3D" são o mesmo modelo: o hífen não conta na comparação exata.
+        # "violão takamine": the category word is not in the product name.
+        # "GF3D" and "GF-3D" are the same model: the hyphen does not count in the exact comparison.
         nome_sem_hifen = nome.replace("-", "")
         if not all(
             casa(palavra, nome)
@@ -220,7 +220,7 @@ def _filtrar(linhas, filtros: Filtros, aproximado: bool = False):
             for palavra in filtros.palavras
         ):
             continue
-        # A categoria também tolera erro de digitação, mas só depois da comparação exata.
+        # The category also tolerates a typo, but only after the exact comparison.
         if filtros.categoria not in categoria_do_produto and not (
             aproximado
             and all(_palavra_aproximada(palavra, categoria_do_produto) for palavra in filtros.categoria.split())
@@ -261,7 +261,7 @@ def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int
 class DadosParaConta:
     nome: str
     preco_final: int
-    # Pagando no PIX: o desconto incide sobre o preço de tabela e não soma à promoção.
+    # Paying with PIX: the discount applies to the list price and does not stack with the promotion.
     preco_no_pix: int
     em_promocao: bool
     disponibilidade: str

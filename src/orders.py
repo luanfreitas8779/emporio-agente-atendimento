@@ -37,7 +37,7 @@ class ItemPedido:
 class Pedido:
     numero: int
     data: str
-    # O código original fica só para o código: o modelo recebe apenas a situação.
+    # The original code stays in the code only: the model receives only the status description.
     status: Annotated[str, Field(exclude=True)]
     situacao: str
     itens: list[ItemPedido]
@@ -45,7 +45,7 @@ class Pedido:
     pagamento: str
     rastreio: str | None
     entrega_estimada: str | None
-    # Calculado em código; só existe para pedido enviado depois da previsão (DQ-16).
+    # Calculated in code; only present for an order shipped after the estimate (DQ-16).
     atraso: str | None = None
 
 
@@ -60,7 +60,7 @@ def identificar_cliente(conexao: sqlite3.Connection, telefone: str | None) -> Cl
 
 
 PARCELAS_NO_CREDITO = {f"credit_{n}x": n for n in range(1, 13)}
-# Tradução fixa e literal (ADR-012): não acrescenta significado que os dados não têm.
+# Fixed, literal translation (ADR-012): it adds no meaning that the data does not have.
 STATUS_DE_PEDIDO = {
     "pending": "pendente",
     "confirmed": "confirmado",
@@ -126,7 +126,7 @@ def consultar_pedidos(
             linha["status"],
             STATUS_DE_PEDIDO[linha["status"]],
             consultar_itens(conexao, linha["order_id"]),
-            # O total registrado prevalece sobre a soma dos itens (DQ-11 e DQ-12).
+            # The recorded total prevails over the sum of the items (DQ-11 and DQ-12).
             formatar_preco(linha["total_cents"]),
             descrever_pagamento(linha["payment_method"]),
             linha["tracking_code"],

@@ -279,7 +279,7 @@ RESPOSTA_SEGURA = (
 
 @dataclass(frozen=True)
 class ChamadaDeFerramenta:
-    """Uma ferramenta que o modelo chamou no turno, para o painel da interface."""
+    """A tool the model called in the turn, for the interface panel."""
 
     nome: str
     argumentos: dict
@@ -298,21 +298,21 @@ class Sessao:
         return orders.identificar_cliente(self.conexao, self.telefone)
 
 
-# O Streamlit pode rodar o script com outra mensagem em andamento, e o run_sync
-# falha se encontrar um loop em execução. Uma thread própria evita esse conflito.
+# Streamlit may run the script with another message in progress, and run_sync
+# fails if it finds a running loop. A dedicated thread avoids this conflict.
 _executor = ThreadPoolExecutor(max_workers=1)
 
 
-# Valores em reais acima disto não são de compras reais e estouram os cálculos.
+# Amounts in reais above this are not real purchases and overflow the calculations.
 VALOR_MAXIMO = 1_000_000
-# Números de pedido e de produto maiores que isto não existem e estouram o inteiro do SQLite.
+# Order and product numbers larger than this do not exist and overflow SQLite's integer.
 NUMERO_MAXIMO = 2**31 - 1
 
 agente = Agent(
     f"google:{MODELO_GEMINI}",
     deps_type=Sessao,
     instructions=INSTRUCOES,
-    # Uma chamada sem resposta não pode travar o chat: tempo por tentativa e por requisição.
+    # A call without an answer cannot freeze the chat: timeout per attempt and per request.
     model_settings={"timeout": 20, "request_timeout": 40},
     defer_model_check=True,
 )
@@ -343,7 +343,7 @@ def _mensagens_do_turno(mensagens: list) -> list:
 
 
 def argumentos_da_busca(mensagens: list, nome: str) -> list:
-    """Valores válidos do argumento `nome` que o modelo passou a `buscar_produtos` neste turno."""
+    """Valid values of the `nome` argument the model passed to `buscar_produtos` in this turn."""
     valores = (
         chamada.argumentos.get(nome)
         for chamada in ferramentas_do_turno(_mensagens_do_turno(mensagens))
@@ -353,17 +353,17 @@ def argumentos_da_busca(mensagens: list, nome: str) -> list:
 
 
 def limites_de_preco(mensagens: list) -> list[Decimal]:
-    """Limites de preço aplicados pela busca: a resposta pode repeti-los como limite, não como preço."""
+    """Price limits applied by the search: the answer may repeat them as a limit, not as a price."""
     return [Decimal(str(v)) for v in argumentos_da_busca(mensagens, "preco_maximo")]
 
 
 def quantidades_da_busca(mensagens: list) -> list[str]:
-    """Quantidades pedidas à busca, em texto de fonte (o formato do retorno da conta)."""
+    """Quantities requested from the search, as source text (the format of the calculation result)."""
     return [f'"quantidade": {int(v)}' for v in argumentos_da_busca(mensagens, "quantidade")]
 
 
 def fontes_do_turno(mensagens: list) -> FontesDoTurno:
-    """Textos que podem sustentar a resposta: o retorno das ferramentas e a fala do cliente."""
+    """Texts that can support the answer: the tool results and the customer's message."""
     das_ferramentas, do_cliente = [], []
     for mensagem in _mensagens_do_turno(mensagens):
         for parte in mensagem.parts:
@@ -374,7 +374,7 @@ def fontes_do_turno(mensagens: list) -> FontesDoTurno:
     return FontesDoTurno(das_ferramentas, do_cliente)
 
 
-# Raciocínio do modelo que vazou no texto: em qualquer caixa e com espaços dentro da tag.
+# Model reasoning leaked into the text: in any case and with spaces inside the tag.
 NOMES_DE_BLOCO_INTERNO = r"system|thinking|thought|reasoning"
 BLOCO_INTERNO = re.compile(
     rf"<\s*({NOMES_DE_BLOCO_INTERNO})\s*>.*?<\s*/\s*\1\s*>", re.DOTALL | re.IGNORECASE
@@ -387,7 +387,7 @@ def sem_bloco_interno(texto: str) -> str:
 
 
 def limpar_texto_das_respostas(mensagens: list) -> None:
-    """Tira o bloco interno do que será guardado, para não voltar à tela nem ao modelo."""
+    """Removes the internal block from what will be stored, so it does not return to the screen or the model."""
     for mensagem in mensagens:
         if isinstance(mensagem, ModelResponse):
             for parte in mensagem.parts:
@@ -397,26 +397,26 @@ def limpar_texto_das_respostas(mensagens: list) -> None:
 
 @agente.output_validator
 def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
-    # O raciocínio interno do modelo não é para o cliente.
+    # The model's internal reasoning is not for the customer.
     resposta = sem_bloco_interno(resposta)
     if not resposta or TAG_INTERNA.search(resposta):
         raise ModelRetry("A resposta contém texto interno. Escreva só a mensagem para o cliente.")
-    # Terminar em ":" anuncia uma lista que não veio.
+    # Ending in ":" announces a list that did not come.
     if resposta.endswith(":"):
         raise ModelRetry(
             "A resposta termina anunciando uma lista que não vem. Traga os itens devolvidos "
             "pela ferramenta ou reescreva sem anunciar a lista."
         )
-    # Só passa o que veio das ferramentas ou do próprio cliente (ADR-013).
+    # Only what came from the tools or from the customer passes (ADR-013).
     if guardrail.promete_aviso(resposta):
         raise ModelRetry(
             "A resposta promete avisar o cliente, mas o sistema não envia avisos. "
             "Diga que o interesse foi anotado e que isso não reserva o produto nem garante aviso."
         )
-    # As datas de hoje e de amanhã vêm do contexto da sessão, não de uma ferramenta.
+    # Today's and tomorrow's dates come from the session context, not from a tool.
     hoje = ctx.deps.hoje
     das_ferramentas, do_cliente = fontes_do_turno(ctx.messages)
-    # O telefone da sessão também é do sistema, não do cliente.
+    # The session's phone number also comes from the system, not from the customer.
     fontes = [
         *das_ferramentas,
         *quantidades_da_busca(ctx.messages),
@@ -440,7 +440,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     if cliente is None:
         texto = "O cliente desta conversa está sem cadastro: não consulte pedidos."
     else:
-        # Só o primeiro nome chega ao modelo; o sobrenome fica no código.
+        # Only the first name reaches the model; the last name stays in the code.
         texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
     hoje = ctx.deps.hoje
     texto += f"\nHoje: {formatar_data(hoje)}, {dia_da_semana(hoje)}. O sistema não informa a hora atual."
@@ -453,7 +453,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         if nome:
             texto += f"\nProduto em foco: {nome}."
     interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.telefone or "")
-    # Só os nomes: o estoque atual vem sempre de buscar_produtos.
+    # Only the names: the current stock always comes from buscar_produtos.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
     nomes = "; ".join(recentes) or "nenhum"
     if len(interesses) > len(recentes):
@@ -487,7 +487,7 @@ def buscar_produtos(
         ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis, quantidade,
         somente_promocao,
     )
-    # Com vários resultados "ele" fica ambíguo, e sem resultados o foco anterior seria enganoso.
+    # With several results "ele" ("it") is ambiguous, and with none the previous focus would mislead.
     ctx.deps.estado.produto_em_foco = produtos[0].id if len(produtos) == 1 else None
     return produtos
 
@@ -511,7 +511,7 @@ def consultar_politicas(
         parcelas: Só para a seção pagamentos: número de parcelas que o cliente quer.
     """
     if secao == "pagamentos" and valor is None:
-        # Sem valor o parcelamento seria afirmado às cegas: vale o preço do produto em foco.
+        # Without an amount the installments would be stated blindly: the product in focus sets the price.
         foco = ctx.deps.estado.produto_em_foco
         centavos = catalog.preco_final_em_centavos(ctx.deps.conexao, foco) if foco else None
         if centavos is not None:
@@ -560,7 +560,7 @@ def consultar_meus_pedidos(
     return pedidos
 
 
-# Palavras inteiras e frases que dizem o canal da compra; "site" sozinho não diz, pode ser só consulta.
+# Whole words and phrases that state the purchase channel; "site" alone does not, it may be a lookup.
 PADRAO_DO_CANAL = {
     returns.Canal.ONLINE: re.compile(r"\bonline\b|\bpel[oa] (?:site|internet|app|aplicativo)\b"),
     returns.Canal.PRESENCIAL: re.compile(
@@ -570,7 +570,7 @@ PADRAO_DO_CANAL = {
 
 
 def canal_citado_pelo_cliente(mensagens: list, canal: returns.Canal) -> bool:
-    """O pedido não registra o canal: só vale o que uma fala do cliente da conversa disse."""
+    """The order does not record the channel: only what a customer message in the conversation said counts."""
     falas = (
         catalog.normalizar(str(parte.content))
         for mensagem in mensagens
@@ -644,9 +644,9 @@ def encaminhar_para_atendente(
     return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
 
 
-# Limite de uso e indisponibilidade temporária: esperar pode resolver.
+# Rate limit and temporary unavailability: waiting may solve it.
 ERROS_TEMPORARIOS = (ModelRateLimitError, ModelUnavailableError, ModelOverloadedError)
-# Falha do servidor do provedor (500, 502, 504): costuma passar na tentativa seguinte.
+# Provider server failure (500, 502, 504): it usually passes on the next attempt.
 ERROS_DE_SERVIDOR = (ModelServerError,)
 ESPERAS_ENTRE_TENTATIVAS = (2, 5)
 ESPERA_MAXIMA = 15
@@ -654,12 +654,12 @@ _aguardar = time.sleep
 
 
 def _executar(mensagem: str, sessao: Sessao, historico: list):
-    """Roda o agente e repete quando o provedor recusa por limite de uso."""
+    """Runs the agent and retries when the provider refuses due to the rate limit."""
     estado_inicial = replace(sessao.estado)
     for espera in (*ESPERAS_ENTRE_TENTATIVAS, None):
-        # As ferramentas da tentativa que falhou podem ter alterado o estado da conversa.
+        # The tools of the failed attempt may have changed the conversation state.
         sessao.estado = replace(estado_inicial)
-        # O contexto copiado preserva o modelo simulado dos testes na outra thread.
+        # The copied context keeps the tests' simulated model in the other thread.
         contexto = contextvars.copy_context()
         execucao = _executor.submit(
             contexto.run, agente.run_sync, mensagem, deps=sessao, message_history=historico
@@ -669,13 +669,13 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
         except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as erro:
             if espera is None or limits.e_limite_diario(erro):
                 raise
-            # O provedor pode indicar quando tentar de novo; um teto evita travar o chat.
+            # The provider may say when to try again; a cap avoids freezing the chat.
             indicada = erro.retry_after or limits.espera_indicada(erro)
             _aguardar(min(indicada, ESPERA_MAXIMA) if indicada else espera)
 
 
 def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
-    """Guarda a fala do cliente e o texto enviado a ele, sem a tentativa que falhou."""
+    """Stores the customer's message and the text sent to them, without the failed attempt."""
     try:
         memory.salvar_mensagens(
             sessao.conexao,
@@ -686,7 +686,7 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
             ],
         )
     except Exception:
-        # Se o banco é a causa da falha, o cliente ainda recebe a mensagem.
+        # If the database is the cause of the failure, the customer still gets the message.
         registro.exception("Não foi possível guardar a conversa")
     return texto
 
@@ -707,8 +707,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
             limits.registrar_limite(erro)
         except OSError:
             registro.exception("Não foi possível registrar o limite do provedor")
-        # Cota esgotada não se resolve esperando: não há nova tentativa, só a mesma mensagem.
-        # Cota esgotada também só volta no dia seguinte.
+        # Exhausted quota is not solved by waiting: there is no retry, only the same message.
+        # Exhausted quota also only comes back the next day.
         diario = isinstance(erro, ModelQuotaExceededError) or limits.e_limite_diario(erro)
         return _responder_sem_modelo(
             mensagem, sessao, MENSAGEM_DE_LIMITE_DIARIO if diario else MENSAGEM_DE_LIMITE
@@ -716,8 +716,8 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     except (ModelTimeoutError, ModelRequestTimeout):
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_TIMEOUT)
     except UnexpectedModelBehavior:
-        # O modelo insistiu em valores não confirmados: o cliente não recebe o texto dele,
-        # e o histórico guarda só a pergunta e a resposta segura, sem a tentativa rejeitada.
+        # The model insisted on unconfirmed values: the customer does not get its text,
+        # and the history keeps only the question and the safe answer, without the rejected attempt.
         try:
             resultado = handoffs.registrar(
                 sessao.conexao,
@@ -728,7 +728,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         except sqlite3.Error:
             registro.exception("Não foi possível registrar o encaminhamento")
             resultado = None
-        # O texto só afirma o registro quando ele existe.
+        # The text only claims the registration when it exists.
         resposta = {
             handoffs.Resultado.REGISTRADO: RESPOSTA_SEGURA,
             handoffs.Resultado.JA_REGISTRADO: RESPOSTA_SEGURA,
@@ -738,7 +738,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         }[resultado]
         return _responder_sem_modelo(mensagem, sessao, resposta)
     except Exception:
-        # Rede, chave, provedor, banco ou erro inesperado: o detalhe vai para o log,
-        # e o cliente recebe a mensagem técnica para o campo de mensagem ser liberado.
+        # Network, key, provider, database, or unexpected error: the details go to the log,
+        # and the customer gets the technical message so that the message field is enabled again.
         registro.exception("Falha técnica ao responder")
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_ERRO_TECNICO)

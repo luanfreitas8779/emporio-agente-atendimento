@@ -9,11 +9,11 @@ from src.phone import normalizar_telefone
 
 
 MAX_RESUMO = 500
-# O modelo reescreve o resumo a cada tentativa; sem a janela o mesmo caso viraria vários registros.
+# The model rewrites the summary on each attempt; without the window the same case would become several records.
 JANELA_DE_REPETICAO = timedelta(hours=1)
 
 
-# Palavras que aparecem em quase todo resumo e não dizem qual é o assunto.
+# Words that appear in almost every summary and do not say what the subject is.
 PALAVRAS_SEM_ASSUNTO = {
     "cliente", "pedido", "reclama", "reclamou", "reclamacao", "reclamando", "relata", "informa",
     "afirma", "insatisfeito", "insatisfeita", "outro", "outra",
@@ -21,14 +21,14 @@ PALAVRAS_SEM_ASSUNTO = {
 
 
 def _assunto(resumo: str) -> set[str]:
-    """Palavras que identificam o caso: as de 5 letras ou mais, sem as comuns, e os números."""
+    """Words that identify the case: those with 5 letters or more, without the common ones, and the numbers."""
     palavras = re.findall(r"\w+", normalizar(resumo))
     return {p for p in palavras if (len(p) >= 5 or p.isdigit()) and p not in PALAVRAS_SEM_ASSUNTO}
 
 
 def _mesmo_assunto(anterior: str, resumo: str) -> bool:
-    """Dois resumos de reclamação tratam do mesmo caso quando citam o mesmo pedido ou, sem
-    pedidos citados nos dois, compartilham alguma palavra do assunto."""
+    """Two complaint summaries deal with the same case when they cite the same order or, without
+    orders cited in both, share a subject word."""
     assunto_anterior, assunto = _assunto(anterior), _assunto(resumo)
     pedidos_anterior = {p for p in assunto_anterior if p.isdigit()}
     pedidos = {p for p in assunto if p.isdigit()}
@@ -61,8 +61,8 @@ def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo
     anteriores = conexao.execute(
         "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (chave, motivo)
     ).fetchall()
-    # O mesmo resumo é repetido a qualquer tempo; outro resumo só dentro da janela e, numa
-    # reclamação, só se for sobre o mesmo assunto.
+    # The same summary is a repeat at any time; another summary only within the window and, for a
+    # complaint, only if it is about the same subject.
     repetido = any(
         anterior == resumo
         or (

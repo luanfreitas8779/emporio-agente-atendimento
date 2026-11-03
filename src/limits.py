@@ -17,12 +17,12 @@ def _violacoes(corpo: object) -> list[dict]:
 
 
 def _violacao(corpo: object) -> dict:
-    """Primeira violação de cota do corpo do erro do Gemini, ou um dicionário vazio."""
+    """First quota violation in the Gemini error body, or an empty dictionary."""
     return next(iter(_violacoes(corpo)), {})
 
 
 def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
-    """Acrescenta uma linha JSON com o limite que o provedor informou; campos ausentes ficam nulos."""
+    """Appends a JSON line with the limit the provider reported; missing fields are null."""
     caminho = caminho or config.CAMINHO_LOG_DE_LIMITES
     violacao = _violacao(erro.body)
     evento = {
@@ -39,12 +39,12 @@ def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
 
 
 def e_limite_diario(erro: ModelAPIError) -> bool:
-    """A cota por dia só volta no dia seguinte, então esperar alguns segundos não resolve."""
+    """The daily quota only comes back the next day, so waiting a few seconds does not help."""
     return any("PerDay" in (v.get("quotaId") or "") for v in _violacoes(erro.body))
 
 
 def espera_indicada(erro: ModelAPIError) -> float | None:
-    """Segundos do `retryDelay` ("27s") no corpo do erro, ou None se ausente ou ilegível."""
+    """Seconds of the `retryDelay` ("27s") in the error body, or None if missing or unreadable."""
     for detalhe in _detalhes(erro.body):
         atraso = detalhe.get("retryDelay")
         if isinstance(atraso, str) and atraso.endswith("s"):

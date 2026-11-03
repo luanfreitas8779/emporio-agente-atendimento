@@ -8,7 +8,7 @@ from src.database import conectar
 
 
 class ErroDeReposicao(ValueError):
-    """Reposição recusada: o banco não foi alterado."""
+    """Restock rejected: the database was not changed."""
 
 
 def repor_estoque(conexao: sqlite3.Connection, product_id: int, quantidade: int) -> None:
@@ -19,7 +19,7 @@ def repor_estoque(conexao: sqlite3.Connection, product_id: int, quantidade: int)
     ).fetchone()
     if produto is None:
         raise ErroDeReposicao(f"Produto {product_id} inexistente.")
-    # O status tem prioridade sobre o estoque: repor outro status não muda a disponibilidade.
+    # The status takes precedence over the stock: restocking another status does not change availability.
     if produto["status"] != "active":
         raise ErroDeReposicao(f"O produto {product_id} não está ativo; a reposição não teria efeito.")
     conexao.execute(

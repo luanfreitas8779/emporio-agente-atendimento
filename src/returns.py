@@ -68,7 +68,7 @@ class Regra:
 class Veredito:
     resultado: Resultado
     regras: list[Regra]
-    # O que o modelo deve perguntar ao cliente antes de haver veredito.
+    # What the model must ask the customer before there is a verdict.
     faltando: list[str] = field(default_factory=list)
     avisos: list[str] = field(default_factory=list)
     data_aproximada: bool = False
@@ -92,13 +92,13 @@ def avaliar_devolucao(
         return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
     if linha["status"] in SEM_ENTREGA:
         return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[SEM_ENTREGA[linha["status"]]])
-    # O canal só importa depois de confirmar que o pedido existe e é do cliente.
+    # The channel only matters after confirming that the order exists and belongs to the customer.
     if motivo == Motivo.ARREPENDIMENTO and canal is None:
         return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
         return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[AVISO_SEM_ARREPENDIMENTO_PRESENCIAL])
     compra = date.fromisoformat(linha["order_date"])
-    # Sem data real de entrega nos dados (DQ-17), o recebimento é a entrega estimada.
+    # Without an actual delivery date in the data (DQ-17), receipt is the estimated delivery.
     recebimento = date.fromisoformat(linha["estimated_delivery"])
     if motivo == Motivo.DEFEITO:
         regras = [

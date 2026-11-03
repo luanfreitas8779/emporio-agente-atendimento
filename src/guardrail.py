@@ -6,7 +6,7 @@ from decimal import Decimal
 from src.catalog import normalizar
 
 PADRAO_DINHEIRO = re.compile(r"R\$\s*(\d[\d.]*(?:,\d+)?)")
-# Valores escritos com a palavra "reais" ("2.199 reais", "2 mil reais") também são dinheiro.
+# Amounts written with the word "reais" ("2.199 reais", "2 mil reais") are also money.
 PADRAO_REAIS = re.compile(r"(\d[\d.]*(?:,\d+)?)\s*reais\b")
 PADRAO_MIL_REAIS = re.compile(r"(?:(\d+(?:,\d+)?)\s*)?\bmil\s*reais\b")
 MESES = {
@@ -19,30 +19,30 @@ PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
-# "15/12" sem ano: conferimos só o dia e o mês, como na data por extenso.
+# "15/12" without a year: we check only the day and the month, as for a date written out.
 PADRAO_DATA_CURTA = re.compile(r"(?<![\d/])(\d{1,2})/(\d{1,2})(?![\d/])")
-# "7 horas" vale "07:00".
+# "7 horas" means "07:00".
 PADRAO_HORAS = re.compile(r"\b([01]?\d|2[0-3])\s*horas\b")
-# Horários como "9h", "9h30", "09:00" e "18:00", comparados por hora e minuto ("HH:MM").
+# Times such as "9h", "9h30", "09:00", and "18:00", compared by hour and minute ("HH:MM").
 PADRAO_HORARIO = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
-# Telefones com hífen ("3341-4444", "(67) 99654-7821"), comparados pelos 8 últimos dígitos
-# para valer com ou sem DDD.
+# Phone numbers with a hyphen ("3341-4444", "(67) 99654-7821"), compared by the last 8 digits
+# so they count with or without the area code.
 PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
-# "3 unidades", "6 parcelas", "6 vezes", "4x"/"4 x", "restam 3" e "3 em estoque" na resposta;
-# "quantidade": 2 no retorno da conta.
+# "3 unidades", "6 parcelas", "6 vezes", "4x"/"4 x", "restam 3", and "3 em estoque" in the answer;
+# "quantidade": 2 in the calculation result.
 PADRAO_QUANTIDADE = re.compile(
     r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|quantidade\W{1,3}(\d+)"
 )
-# "Restam 3" e "3 em estoque" afirmam o estoque, que nenhuma ferramenta informa e o cliente não
-# confirma: pedir 3 unidades não prova que existem 3.
+# "Restam 3" and "3 em estoque" state the stock, which no tool reports and the customer does not
+# confirm: asking for 3 units does not prove that there are 3.
 PADRAO_ESTOQUE = re.compile(r"\brestam?\s+(\d+)\b|\b(\d+)\s+(?:no|em)\s+estoque\b")
-# "até R$ 1.000": o valor dito como limite, que a busca aplicou e a resposta pode repetir.
+# "até R$ 1.000": the amount stated as a limit, which the search applied and the answer may repeat.
 PADRAO_LIMITE = re.compile(
     r"\b(?:ate|abaixo de|no maximo|maximo de|menos de)\s+r\$\s*(\d[\d.]*(?:,\d+)?)"
 )
-# Número inteiro fora de valores em reais e decimais.
+# Whole number outside amounts in reais and decimals.
 PADRAO_NUMERO_SOLTO = re.compile(r"(?<![\d.,$])\b\d+\b(?![.,]?\d)")
-# "Semana que vem" e "próxima semana" valem o mesmo; o sistema não calcula essas datas.
+# "Semana que vem" and "próxima semana" mean the same; the system does not calculate these dates.
 EXPRESSOES_RELATIVAS = {
     "semana que vem": "próxima semana",
     "proxima semana": "próxima semana",
@@ -51,7 +51,7 @@ EXPRESSOES_RELATIVAS = {
 }
 PADRAO_DATA_RELATIVA = re.compile(r"\b(" + "|".join(EXPRESSOES_RELATIVAS) + r")\b")
 
-# Promessas de aviso que o sistema não cumpre (ADR-016): o interesse não notifica ninguém.
+# Notice promises the system does not keep (ADR-016): the interest notifies no one.
 PADRAO_PROMESSA_DE_AVISO = re.compile(
     r"\bte avis\w*|\bpara avisar\b|\bavis(?:ar|aremos|amos)\s+(?:voce|vc)\b|\bavisaremos\b|\bavisarei\b"
     r"|\bfica(?:ra|r)?\s+sabendo\b|\bvoce\s+(?:sera|vai ser)\s+avisad\w+"
@@ -59,16 +59,16 @@ PADRAO_PROMESSA_DE_AVISO = re.compile(
     r"|\bvamos te\s+(?:informar|comunicar)\s+(?:assim que|quando)\b"
     r"|\bvoce\s+(?:recebera|vai receber)\s+(?:um\s+)?(?:aviso|mensagem|notificacao)\b"
 )
-# Quantos caracteres antes da promessa procurar uma negação ("não posso te avisar").
+# How many characters before the promise to look for a negation ("não posso te avisar").
 JANELA_DA_NEGACAO = 25
-# A negação só vale colada na promessa: "Não se preocupe, te aviso" continua sendo promessa.
+# The negation only counts next to the promise: "Não se preocupe, te aviso" is still a promise.
 PADRAO_NEGACAO = re.compile(r"\b(?:nao|sem)\b[^.,;:!?]*$")
 
 
 def promete_aviso(resposta: str) -> bool:
-    """Diz se a resposta promete avisar o cliente, sem contar quando nega a promessa.
+    """Says whether the answer promises to notify the customer, not counting when it denies the promise.
 
-    O retorno da equipe após um encaminhamento ("entraremos em contato") não é promessa de aviso.
+    The team's reply after a handoff ("entraremos em contato") is not a notice promise.
     """
     texto = normalizar(resposta)
     for achado in PADRAO_PROMESSA_DE_AVISO.finditer(texto):
@@ -79,18 +79,18 @@ def promete_aviso(resposta: str) -> bool:
 
 
 def numero(texto: str) -> Decimal:
-    """Lê "2.199,00" ou "18,5" como número."""
+    """Reads "2.199,00" or "18,5" as a number."""
     return Decimal(texto.replace(".", "").replace(",", "."))
 
 
 def valores(texto: str) -> dict[str, set]:
-    """Valores do texto por tipo, em formato canônico para comparar com as fontes.
+    """Values in the text by type, in canonical form to compare with the sources.
 
-    Dinheiro, horário, telefone e rastreio usam o texto como veio; datas por extenso, quantidades
-    e datas relativas usam o texto sem acento e em minúsculas.
+    Money, time, phone number, and tracking code use the text as it came; dates written out, quantities,
+    and relative dates use the text without accents and in lowercase.
     """
     normalizado = normalizar(texto)
-    # Em percentual o ponto e a vírgula são decimais: "18.5%" e "18,5%" valem 18,5.
+    # In percentages the period and the comma are decimal: "18.5%" and "18,5%" mean 18.5.
     percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(texto)}
     percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(texto)}
     datas = set()
@@ -100,10 +100,10 @@ def valores(texto: str) -> dict[str, set]:
         datas.add(_data(ano, mes, dia))
     dinheiro = {numero(v) for v in PADRAO_DINHEIRO.findall(texto)}
     dinheiro |= {numero(v) for v in PADRAO_REAIS.findall(texto)}
-    # "mil reais" sem número vale 1.000.
+    # "mil reais" without a number means 1.000.
     dinheiro |= {numero(v) * 1000 if v else Decimal(1000) for v in PADRAO_MIL_REAIS.findall(texto)}
-    # "15 de dezembro" não traz o ano: conferimos só o dia e o mês ("DD/MM").
-    # Com o ano ("3 de março de 2026"), a data inteira é conferida.
+    # "15 de dezembro" has no year: we check only the day and the month ("DD/MM").
+    # With the year ("3 de março de 2026"), the full date is checked.
     por_extenso = set()
     for dia, mes, ano in PADRAO_DATA_EXTENSO.findall(normalizado):
         if ano:
@@ -145,9 +145,9 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
         return None
 
 
-# Só valem se vierem do sistema: o cliente pode "ditar" um preço, um desconto, um horário de
-# funcionamento, um telefone da loja ou o estoque. Datas, rastreios, quantidades e datas relativas
-# ditados por ele podem ser repetidos.
+# These only count if they come from the system: the customer may "state" a price, a discount, opening
+# hours, a store phone number, or the stock. Dates, tracking codes, quantities, and relative dates
+# stated by the customer may be repeated.
 TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefone", "estoque")
 
 
@@ -157,11 +157,11 @@ def valores_nao_confirmados(
     fontes_do_cliente: list[str] | None = None,
     limites_da_busca: list[Decimal] | None = None,
 ) -> list[str]:
-    """Lista os valores da resposta que não aparecem nas fontes.
+    """Lists the values in the answer that do not appear in the sources.
 
-    As fontes do cliente não confirmam os tipos de `TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA`. Um limite
-    de preço aplicado pela busca só confirma o valor dito como limite ("até R$ 1.000,00"), nunca
-    como preço.
+    The customer's sources do not confirm the types in `TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA`. A price limit
+    applied by the search only confirms the amount stated as a limit ("até R$ 1.000,00"), never
+    as a price.
     """
     confirmados: defaultdict[str, set] = defaultdict(set)
     for fonte in fontes:
@@ -171,7 +171,7 @@ def valores_nao_confirmados(
         for tipo, encontrados in valores(fonte).items():
             if tipo not in TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA:
                 confirmados[tipo] |= encontrados
-        # "Tem 13 Yamaha C40? E 12?": o número solto também é a quantidade que ele pediu.
+        # "Tem 13 Yamaha C40? E 12?": the loose number is also the quantity the customer asked for.
         confirmados["quantidade"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
     confirmados["dia_mes"] |= {data.strftime("%d/%m") for data in confirmados["data"]}
     citados = valores(resposta)
