@@ -7,7 +7,7 @@ from src.returns import avaliar_devolucao
 
 
 def test_compra_online_tres_dias_apos_a_entrega_esta_dentro_do_prazo_de_arrependimento(conexao):
-    # Pedido 7 (cliente 14): entrega estimada em 17/02/2026, prazo de 7 dias até 24/02/2026.
+    # Order 7 (customer 14): estimated delivery on 17/02/2026, 7-day deadline until 24/02/2026.
     veredito = avaliar_devolucao(
         conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
         hoje=date(2026, 2, 20),
@@ -32,7 +32,7 @@ def test_pedido_7_com_a_data_padrao_esta_fora_do_prazo_de_arrependimento(conexao
 
 
 def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(conexao):
-    # Dentro de 7 dias da entrega, mas a compra foi na loja (DQ-24).
+    # Within 7 days of delivery, but the purchase was made in the store (DQ-24).
     veredito = avaliar_devolucao(
         conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="presencial",
         hoje=date(2026, 2, 20),
@@ -55,7 +55,7 @@ def test_arrependimento_sem_canal_pede_o_canal_de_compra(conexao):
 
 
 def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(conexao):
-    # Compra em 03/02/2026 (30 dias até 05/03) e entrega estimada em 17/02/2026 (90 dias até 18/05).
+    # Purchase on 03/02/2026 (30 days until 05/03) and estimated delivery on 17/02/2026 (90 days until 18/05).
     veredito = avaliar_devolucao(
         conexao, cliente_id=14, numero=7, motivo="defeito", canal=None,
         hoje=date(2026, 3, 25),
@@ -69,7 +69,7 @@ def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(c
 
 
 def test_pedido_de_outro_cliente_nao_e_avaliado(conexao):
-    # O pedido 7 pertence ao cliente 14.
+    # Order 7 belongs to customer 14.
     veredito = avaliar_devolucao(
         conexao, cliente_id=2, numero=7, motivo="defeito", canal=None, hoje=date(2026, 3, 25),
     )
@@ -127,7 +127,7 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
 def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com_qualquer_canal(
     conexao, canal
 ):
-    # O pedido 7 pertence ao cliente 14, e o pedido 999 não existe.
+    # Order 7 belongs to customer 14, and order 999 does not exist.
     for numero in (7, 999):
         veredito = avaliar_devolucao(
             conexao, cliente_id=2, numero=numero, motivo="arrependimento", canal=canal,
@@ -139,7 +139,7 @@ def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com
 
 
 def test_pedido_enviado_com_entrega_estimada_futura_avisa_que_o_prazo_conta_do_recebimento(conexao):
-    # Pedido 8 (cliente 2): enviado, entrega estimada em 28/02/2026.
+    # Order 8 (customer 2): shipped, estimated delivery on 28/02/2026.
     veredito = avaliar_devolucao(
         conexao, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
         hoje=date(2026, 2, 20),

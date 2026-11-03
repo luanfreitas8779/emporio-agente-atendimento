@@ -21,7 +21,7 @@ def test_crafter_ht_100_mostra_preco_original_desconto_e_preco_final(conexao):
 
 
 def test_promocao_inativa_nao_gera_desconto(conexao):
-    # A promoção "Black Friday" de 10% do Crafter CE-15 está inativa.
+    # The Crafter CE-15's 10% "Black Friday" promotion is inactive.
     (produto,) = buscar_produtos(conexao, termo="Crafter CE-15")
 
     assert produto.desconto_percentual is None
@@ -59,7 +59,7 @@ def test_descontinuado_com_estoque_continua_fora_de_catalogo(conexao):
 
 
 def test_produto_em_lancamento_nao_tem_disponibilidade_confirmada(conexao):
-    # O Kala tem estoque 2, mas o status é coming_soon.
+    # The Kala has stock 2, but its status is coming_soon.
     (kala,) = buscar_produtos(conexao, termo="Kala KA-ABP-CTG")
 
     assert kala.disponibilidade == "lancamento"
@@ -72,7 +72,7 @@ def test_limita_a_busca_pelo_preco_maximo(conexao):
 
 
 def test_preco_maximo_considera_o_preco_final_da_promocao(conexao):
-    # O Ohana CK-20 custa R$ 549,00, mas está com 20% de desconto: R$ 439,20.
+    # The Ohana CK-20 costs R$ 549,00, but has a 20% discount: R$ 439,20.
     nomes = [p.nome for p in buscar_produtos(conexao, categoria="ukuleles", preco_maximo=450)]
 
     assert "Ohana CK-20 Concert Natural" in nomes
@@ -170,7 +170,7 @@ def test_categoria_sem_produtos_nao_retorna_resultados(conexao):
 
 @pytest.mark.regressao
 def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(conexao):
-    # 4.35 * 100 vale 434.99999999999994 em ponto flutuante.
+    # 4.35 * 100 is 434.99999999999994 in floating point.
     conexao.execute(
         "INSERT INTO products VALUES (9001, 'Produto Limite', 5, 435, 1, 'active', '{}')"
     )
@@ -208,7 +208,7 @@ def test_categoria_inexistente_nao_encontra_produtos(conexao):
 
 @pytest.mark.regressao
 def test_busca_tolera_letra_a_menos_no_nome(conexao):
-    # Validação da issue #7: "gianini gf 3d" não encontrava o Giannini GF-3D.
+    # Issue #7 validation: "gianini gf 3d" did not find the Giannini GF-3D.
     (produto,) = buscar_produtos(conexao, termo="gianini gf 3d")
 
     assert produto.nome == "Giannini GF-3D Dreadnought Sunburst"
@@ -255,7 +255,7 @@ def test_bateria_traz_ferragens_incluidas_em_portugues(conexao):
 
 @pytest.mark.regressao
 def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conexao):
-    # Descrição e especificações do id 137 discordam (DQ-05): o dado não é confiável.
+    # The description and specifications of id 137 disagree (DQ-05): the data is not reliable.
     produto = buscar_produtos(conexao, termo="Yamaha Bass 3X")[0]
 
     assert "cordas" not in produto.especificacoes
@@ -264,7 +264,7 @@ def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conex
 
 @pytest.mark.regressao
 def test_informa_se_o_estoque_atende_a_quantidade_sem_revelar_o_numero(conexao):
-    # Yamaha C40 tem 12 unidades em estoque.
+    # The Yamaha C40 has 12 units in stock.
     atende = buscar_produtos(conexao, termo="Yamaha C40", quantidade=10)[0]
     nao_atende = buscar_produtos(conexao, termo="Yamaha C40", quantidade=13)[0]
     sem_pedido = buscar_produtos(conexao, termo="Yamaha C40")[0]
@@ -276,7 +276,7 @@ def test_informa_se_o_estoque_atende_a_quantidade_sem_revelar_o_numero(conexao):
 
 
 def test_produto_fora_de_catalogo_nunca_atende_a_quantidade_mesmo_com_estoque(conexao):
-    # Ibanez Bass 2X (id 136) está descontinuado e tem 13 unidades (DQ-02).
+    # Ibanez Bass 2X (id 136) is discontinued and has 13 units (DQ-02).
     produto = buscar_produtos(conexao, termo="Ibanez Bass 2X", quantidade=2)[0]
 
     assert produto.atende_quantidade is False
@@ -284,7 +284,7 @@ def test_produto_fora_de_catalogo_nunca_atende_a_quantidade_mesmo_com_estoque(co
 
 @pytest.mark.regressao
 def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(conexao):
-    # "Yamha" não é trecho de "Yamaha": só a busca aproximada o encontra.
+    # "Yamha" is not a substring of "Yamaha": only the fuzzy search finds it.
     (disponivel,) = buscar_produtos(conexao, termo="Yamha C40", somente_disponiveis=True, quantidade=10)
     (sem_estoque,) = buscar_produtos(conexao, termo="Yamha C40", quantidade=13)
 

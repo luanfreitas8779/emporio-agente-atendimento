@@ -34,7 +34,7 @@ def test_cliente_2_consulta_o_pedido_8_com_status_e_rastreio(conexao):
 
 
 def test_pedido_de_outro_cliente_e_tratado_como_nao_encontrado(conexao):
-    # O pedido 5 pertence ao cliente 5.
+    # Order 5 belongs to customer 5.
     assert consultar_pedidos(conexao, cliente_id=2, numero=5) == []
 
 
@@ -53,7 +53,7 @@ def test_pedido_mostra_itens_data_e_pagamento(conexao):
 
 
 def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(conexao):
-    # Pedido 3: 2 x R$ 1.749,00 somam R$ 3.498,00, mas o total registrado é R$ 3.450,00.
+    # Order 3: 2 x R$ 1.749,00 add up to R$ 3.498,00, but the recorded total is R$ 3.450,00.
     (pedido,) = consultar_pedidos(conexao, cliente_id=12, numero=3)
 
     assert pedido.total == "R$ 3.450,00"
@@ -100,7 +100,7 @@ def test_pedido_traz_a_situacao_traduzida_em_codigo(conexao, cliente, numero, si
 
 @pytest.mark.regressao
 def test_pedido_enviado_depois_da_entrega_estimada_informa_os_dias_de_atraso(conexao):
-    # Pedido 8: enviado, entrega estimada em 28/02/2026 (DQ-16).
+    # Order 8: shipped, estimated delivery on 28/02/2026 (DQ-16).
     (pedido,) = consultar_pedidos(conexao, cliente_id=2, numero=8, hoje=date(2026, 3, 25))
 
     assert pedido.atraso == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."

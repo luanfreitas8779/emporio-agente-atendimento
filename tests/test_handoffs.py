@@ -72,7 +72,7 @@ def test_resumo_acima_de_500_caracteres_e_cortado(conexao):
 
 @pytest.fixture
 def relogio(monkeypatch):
-    """Relógio controlado: `relogio.em(minutos)` fixa o instante do próximo registro."""
+    """Controlled clock: `relogio.em(minutos)` sets the moment of the next registration."""
     inicio = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
 
     class Relogio:

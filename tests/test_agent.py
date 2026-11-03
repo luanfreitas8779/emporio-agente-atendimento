@@ -166,7 +166,7 @@ def test_agente_recusa_secao_fora_da_lista_e_o_modelo_tenta_de_novo(conexao):
 
 
 def modelo_que_chama(ferramenta: str, argumentos: dict, capturados: list):
-    """Chama a ferramenta uma vez e guarda o retorno, sem depender do texto dele."""
+    """Calls the tool once and stores the result, without depending on its text."""
 
     def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         if len(mensagens) == 1:
@@ -210,7 +210,7 @@ def test_sessao_sem_telefone_tambem_nao_consulta_pedidos(conexao):
 
 
 def test_pedido_de_outro_cliente_volta_vazio_para_o_agente(conexao):
-    # O pedido 5 pertence ao cliente 5.
+    # Order 5 belongs to customer 5.
     retorno = chamar_ferramenta(conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 5})
 
     assert retorno.content == []
@@ -218,12 +218,12 @@ def test_pedido_de_outro_cliente_volta_vazio_para_o_agente(conexao):
 
 @pytest.mark.regressao
 def test_mensagem_nao_consegue_trocar_o_cliente_consultado(conexao):
-    # O pedido 4 é do cliente 1; a sessão é da cliente 2.
+    # Order 4 belongs to customer 1; the session belongs to customer 2.
     retorno = chamar_ferramenta(
         conexao, ANA, "consultar_meus_pedidos", {"numero_pedido": 4, "customer_id": 1}
     )
 
-    # O argumento extra é recusado e nenhum pedido chega a ser consultado.
+    # The extra argument is rejected and no order is looked up.
     assert retorno.outcome == "retried"
     assert retorno.content[0]["type"] == "extra_forbidden"
 
@@ -251,7 +251,7 @@ def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(conexao):
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Oi!", sessao)
 
-    # A fonte dos valores é o CSV, não o código sob teste.
+    # The source of the values is the CSV, not the code under test.
     for cliente in ler_csv(PASTA_DADOS / "customers.csv"):
         assert cliente["email"] not in instrucoes
         assert cliente["phone"] not in instrucoes
@@ -345,7 +345,7 @@ def test_nova_sessao_com_o_mesmo_telefone_recupera_a_conversa(conexao, tmp_path)
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
         responder("Quero um violão", Sessao(conexao, telefone=ANA))
 
-        # Outra conexão ao mesmo arquivo equivale a reiniciar a aplicação.
+        # Another connection to the same file is equivalent to restarting the application.
         nova = conectar(tmp_path / "teste.db")
         try:
             resposta = responder("Chegou?", Sessao(nova, telefone="67996547821"))
@@ -383,7 +383,7 @@ def modelo_que_consulta_o_horario_e_lista_as_perguntas(
 
 @pytest.mark.regressao
 def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(conexao, monkeypatch):
-    # Um limite pequeno força o corte no meio de um turno com ferramenta.
+    # A small limit forces the cut in the middle of a turn with a tool.
     monkeypatch.setattr("src.memory.MAX_MENSAGENS_NO_HISTORICO", 7)
     sessao = Sessao(conexao, telefone=ANA)
 
@@ -394,7 +394,7 @@ def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno
             responder(pergunta, sessao)
         resposta = responder("P4", sessao)
 
-    # Cada turno com ferramenta tem 4 mensagens: caberia só um turno inteiro em 7.
+    # Each turn with a tool has 4 messages: only one whole turn would fit in 7.
     assert resposta == "P3 | P4"
 
 
@@ -426,8 +426,8 @@ def test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior(conexao):
 def modelo_que_inventa_um_preco_ate_a_pergunta_seguinte(
     mensagens: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    # A correção pedida pela guarda também chega como fala do cliente, por isso
-    # o modelo insiste enquanto a pergunta seguinte ainda não apareceu.
+    # The correction requested by the guardrail also arrives as a customer message, so
+    # the model insists while the next question has not appeared yet.
     perguntas = [
         parte.content
         for mensagem in mensagens
@@ -615,7 +615,7 @@ def test_ferramenta_de_devolucao_usa_o_pedido_do_cliente_e_a_data_da_sessao(cone
 
 @pytest.mark.regressao
 def test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal(conexao):
-    # O modelo supôs "online"; o cliente disse só o motivo.
+    # The model assumed "online"; the customer only gave the reason.
     retorno = chamar_ferramenta_na_data(
         conexao, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
         {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
@@ -637,7 +637,7 @@ def test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado(conexao):
 
 
 def test_devolucao_de_pedido_de_outro_cliente_volta_como_nao_encontrado(conexao):
-    # O pedido 7 é da cliente 14; a sessão é da cliente 2.
+    # Order 7 belongs to customer 14; the session belongs to customer 2.
     retorno = chamar_ferramenta(
         conexao, ANA, "avaliar_devolucao", {"numero_pedido": 7, "motivo": "defeito"}
     )
@@ -689,7 +689,7 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
         responder("Quero devolver", sessao)
         instrucoes = responder("Foi online", sessao)
 
-    # A pergunta do Tom fica só no histórico; o estado guarda apenas o pedido em análise.
+    # Tom's question stays only in the history; the state keeps only the order under review.
     assert "Pergunta pendente" not in instrucoes
     assert "Pedido em análise: 7" in instrucoes
 
@@ -701,7 +701,7 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
 ])
 @pytest.mark.regressao
 def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(conexao, argumentos):
-    # O pedido 7 é da cliente 14; a sessão é da cliente 2 (Ana). O 999 não existe.
+    # Order 7 belongs to customer 14; the session belongs to customer 2 (Ana). Order 999 does not exist.
     sessao = Sessao(conexao, telefone=ANA)
     modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos)
 
@@ -752,7 +752,7 @@ def test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone(conexao):
 
 
 def modelo_que_retoma_o_interesse(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    """Lê o nome do interesse no contexto e consulta o catálogo, como manda o prompt."""
+    """Reads the interest's name in the context and looks up the catalog, as the prompt says."""
     if len(mensagens) == 1:
         nome = info.instructions.split("Interesses pendentes: ")[1].split(".")[0].split(";")[0]
         return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"termo": nome})])
@@ -1178,7 +1178,7 @@ def test_turno_com_varias_rodadas_de_ferramenta_continua_no_historico(conexao):
         responder("Longa", sessao)
         resposta = responder("P2", sessao)
 
-    # O turno "Longa" tem 8 mensagens (fala, 3 chamadas, 3 retornos, resposta).
+    # The "Longa" turn has 8 messages (message, 3 calls, 3 results, answer).
     assert resposta == "Longa | P2"
 
 
@@ -1191,7 +1191,7 @@ def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(con
             responder(f"P{numero}", sessao)
         resposta = responder("P17", sessao)
 
-    # Cada turno simples tem 2 mensagens: 15 turnos cabem em 30, e o P1 não.
+    # Each simple turn has 2 messages: 15 turns fit in 30, and P1 does not.
     assert resposta == " | ".join(f"P{numero}" for numero in range(2, 18))
 
 
@@ -1274,7 +1274,7 @@ def test_calcula_o_total_no_pix_e_a_economia(conexao):
 
 @pytest.mark.regressao
 def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(conexao):
-    # O PIX não soma à promoção: o Crafter HT-100 custa o mesmo no PIX.
+    # PIX does not stack with the promotion: the Crafter HT-100 costs the same with PIX.
     resultado = conta_pela_ferramenta(conexao, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
     assert resultado.total == "R$ 2.567,08"
@@ -1397,7 +1397,7 @@ def test_conta_sem_promocao_nao_traz_observacao_do_pix(conexao):
 
 @pytest.mark.regressao
 def test_quantidade_acima_do_estoque_traz_aviso_na_conta(conexao):
-    # O Yamaha C40 tem 12 unidades, mas o número do estoque não é exposto.
+    # The Yamaha C40 has 12 units, but the stock number is not exposed.
     resultado = conta_pela_ferramenta(conexao, ("Yamaha C40", 13))
 
     assert resultado.aviso == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."

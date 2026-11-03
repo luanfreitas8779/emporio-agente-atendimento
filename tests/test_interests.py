@@ -34,7 +34,7 @@ def test_telefone_invalido_nao_grava_interesse(conexao, telefone):
 def test_repetir_o_pedido_nao_duplica_o_interesse(conexao):
     registrar(conexao, TELEFONE, GIANNINI_GF_3D)
 
-    # Outra formatação do mesmo telefone é o mesmo cliente.
+    # Another formatting of the same phone number is the same customer.
     resultado = registrar(conexao, "67996547821", GIANNINI_GF_3D)
 
     assert resultado == Resultado.JA_REGISTRADO

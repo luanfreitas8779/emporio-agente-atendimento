@@ -7,7 +7,7 @@ from src.memory import Estado, carregar_estado, criar_tabelas, salvar_estado
 
 TELEFONE = "67996547821"
 
-# Esquemas de conversation_state criados em versões anteriores do projeto.
+# conversation_state schemas created in previous versions of the project.
 ESQUEMA_COM_COLUNA_ANTIGA = """
 CREATE TABLE conversation_state (
     phone TEXT PRIMARY KEY,

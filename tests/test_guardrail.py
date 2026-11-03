@@ -12,7 +12,7 @@ ANA = "(67) 99654-7821"
 
 
 def modelo_com_respostas(ferramenta, argumentos, respostas, chamadas=None):
-    """Chama a ferramenta (se houver) e depois devolve as respostas, uma por vez."""
+    """Calls the tool (if any) and then returns the answers, one at a time."""
     restantes = iter(respostas)
 
     def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -57,7 +57,7 @@ def test_resposta_com_preco_correto_nao_pede_correcao(conexao):
     )
 
     assert resposta == "O Takamine custa R$ 2.199,00."
-    assert len(chamadas) == 2  # a chamada da ferramenta e a resposta final
+    assert len(chamadas) == 2  # the tool call and the final answer
 
 
 def test_preco_inventado_persistente_vira_resposta_segura(conexao):
@@ -104,7 +104,7 @@ def test_rastreio_data_e_percentual_inventados_sao_corrigidos(
 
 
 def test_valor_em_reais_citado_pelo_proprio_cliente_nao_e_confirmado(conexao):
-    # O cliente pode ditar um preço; só o retorno das ferramentas confirma dinheiro (ADR-013).
+    # The customer may state a price; only the tool results confirm money (ADR-013).
     repeticao = "Sobre os R$ 500,00 que você mencionou, vou consultar."
     resposta = perguntar(conexao, "Posso pagar R$ 500,00 à vista?", None, None, [repeticao] * 3)
 
@@ -131,7 +131,7 @@ def test_resposta_sem_valores_passa_sem_ferramenta(conexao):
 
 @pytest.mark.regressao
 def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
-    # "18.5%" virava 185 ao tirar o ponto como se fosse separador de milhar.
+    # "18.5%" became 185 when the period was removed as if it were a thousands separator.
     assert valores_nao_confirmados("São 185% de desconto.", ["Desconto de 18.5%."]) == ["185"]
     assert valores_nao_confirmados("São 18.5% de desconto.", ["Desconto de 18,5%."]) == []
 
@@ -308,7 +308,7 @@ def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(conexao):
     ],
 )
 def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta):
-    # Formatos diferentes dos do arquivo (9h x 09:00, telefone sem DDD) contra data/politicas.md.
+    # Formats different from the file's (9h x 09:00, phone without area code) against data/politicas.md.
     politica = (PASTA_DADOS / "politicas.md").read_text(encoding="utf-8")
 
     assert valores_nao_confirmados(resposta, [politica]) == []
@@ -340,7 +340,7 @@ def test_data_curta_sem_ano_e_conferida_contra_as_datas_das_fontes():
 
     assert valores_nao_confirmados("Chega em 15/12.", [fonte]) == []
     assert valores_nao_confirmados("Chega em 20/12.", [fonte]) == ["20/12"]
-    # A data completa continua sendo conferida como data, não como "dia/mês".
+    # The full date is still checked as a date, not as "day/month".
     assert valores_nao_confirmados("Chega em 15/12/2026.", [fonte]) == []
 
 
@@ -502,5 +502,5 @@ def test_limite_da_busca_so_confirma_o_valor_dito_como_limite():
 def test_numero_do_cliente_e_quantidade_da_busca_nao_confirmam_estoque():
     assert valores_nao_confirmados("Restam 3 no estoque.", [], ["Tem 3?"]) == ["3"]
     assert valores_nao_confirmados("Temos 3 em estoque.", ['{"quantidade": 3}'], ["Preciso de 3 unidades"]) == ["3"]
-    # Quantidade pedida continua podendo ser repetida.
+    # A requested quantity can still be repeated.
     assert valores_nao_confirmados("Consigo atender 3 unidades.", [], ["Tem 3?"]) == []

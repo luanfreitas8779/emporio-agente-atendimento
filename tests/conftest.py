@@ -6,7 +6,7 @@ from pydantic_ai import models
 from src.database import conectar
 from src.load_data import carregar_dados
 
-# Garante que nenhum teste automático chame o Gemini de verdade.
+# Ensures that no automated test calls the real Gemini model.
 models.ALLOW_MODEL_REQUESTS = False
 
 PASTA_DADOS = Path(__file__).parent.parent / "data"
@@ -14,7 +14,7 @@ PASTA_DADOS = Path(__file__).parent.parent / "data"
 
 @pytest.fixture(autouse=True)
 def log_de_limites_temporario(tmp_path, monkeypatch):
-    """Nenhum teste grava no registro de limites do ambiente local."""
+    """No test writes to the local environment's limit log."""
     caminho = tmp_path / "limites_provedor.log"
     monkeypatch.setattr("src.config.CAMINHO_LOG_DE_LIMITES", caminho)
     return caminho

@@ -35,7 +35,7 @@ def test_recusa_quantidade_menor_que_um(conexao, quantidade):
     assert produto.disponibilidade == "indisponivel"
 
 
-@pytest.mark.parametrize("produto", [130, 136])  # lançamento e fora de catálogo
+@pytest.mark.parametrize("produto", [130, 136])  # new release and discontinued
 def test_recusa_produto_que_nao_esta_ativo(conexao, produto):
     with pytest.raises(ErroDeReposicao, match="ativo"):
         repor_estoque(conexao, produto, 5)

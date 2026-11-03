@@ -41,7 +41,7 @@ def limite_atingido(retry_after: float | None = None) -> ModelRateLimitError:
 
 
 def modelo_que_falha_antes_de_responder(falhas: list[Exception], tentativas: list[int]):
-    """Levanta cada erro da lista, um por chamada, e depois responde."""
+    """Raises each error in the list, one per call, and then answers."""
 
     def modelo(mensagens, info):
         tentativas.append(1)
@@ -215,7 +215,7 @@ def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
 
 
 def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(conexao, esperas, tmp_path, monkeypatch):
-    # Um diretório no lugar do arquivo faz a gravação falhar.
+    # A directory in place of the file makes the write fail.
     monkeypatch.setattr("src.config.CAMINHO_LOG_DE_LIMITES", tmp_path)
     modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
 
@@ -281,7 +281,7 @@ def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(co
 
 
 def limite_do_provedor(cota: str, retry_delay: str | None = None) -> ModelRateLimitError:
-    """429 no formato do Gemini: a violação de cota e, às vezes, o RetryInfo."""
+    """429 in the Gemini format: the quota violation and, sometimes, the RetryInfo."""
     detalhes = [{"violations": [{"quotaId": cota, "quotaValue": "15"}]}]
     if retry_delay:
         detalhes.append({"retryDelay": retry_delay})

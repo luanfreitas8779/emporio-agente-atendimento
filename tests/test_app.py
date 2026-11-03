@@ -22,8 +22,8 @@ def tela(conexao, tmp_path, monkeypatch):
 
 
 def test_pergunta_fica_pendente_enquanto_o_tom_responde(tela, monkeypatch):
-    # O campo só fica desabilitado enquanto há pergunta pendente (ADR-020). O AppTest não
-    # observa o `disabled` durante a execução; isso é conferido no navegador (docs/05, seção 8).
+    # The field is only disabled while there is a pending question (ADR-020). AppTest does not
+    # observe `disabled` during the run; this is checked in the browser (docs/05, section 8).
     durante: list = []
 
     def responder_observando(mensagem, sessao):
@@ -48,7 +48,7 @@ def test_depois_da_resposta_o_campo_libera_e_a_conversa_tem_uma_resposta(tela):
 
 
 def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, monkeypatch):
-    # Trocar o telefone durante a resposta não pode passar a pergunta para outro cliente (ADR-009).
+    # Changing the phone number during the answer cannot hand the question to another customer (ADR-009).
     telefones: list = []
 
     def responder_observando(mensagem, sessao):
@@ -89,7 +89,7 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
 
 @pytest.mark.regressao
 def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
-    # Abrir o banco para a sessão é a parte que falha; a verificação inicial da tela já passou.
+    # Opening the database for the session is the part that fails; the screen's initial check already passed.
     def sessao_com_falha(*argumentos, **nomeados):
         raise OSError("disco indisponível")
 
@@ -233,7 +233,7 @@ def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(
 
 @pytest.mark.regressao
 def test_configuracao_do_streamlit_esconde_as_opcoes_de_desenvolvedor_do_cliente():
-    # O AppTest não renderiza a barra do navegador: o que se confere é a configuração (docs/05, seção 8).
+    # AppTest does not render the browser bar: what is checked is the configuration (docs/05, section 8).
     configuracao = tomllib.loads((Path(APP).parent / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
 
     assert configuracao["client"]["toolbarMode"] == "viewer"
