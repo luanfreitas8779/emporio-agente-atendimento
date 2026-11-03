@@ -13,15 +13,15 @@ class ErroDeReposicao(ValueError):
 
 def repor_estoque(conexao: sqlite3.Connection, product_id: int, quantidade: int) -> None:
     if quantidade < 1:
-        raise ErroDeReposicao("A quantidade deve ser maior que zero.")
+        raise ErroDeReposicao("The quantity must be greater than zero.")
     produto = conexao.execute(
         "SELECT status FROM products WHERE product_id = ?", (product_id,)
     ).fetchone()
     if produto is None:
-        raise ErroDeReposicao(f"Produto {product_id} inexistente.")
+        raise ErroDeReposicao(f"Product {product_id} does not exist.")
     # The status takes precedence over the stock: restocking another status does not change availability.
     if produto["status"] != "active":
-        raise ErroDeReposicao(f"O produto {product_id} não está ativo; a reposição não teria efeito.")
+        raise ErroDeReposicao(f"Product {product_id} is not active; restocking would have no effect.")
     conexao.execute(
         "UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_id = ?",
         (quantidade, product_id),
@@ -31,16 +31,16 @@ def repor_estoque(conexao: sqlite3.Connection, product_id: int, quantidade: int)
 
 def principal(argumentos: list[str] | None = None) -> int:
     analisador = argparse.ArgumentParser(
-        description="Simula a reposição de estoque no banco local, sem alterar os arquivos de origem."
+        description="Simulates a stock restock in the local database, without changing the source files."
     )
-    analisador.add_argument("produto", type=int, help="id do produto")
+    analisador.add_argument("produto", type=int, help="product id")
     analisador.add_argument("--quantidade", type=int, default=5)
     analisador.add_argument("--banco", default=str(CAMINHO_BANCO))
     escolhidos = analisador.parse_args(argumentos)
 
     if not Path(escolhidos.banco).exists():
         print(
-            f"Banco não encontrado em {escolhidos.banco}. Rode: python -m src.load_data",
+            f"Database not found at {escolhidos.banco}. Run: python -m src.load_data",
             file=sys.stderr,
         )
         return 1
@@ -48,12 +48,12 @@ def principal(argumentos: list[str] | None = None) -> int:
     try:
         repor_estoque(conexao, escolhidos.produto, escolhidos.quantidade)
     except ErroDeReposicao as erro:
-        print(f"Reposição recusada: {erro}", file=sys.stderr)
+        print(f"Restock rejected: {erro}", file=sys.stderr)
         return 1
     finally:
         conexao.close()
     print(
-        f"Reposição simulada: +{escolhidos.quantidade} unidades no produto {escolhidos.produto}. "
-        "Para voltar ao estado original, rode: python -m src.load_data"
+        f"Simulated restock: +{escolhidos.quantidade} units of product {escolhidos.produto}. "
+        "To return to the original state, run: python -m src.load_data"
     )
     return 0

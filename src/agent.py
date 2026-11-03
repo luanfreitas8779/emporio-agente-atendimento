@@ -687,7 +687,7 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
         )
     except Exception:
         # If the database is the cause of the failure, the customer still gets the message.
-        registro.exception("Não foi possível guardar a conversa")
+        registro.exception("Could not store the conversation")
     return texto
 
 
@@ -706,7 +706,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         try:
             limits.registrar_limite(erro)
         except OSError:
-            registro.exception("Não foi possível registrar o limite do provedor")
+            registro.exception("Could not log the provider limit")
         # Exhausted quota is not solved by waiting: there is no retry, only the same message.
         # Exhausted quota also only comes back the next day.
         diario = isinstance(erro, ModelQuotaExceededError) or limits.e_limite_diario(erro)
@@ -726,7 +726,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
                 mensagem,
             )
         except sqlite3.Error:
-            registro.exception("Não foi possível registrar o encaminhamento")
+            registro.exception("Could not register the handoff")
             resultado = None
         # The text only claims the registration when it exists.
         resposta = {
@@ -740,5 +740,5 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     except Exception:
         # Network, key, provider, database, or unexpected error: the details go to the log,
         # and the customer gets the technical message so that the message field is enabled again.
-        registro.exception("Falha técnica ao responder")
+        registro.exception("Technical failure while answering")
         return _responder_sem_modelo(mensagem, sessao, MENSAGEM_DE_ERRO_TECNICO)

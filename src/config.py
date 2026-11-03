@@ -21,4 +21,4 @@ def data_de_referencia() -> date:
     try:
         return date.fromisoformat(texto)
     except ValueError as erro:
-        raise ValueError(f"DATA_DE_REFERENCIA inválida: use o formato AAAA-MM-DD, não {texto!r}.") from erro
+        raise ValueError(f"Invalid DATA_DE_REFERENCIA: use the YYYY-MM-DD format, not {texto!r}.") from erro

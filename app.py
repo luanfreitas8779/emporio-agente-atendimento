@@ -60,7 +60,7 @@ try:
     finally:
         _conexao.close()
 except (OSError, sqlite3.Error):
-    logging.getLogger(__name__).exception("Não foi possível abrir o banco de dados")
+    logging.getLogger(__name__).exception("Could not open the database")
     st.error("Não foi possível abrir o banco de dados. Verifique o arquivo e reinicie o app.")
     st.stop()
 if not _carregado:
@@ -133,7 +133,7 @@ if pendente is not None:
                 resposta = responder(pendente["pergunta"], sessao)
         except Exception:
             # Without this the traceback would reach the customer and the field would stay locked (ADR-020).
-            logging.getLogger(__name__).exception("Falha ao responder na tela")
+            logging.getLogger(__name__).exception("Failed to answer on the screen")
             resposta = MENSAGEM_DE_ERRO_TECNICO
         # If the screen's phone number changed, the answer was already stored for whoever asked and
         # must not appear in another number's conversation.

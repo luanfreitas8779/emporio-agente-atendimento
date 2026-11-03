@@ -54,7 +54,7 @@ def valor_da_parcela(valor_em_centavos: int, parcelas: int) -> str:
 
 def descrever_parcelamento(valor: float, parcelas: int | None) -> str:
     if valor <= 0 or (parcelas is not None and parcelas < 1):
-        raise ValueError("O valor e o número de parcelas devem ser positivos.")
+        raise ValueError("The amount and the number of installments must be positive.")
     centavos = int((Decimal(str(valor)) * 100).quantize(Decimal(1), ROUND_HALF_UP))
     maximo = max(
         (n for n in range(1, MAXIMO_DE_PARCELAS + 1) if n == 1 or atende_parcela_minima(centavos, n)),
@@ -80,7 +80,7 @@ def consultar_politicas(
     secao: str, valor: float | None = None, parcelas: int | None = None
 ) -> str:
     if secao not in SECOES:
-        raise ValueError(f"Seção desconhecida: {secao}. Use uma de {', '.join(SECOES)}.")
+        raise ValueError(f"Unknown section: {secao}. Use one of {', '.join(SECOES)}.")
     texto = ler_secoes(ARQUIVO_POLITICAS)[secao]
     if secao == "pagamentos" and valor is not None:
         texto += "\n\nCálculo para esta compra:\n" + descrever_parcelamento(valor, parcelas)

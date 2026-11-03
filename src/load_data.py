@@ -90,7 +90,7 @@ def para_centavos(valor: str) -> int:
 
 def rejeitar_duplicado(rotulo: str, identificador: str, vistos: set[str]) -> None:
     if identificador in vistos:
-        raise ErroDeCarga(f"{rotulo} {identificador}: id duplicado")
+        raise ErroDeCarga(f"{rotulo} {identificador}: duplicate id")
     vistos.add(identificador)
 
 
@@ -103,9 +103,9 @@ def preparar_produto(
     produto: dict[str, str], categorias: set[str], vistos: set[str]
 ) -> tuple:
     identificador = produto["product_id"]
-    rejeitar_duplicado("produto", identificador, vistos)
+    rejeitar_duplicado("product", identificador, vistos)
     if produto["category_id"] not in categorias:
-        raise ErroDeCarga(f"produto {identificador}: categoria inexistente")
+        raise ErroDeCarga(f"product {identificador}: nonexistent category")
     try:
         registro = (
             int(identificador),
@@ -117,9 +117,9 @@ def preparar_produto(
             produto["specs"],
         )
     except (ValueError, ArithmeticError) as erro:
-        raise ErroDeCarga(f"produto {identificador}: valor inválido") from erro
+        raise ErroDeCarga(f"product {identificador}: invalid value") from erro
     if registro[4] < 0 or registro[5] not in STATUS_DE_PRODUTO:
-        raise ErroDeCarga(f"produto {identificador}: valor inválido")
+        raise ErroDeCarga(f"product {identificador}: invalid value")
     return registro
 
 
@@ -127,9 +127,9 @@ def preparar_promocao(
     promocao: dict[str, str], produtos: set[str], vistos: set[str]
 ) -> tuple:
     identificador = promocao["promotion_id"]
-    rejeitar_duplicado("promoção", identificador, vistos)
+    rejeitar_duplicado("promotion", identificador, vistos)
     if promocao["product_id"] not in produtos:
-        raise ErroDeCarga(f"promoção {identificador}: produto inexistente")
+        raise ErroDeCarga(f"promotion {identificador}: nonexistent product")
     try:
         registro = (
             int(identificador),
@@ -139,9 +139,9 @@ def preparar_promocao(
             int(promocao["is_active"]),
         )
     except ValueError as erro:
-        raise ErroDeCarga(f"promoção {identificador}: valor inválido") from erro
+        raise ErroDeCarga(f"promotion {identificador}: invalid value") from erro
     if not 0 <= registro[2] <= 100 or registro[4] not in (0, 1):
-        raise ErroDeCarga(f"promoção {identificador}: valor inválido")
+        raise ErroDeCarga(f"promotion {identificador}: invalid value")
     return registro
 
 
@@ -185,16 +185,16 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
 
 def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[str]) -> tuple:
     identificador = cliente["customer_id"]
-    rejeitar_duplicado("cliente", identificador, vistos)
+    rejeitar_duplicado("customer", identificador, vistos)
     try:
         numero = int(identificador)
     except ValueError as erro:
-        raise ErroDeCarga(f"cliente {identificador}: valor inválido") from erro
+        raise ErroDeCarga(f"customer {identificador}: invalid value") from erro
     telefone = normalizar_telefone(cliente["phone"])
     if telefone is None or not cliente["name"].strip():
-        raise ErroDeCarga(f"cliente {identificador}: valor inválido")
+        raise ErroDeCarga(f"customer {identificador}: invalid value")
     if telefone in telefones:
-        raise ErroDeCarga(f"cliente {identificador}: telefone duplicado")
+        raise ErroDeCarga(f"customer {identificador}: duplicate phone number")
     telefones.add(telefone)
     # E-mail and city are not loaded: the agent does not need them (privacy).
     return (numero, cliente["name"].strip(), telefone)
@@ -214,17 +214,17 @@ def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
 
 def preparar_pedido(pedido: dict[str, str], clientes: set[int], vistos: set[str]) -> tuple:
     identificador = pedido["order_id"]
-    rejeitar_duplicado("pedido", identificador, vistos)
+    rejeitar_duplicado("order", identificador, vistos)
     try:
         cliente = int(pedido["customer_id"])
         total = para_centavos(pedido["total_brl"])
         numero = int(identificador)
     except (ValueError, ArithmeticError) as erro:
-        raise ErroDeCarga(f"pedido {identificador}: valor inválido") from erro
+        raise ErroDeCarga(f"order {identificador}: invalid value") from erro
     if pedido["status"] not in STATUS_DE_PEDIDO or not pagamento_valido(pedido["payment_method"]):
-        raise ErroDeCarga(f"pedido {identificador}: valor inválido")
+        raise ErroDeCarga(f"order {identificador}: invalid value")
     if cliente not in clientes:
-        raise ErroDeCarga(f"pedido {identificador}: cliente inexistente")
+        raise ErroDeCarga(f"order {identificador}: nonexistent customer")
     return (
         numero,
         cliente,
@@ -246,13 +246,13 @@ def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -
             int(item["quantity"]),
         )
     except ValueError as erro:
-        raise ErroDeCarga(f"item do pedido {identificador}: valor inválido") from erro
+        raise ErroDeCarga(f"order item {identificador}: invalid value") from erro
     if quantidade < 1:
-        raise ErroDeCarga(f"item do pedido {identificador}: valor inválido")
+        raise ErroDeCarga(f"order item {identificador}: invalid value")
     if numero not in pedidos:
-        raise ErroDeCarga(f"item do pedido {identificador}: pedido inexistente")
+        raise ErroDeCarga(f"order item {identificador}: nonexistent order")
     if produto not in produtos:
-        raise ErroDeCarga(f"item do pedido {identificador}: produto inexistente")
+        raise ErroDeCarga(f"order item {identificador}: nonexistent product")
     return (numero, produto, quantidade)
 
 
@@ -312,4 +312,4 @@ if __name__ == "__main__":
     conexao = conectar(CAMINHO_BANCO)
     carregar_dados(conexao, PASTA_DADOS)
     conexao.close()
-    print(f"Banco criado em {CAMINHO_BANCO}")
+    print(f"Database created at {CAMINHO_BANCO}")

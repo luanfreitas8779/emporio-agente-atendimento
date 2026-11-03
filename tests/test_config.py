@@ -20,5 +20,5 @@ def test_data_de_referencia_pode_ser_configurada_pelo_ambiente(monkeypatch):
 def test_data_de_referencia_invalida_informa_o_formato_esperado(monkeypatch):
     monkeypatch.setenv("DATA_DE_REFERENCIA", "10/04/2026")
 
-    with pytest.raises(ValueError, match="AAAA-MM-DD"):
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
         data_de_referencia()

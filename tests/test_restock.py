@@ -22,13 +22,13 @@ def test_reposicao_deixa_o_giannini_gf_3d_disponivel_sem_alterar_a_origem(conexa
 
 
 def test_recusa_produto_inexistente(conexao):
-    with pytest.raises(ErroDeReposicao, match="inexistente"):
+    with pytest.raises(ErroDeReposicao, match="does not exist"):
         repor_estoque(conexao, 99999, 5)
 
 
 @pytest.mark.parametrize("quantidade", [0, -3])
 def test_recusa_quantidade_menor_que_um(conexao, quantidade):
-    with pytest.raises(ErroDeReposicao, match="quantidade"):
+    with pytest.raises(ErroDeReposicao, match="quantity"):
         repor_estoque(conexao, GIANNINI_GF_3D, quantidade)
 
     (produto,) = buscar_produtos(conexao, "Giannini GF-3D")
@@ -37,7 +37,7 @@ def test_recusa_quantidade_menor_que_um(conexao, quantidade):
 
 @pytest.mark.parametrize("produto", [130, 136])  # new release and discontinued
 def test_recusa_produto_que_nao_esta_ativo(conexao, produto):
-    with pytest.raises(ErroDeReposicao, match="ativo"):
+    with pytest.raises(ErroDeReposicao, match="not active"):
         repor_estoque(conexao, produto, 5)
 
 
@@ -66,7 +66,7 @@ def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
     codigo = principal(["99999", "--banco", str(banco)])
 
     assert codigo == 1
-    assert "inexistente" in capsys.readouterr().err
+    assert "does not exist" in capsys.readouterr().err
 
 
 @pytest.mark.regressao

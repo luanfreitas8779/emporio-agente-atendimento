@@ -36,7 +36,7 @@ def test_interrompe_a_carga_quando_o_produto_aponta_para_categoria_inexistente(t
     escrever_catalogo(tmp_path, '10,100,Guitarra Teste,99,Descricao,1,active,{},2024-01-01')
     conexao = conectar(tmp_path / "teste.db")
 
-    with pytest.raises(ErroDeCarga, match="produto 10"):
+    with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
@@ -47,7 +47,7 @@ def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
     escrever_catalogo(tmp_path, '10,abc,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
     conexao = conectar(tmp_path / "teste.db")
 
-    with pytest.raises(ErroDeCarga, match="produto 10"):
+    with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
@@ -63,7 +63,7 @@ def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tm
     )
     conexao = conectar(tmp_path / "teste.db")
 
-    with pytest.raises(ErroDeCarga, match="promoção 1"):
+    with pytest.raises(ErroDeCarga, match="promotion 1"):
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
@@ -105,7 +105,7 @@ CLIENTE = "1,Cliente Teste,(67) 90000-0001,teste@exemplo.com,Campo Grande"
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_path):
-    with pytest.raises(ErroDeCarga, match="pedido 1"):
+    with pytest.raises(ErroDeCarga, match="order 1"):
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,99,2026-01-01,delivered,100,pix,,,", "1,1,93"
         )
@@ -113,7 +113,7 @@ def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_path):
-    with pytest.raises(ErroDeCarga, match="item do pedido 1"):
+    with pytest.raises(ErroDeCarga, match="order item 1"):
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,1,2026-01-01,delivered,100,pix,,,", "1,1,99999"
         )
@@ -121,7 +121,7 @@ def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_pa
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_path):
-    with pytest.raises(ErroDeCarga, match="item do pedido 7"):
+    with pytest.raises(ErroDeCarga, match="order item 7"):
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,1,2026-01-01,delivered,100,pix,,,", "7,1,93"
         )
@@ -129,7 +129,7 @@ def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_pat
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_total_do_pedido_e_invalido(tmp_path):
-    with pytest.raises(ErroDeCarga, match="pedido 1"):
+    with pytest.raises(ErroDeCarga, match="order 1"):
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,1,2026-01-01,delivered,abc,pix,,,", "1,1,93"
         )
@@ -149,7 +149,7 @@ def carregar_produtos_de(pasta, produtos):
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
-    with pytest.raises(ErroDeCarga, match="produto 10"):
+    with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_produtos_de(
             tmp_path, "10,100,Guitarra Teste,1,Descricao,1,vendida,{},2024-01-01"
         )
@@ -159,13 +159,13 @@ def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
 def test_interrompe_a_carga_quando_o_id_do_produto_esta_duplicado(tmp_path):
     linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
 
-    with pytest.raises(ErroDeCarga, match="produto 10: id duplicado"):
+    with pytest.raises(ErroDeCarga, match="product 10: duplicate id"):
         carregar_produtos_de(tmp_path, f"{linha}\n{linha}")
 
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
-    with pytest.raises(ErroDeCarga, match="produto 10"):
+    with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_produtos_de(
             tmp_path, "10,100.005,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
         )
@@ -173,7 +173,7 @@ def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
-    with pytest.raises(ErroDeCarga, match="produto 10"):
+    with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_produtos_de(
             tmp_path, "10,100,Guitarra Teste,1,Descricao,-1,active,{},2024-01-01"
         )
@@ -207,19 +207,19 @@ def carregar_clientes_de(pasta, *clientes):
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_telefone_do_cliente_e_invalido(tmp_path):
-    with pytest.raises(ErroDeCarga, match="cliente 1"):
+    with pytest.raises(ErroDeCarga, match="customer 1"):
         carregar_clientes_de(tmp_path, "1,Cliente Teste,12345,t@exemplo.com,Campo Grande")
 
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_nome_do_cliente_esta_vazio(tmp_path):
-    with pytest.raises(ErroDeCarga, match="cliente 1"):
+    with pytest.raises(ErroDeCarga, match="customer 1"):
         carregar_clientes_de(tmp_path, "1, ,(67) 90000-0001,t@exemplo.com,Campo Grande")
 
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_id_do_cliente_esta_duplicado(tmp_path):
-    with pytest.raises(ErroDeCarga, match="cliente 1: id duplicado"):
+    with pytest.raises(ErroDeCarga, match="customer 1: duplicate id"):
         carregar_clientes_de(
             tmp_path,
             "1,Um,(67) 90000-0001,a@exemplo.com,Campo Grande",
@@ -229,7 +229,7 @@ def test_interrompe_a_carga_quando_o_id_do_cliente_esta_duplicado(tmp_path):
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_dois_clientes_tem_o_mesmo_telefone(tmp_path):
-    with pytest.raises(ErroDeCarga, match="cliente 2: telefone duplicado"):
+    with pytest.raises(ErroDeCarga, match="customer 2: duplicate phone number"):
         carregar_clientes_de(
             tmp_path,
             "1,Um,(67) 90000-0001,a@exemplo.com,Campo Grande",
@@ -258,7 +258,7 @@ def test_telefone_com_codigo_do_pais_e_gravado_sem_o_codigo(tmp_path):
 )
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_pedido_tem_dado_invalido(tmp_path, pedido):
-    with pytest.raises(ErroDeCarga, match="pedido 1"):
+    with pytest.raises(ErroDeCarga, match="order 1"):
         carregar_pedidos_de(tmp_path, CLIENTE, pedido, "1,1,93")
 
 
@@ -266,13 +266,13 @@ def test_interrompe_a_carga_quando_o_pedido_tem_dado_invalido(tmp_path, pedido):
 def test_interrompe_a_carga_quando_o_id_do_pedido_esta_duplicado(tmp_path):
     pedido = "1,1,2026-01-01,delivered,100,pix,,,"
 
-    with pytest.raises(ErroDeCarga, match="pedido 1: id duplicado"):
+    with pytest.raises(ErroDeCarga, match="order 1: duplicate id"):
         carregar_pedidos_de(tmp_path, CLIENTE, f"{pedido}\n{pedido}", "1,1,93")
 
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_a_quantidade_do_item_nao_e_positiva(tmp_path):
-    with pytest.raises(ErroDeCarga, match="item do pedido 1"):
+    with pytest.raises(ErroDeCarga, match="order item 1"):
         carregar_pedidos_de(
             tmp_path, CLIENTE, "1,1,2026-01-01,delivered,100,pix,,,", "1,0,93"
         )
@@ -288,7 +288,7 @@ def test_interrompe_a_carga_quando_a_promocao_tem_dado_invalido(tmp_path, promoc
     )
     conexao = conectar(tmp_path / "teste.db")
 
-    with pytest.raises(ErroDeCarga, match="promoção 1"):
+    with pytest.raises(ErroDeCarga, match="promotion 1"):
         carregar_catalogo(conexao, tmp_path)
 
     conexao.close()
