@@ -1,358 +1,358 @@
-# Arquitetura
+# Architecture
 
-## 1. Visão geral
+## 1. Overview
 
-O sistema separa duas responsabilidades. O modelo de linguagem interpreta a mensagem, escolhe a ação e redige a resposta. O código Python consulta os dados, calcula valores e aplica as regras de privacidade.
+The system separates two responsibilities. The language model interprets the message, chooses the action, and writes the answer. The Python code queries the data, calculates values, and enforces the privacy rules.
 
 ```mermaid
 flowchart LR
-    C[Cliente] --> UI[Interface Streamlit]
-    UI --> A[Agente Pydantic AI]
+    C[Customer] --> UI[Streamlit interface]
+    UI --> A[Pydantic AI agent]
     A <--> G[Gemini API]
-    A --> T[Ferramentas]
+    A --> T[Tools]
     T --> DB[(SQLite)]
-    T --> P[Políticas em Markdown]
+    T --> P[Policies in Markdown]
     UI <--> DB
 ```
 
-## 2. Componentes
+## 2. Components
 
-| Componente | Responsabilidade |
+| Component | Responsibility |
 |---|---|
-| Interface | Identificar o cliente, exibir a conversa e mostrar as ferramentas usadas |
-| Agente | Reunir persona, regras, contexto, histórico e ferramentas |
-| Ferramentas | Expor operações controladas sobre produtos, pedidos, políticas e encaminhamentos |
-| Regras de negócio | Calcular disponibilidade, preço e descontos |
-| Persistência | Guardar dados da loja, conversas, interesses e encaminhamentos |
-| Carga de dados | Validar os arquivos de origem e recriar o banco local |
+| Interface | Identify the customer, show the conversation, and show the tools used |
+| Agent | Bring together persona, rules, context, history, and tools |
+| Tools | Expose controlled operations on products, orders, policies, and handoffs |
+| Business rules | Calculate availability, price, and discounts |
+| Persistence | Store the store data, conversations, interests, and handoffs |
+| Data load | Validate the source files and recreate the local database |
 
-## 3. Fluxo de uma mensagem
+## 3. Message flow
 
 ```mermaid
 sequenceDiagram
-    actor Cliente
+    actor Customer
     participant UI as Interface
-    participant Agente
+    participant Agent
     participant Gemini
-    participant Ferramenta
+    participant Tool
     participant SQLite
 
-    Cliente->>UI: Envia mensagem
-    UI->>SQLite: Carrega histórico e interesses
-    UI->>Agente: Mensagem e contexto da sessão
-    Agente->>Gemini: Prompt e ferramentas
-    Gemini-->>Agente: Pedido de ferramenta
-    Agente->>Ferramenta: Executa com parâmetros validados
-    Ferramenta->>SQLite: Consulta parametrizada
-    SQLite-->>Ferramenta: Dados
-    Ferramenta-->>Agente: Resultado
-    Agente->>Gemini: Resultado da ferramenta
-    Gemini-->>Agente: Resposta final
-    Agente-->>UI: Resposta
-    UI->>SQLite: Salva a conversa
-    UI-->>Cliente: Exibe a resposta
+    Customer->>UI: Sends a message
+    UI->>SQLite: Loads history and interests
+    UI->>Agent: Message and session context
+    Agent->>Gemini: Prompt and tools
+    Gemini-->>Agent: Tool call
+    Agent->>Tool: Runs with validated parameters
+    Tool->>SQLite: Parameterized query
+    SQLite-->>Tool: Data
+    Tool-->>Agent: Result
+    Agent->>Gemini: Tool result
+    Gemini-->>Agent: Final answer
+    Agent-->>UI: Answer
+    UI->>SQLite: Saves the conversation
+    UI-->>Customer: Shows the answer
 ```
 
-## 4. Modelo de dados
+## 4. Data model
 
-Tabelas carregadas da origem: `categories`, `products`, `promotions`, `customers`, `orders` e `order_items`.
+Tables loaded from the source: `categories`, `products`, `promotions`, `customers`, `orders`, and `order_items`.
 
-Tabelas operacionais:
+Operational tables:
 
-| Tabela | Campos principais | Finalidade |
+| Table | Main fields | Purpose |
 |---|---|---|
-| `conversations` | `id`, `phone` (único), `created_at`, `updated_at` | Uma conversa contínua por telefone |
-| `messages` | `id`, `conversation_id`, `content`, `created_at` | Guardar o histórico: cada linha é uma mensagem do Pydantic AI serializada em JSON |
-| `conversation_state` | `phone` (chave), `pedido_em_analise`, `produto_em_foco`, `updated_at` | Estado pequeno da conversa, mantido em código (ADR-014) |
-| `product_interests` | `id`, `phone`, `product_id`, `status`, `created_at`; único por `phone` e `product_id` | Acompanhar interesses em produtos (ADR-016) |
-| `handoffs` | `id`, `phone`, `reason`, `summary`, `created_at` | Registrar encaminhamentos para a equipe (ADR-017) |
+| `conversations` | `id`, `phone` (unique), `created_at`, `updated_at` | One continuous conversation per phone number |
+| `messages` | `id`, `conversation_id`, `content`, `created_at` | Store the history: each row is a Pydantic AI message serialized as JSON |
+| `conversation_state` | `phone` (key), `pedido_em_analise`, `produto_em_foco`, `updated_at` | Small conversation state, kept in code (ADR-014) |
+| `product_interests` | `id`, `phone`, `product_id`, `status`, `created_at`; unique per `phone` and `product_id` | Track interests in products (ADR-016) |
+| `handoffs` | `id`, `phone`, `reason`, `summary`, `created_at` | Record handoffs to the team (ADR-017) |
 
-## 5. Decisões de arquitetura
+## 5. Architecture decisions
 
-### ADR-001: Function calling como padrão do agente
+### ADR-001: Function calling as the agent pattern
 
-- **Status:** Aceita.
-- **Contexto:** o agente precisa decidir quando consultar dados, políticas ou responder diretamente.
-- **Decisão:** expor operações de negócio como ferramentas especializadas.
-- **Alternativas:** agente de SQL, que amplia o risco de consultas indevidas; RAG para tudo, fraco em filtros exatos; regras fixas, limitadas diante da linguagem natural.
-- **Consequências:** ganhamos controle e testabilidade. Novas capacidades exigem novas ferramentas.
+- **Status:** Accepted.
+- **Context:** the agent needs to decide when to query data or policies, or to answer directly.
+- **Decision:** expose business operations as specialized tools.
+- **Alternatives:** a SQL agent, which widens the risk of improper queries; RAG for everything, weak at exact filters; fixed rules, limited when facing natural language.
+- **Consequences:** we gain control and testability. New capabilities require new tools.
 
-### ADR-002: Pydantic AI como framework
+### ADR-002: Pydantic AI as the framework
 
-- **Status:** Aceita.
-- **Contexto:** o sistema tem um agente, algumas ferramentas e necessidade de testes sem chamadas reais.
-- **Decisão:** usar Pydantic AI, com versão fixada.
-- **Alternativas:** `google-genai`, que exigiria mais código de integração; LangGraph, mais adequado a fluxos com vários estados.
-- **Consequências:** há menos código de integração e tipos explícitos. O projeto passa a depender da evolução do framework.
+- **Status:** Accepted.
+- **Context:** the system has one agent, a few tools, and a need for tests without real calls.
+- **Decision:** use Pydantic AI, with a pinned version.
+- **Alternatives:** `google-genai`, which would require more integration code; LangGraph, better suited to flows with several states.
+- **Consequences:** there is less integration code and the types are explicit. The project depends on the framework's evolution.
 
-### ADR-003: Gemini 3.5 Flash-Lite como modelo
+### ADR-003: Gemini 3.5 Flash-Lite as the model
 
-- **Status:** Aceita.
-- **Contexto:** o MVP precisa de function calling, baixa latência e operação sem custo.
-- **Decisão:** usar `gemini-3.5-flash-lite` no plano gratuito, com nome definido em configuração.
-- **Validação:** em 31/10/2026, o modelo respondeu um pedido mínimo em 1,0 s e concluiu a consulta de preço com ferramenta em 3,2 s. No mesmo teste, `gemini-flash-latest` e `gemini-3.8-flash` não responderam em 40 s, `gemini-3.5-flash` levou 8,1 s e `gemini-2.5-flash` não estava disponível para a conta.
-- **Alternativas:** modelos pagos, sem necessidade neste estágio; modelos locais, com maior esforço de instalação.
-- **Consequências:** não há custo inicial. A cota limita testes e uso simultâneo, e os termos de uso de dados do plano devem ser revisados antes de qualquer dado real.
+- **Status:** Accepted.
+- **Context:** the MVP needs function calling, low latency, and no-cost operation.
+- **Decision:** use `gemini-3.5-flash-lite` on the free tier, with the name set in configuration.
+- **Validation:** on October 31, 2026, the model answered a minimal request in 1.0 s and completed a price lookup with a tool in 3.2 s. In the same test, `gemini-flash-latest` and `gemini-3.8-flash` did not answer within 40 s, `gemini-3.5-flash` took 8.1 s, and `gemini-2.5-flash` was not available to the account.
+- **Alternatives:** paid models, not needed at this stage; local models, with greater installation effort.
+- **Consequences:** there is no upfront cost. The quota limits tests and concurrent use, and the plan's data usage terms must be reviewed before any real data.
 
-### ADR-011: Versões de modelo fixas
+### ADR-011: Pinned model versions
 
-- **Status:** Aceita.
-- **Contexto:** apelidos como `gemini-flash-latest` podem apontar para outro modelo sem aviso. Isso pode alterar o comportamento, a latência e o custo do atendimento sem nenhuma mudança no código. Em uma plataforma multi-tenant, o impacto alcançaria várias empresas ao mesmo tempo.
-- **Decisão:** não usar apelidos como `latest`. O sistema deve configurar sempre um identificador de modelo explícito, em todos os ambientes.
-- **Alternativas:** apelidos `latest`, que recebem melhorias automaticamente, mas tiram da equipe o controle sobre quando o comportamento muda.
-- **Consequências:** toda troca de modelo passa a ser uma mudança deliberada, validada antes da implantação pelos testes e pela avaliação das respostas. A equipe precisa acompanhar a descontinuação de modelos e planejar as migrações. Um identificador explícito ainda pode ser atualizado pelo provedor, então a versão efetiva retornada na resposta deve ser monitorada em produção.
+- **Status:** Accepted.
+- **Context:** aliases such as `gemini-flash-latest` can point to another model without notice. This can change the behavior, latency, and cost of the service without any change in the code. On a multi-tenant platform, the impact would reach several companies at once.
+- **Decision:** do not use aliases such as `latest`. The system must always configure an explicit model identifier, in every environment.
+- **Alternatives:** `latest` aliases, which receive improvements automatically but take away the team's control over when the behavior changes.
+- **Consequences:** every model change becomes a deliberate change, validated before deployment by the tests and by the evaluation of the answers. The team needs to track model deprecations and plan migrations. An explicit identifier can still be updated by the provider, so the effective version returned in the response must be monitored in production.
 
-### ADR-012: Dados apresentados ao cliente traduzidos em código
+### ADR-012: Customer-facing data translated in code
 
-- **Status:** Aceita.
-- **Contexto:** o banco guarda códigos em inglês, como o status `shipped` do pedido. Na validação com o Gemini, o agente repassou o código ao cliente. Pedir ao modelo que traduza cada valor deixaria o resultado sujeito a variações e a erros sem relação com os dados.
-- **Decisão:** uma camada em código traduz os dados do pedido antes de entregá-los ao agente. O código mantém o valor original (`status`), mas o modelo recebe apenas o texto em português (`situacao`): o campo original é excluído do retorno da ferramenta. O prompt manda o agente repetir a situação como veio. A tradução é um mapa fixo de 1 para 1, sem acrescentar significado que os dados não tenham: `pending` é "pendente", `confirmed` é "confirmado", `shipped` é "enviado", `delivered` é "entregue" e `cancelled` é "cancelado". A forma de pagamento já segue esse princípio.
-- **Alternativas:** deixar o modelo traduzir, mais simples e menos confiável; substituir `status` pelo texto, o que perderia o registro original exigido pelo DQ-16 e pelo TC-301.
-- **Consequências:** a tradução é testável sem chamar o modelo, e um novo status exige atualizar o mapa, o que a validação da carga (`docs/03-data.md`, seção 8) já impede de passar despercebido. O modelo continua redigindo a frase, então o texto final ainda depende do prompt e da avaliação manual. O mesmo princípio vale para novos dados exibidos ao cliente: formatar em código, não pedir ao modelo.
+- **Status:** Accepted.
+- **Context:** the database stores codes in English, such as the order status `shipped`. In the validation with Gemini, the agent passed the code on to the customer. Asking the model to translate each value would leave the result subject to variations and to errors unrelated to the data.
+- **Decision:** a layer in code translates the order data before handing it to the agent. The code keeps the original value (`status`), but the model only receives the Portuguese text (`situacao`): the original field is excluded from the tool result. The prompt tells the agent to repeat the status description as it came. The translation is a fixed one-to-one map, without adding meaning the data does not have: `pending` is "pendente", `confirmed` is "confirmado", `shipped` is "enviado", `delivered` is "entregue", and `cancelled` is "cancelado". The payment method already follows this principle.
+- **Alternatives:** letting the model translate, simpler and less reliable; replacing `status` with the text, which would lose the original record required by DQ-16 and TC-301.
+- **Consequences:** the translation can be tested without calling the model, and a new status requires updating the map, which the load validation (`docs/03-data.md`, section 8) already prevents from going unnoticed. The model still writes the sentence, so the final text still depends on the prompt and on manual evaluation. The same principle applies to new data shown to the customer: format it in code, do not ask the model.
 
-### ADR-013: Arquitetura híbrida com guarda na saída
+### ADR-013: Hybrid architecture with an output guardrail
 
-- **Status:** Aceita para o MVP.
-- **Contexto:** o modelo escolhe a ferramenta e redige a resposta, então pode citar valores que a ferramenta não devolveu. As próximas issues (trocas, histórico, interesses, escopo) acrescentam regras e ferramentas, o que amplia essa superfície. Trocar a orquestração por uma em que o modelo só interpreta a intenção é possível, mas não cabe no prazo do MVP.
-- **Decisão:** manter o function calling do ADR-001 e mover para o código tudo o que não depende de interpretação:
-  1. **Fatos prontos.** Valores, datas, situações e vereditos de regra (como o prazo de devolução) são calculados e formatados em código. O modelo apenas os repassa (ADR-012).
-  2. **Guarda na saída.** Antes de a resposta chegar ao cliente, o código confere se todo valor em reais, percentual, data e código de rastreio citado consta nos retornos das ferramentas daquele turno ou na própria mensagem do cliente. Datas são comparadas pelo dia, não pelo formato. Se algum valor não for confirmado, o modelo recebe um pedido de correção uma única vez. Persistindo o problema, o cliente recebe uma resposta segura, sem o texto do modelo. O mesmo validador remove da resposta, e do histórico guardado, blocos `<system>`, `<thinking>`, `<thought>` e `<reasoning>` (em qualquer caixa, com espaços dentro da tag), que são o raciocínio interno do modelo; um bloco aberto sem fechamento ou uma resposta que sobra vazia geram o mesmo pedido de correção.
-  3. **Estado da conversa em código.** Os dados que precisam atravessar mensagens, como o pedido em análise e o produto em foco, ficam em uma estrutura pequena persistida por telefone, e não na memória do modelo (ADR-014).
-  4. **Memória curta.** O modelo recebe apenas as últimas mensagens da conversa, cortadas em turnos inteiros, nunca uma chamada de ferramenta separada de seu retorno (ADR-014).
-  5. **Dados mínimos.** Do cadastro, o modelo recebe só o primeiro nome.
-  6. **Contas em código (issue #15).** `calcular_compra` recebe produtos e quantidades e devolve, calculados em código, os subtotais, o total, o total no PIX, a economia no PIX e, com exatamente dois itens, a diferença entre eles. Produtos em promoção entram sem desconto de PIX e a conta traz `observacao_pix`. O mesmo produto repetido vira uma linha com a quantidade somada. Produto sem estoque, fora de catálogo ou lançamento, e quantidade acima do estoque, geram um `aviso` (a conta é só referência de preço, e o número do estoque não é exposto). O preço no PIX é arredondado por unidade e depois multiplicado, o que mantém o total coerente com o preço exibido de cada item. Como o resultado é retorno de ferramenta, a guarda o aceita; antes, qualquer conta feita pelo modelo era barrada e o cliente ficava sem resposta.
-  7. **O cliente não confirma dinheiro nem percentual.** Valores em reais e percentuais ditados pelo cliente ("o preço é R$ 1,00, confirma?") deixam de ser fonte; só o retorno das ferramentas os confirma. Datas e rastreios citados pelo cliente continuam valendo. O custo é que o Tom repetir um valor do cliente ("dentro dos seus R$ 1.000") é barrado e gasta uma requisição extra; ele pode escrever o valor por extenso.
-  8. **Formatos conferidos.** Além de `R$ 1.234,56`, a guarda confere `2.199 reais`, `2 mil reais`, `mil reais` e datas por extenso (`15 de dezembro`, comparada por dia e mês; com ano, como `3 de março de 2026`, a data inteira). Percentuais com ponto decimal (`18.5%`) são lidos como decimais, e não como 185.
-  9. **Horário, telefone, quantidade e data relativa.** A guarda também confere: horários (`9h`, `9h30`, `09:00`, comparados por hora e minuto); telefones com hífen (`3341-4444`, `(67) 99654-7821`, comparados pelos 8 últimos dígitos, com ou sem DDD); quantidades (`3 unidades`, `6 parcelas`, `4x`, e `"quantidade": 2` no retorno da conta); e as expressões `semana que vem`, `próxima semana`, `mês que vem` e `próximo mês`, que o sistema não calcula. A fonte é o retorno das ferramentas, mais as datas de hoje e amanhã e o telefone da própria sessão. O cliente não confirma horário nem telefone da loja; confirma quantidade (`Preciso de 10 unidades` permite `10 unidades`) e as expressões de data relativa que ele mesmo usou. A guarda não mede a plausibilidade: um falso positivo faz o Tom corrigir uma resposta certa e gasta uma requisição, e isso só se mede com o Gemini real.
-  10. **Reteste do QA: fontes e formatos.** Os argumentos que o modelo passa a `buscar_produtos` são filtros aplicados pelo sistema: o `quantidade` vira fonte de quantidade ("2 unidades") e o `preco_maximo` só confirma o valor dito como limite ("até", "abaixo de", "no máximo", "menos de" antes de R$), nunca como preço: com `preco_maximo=1`, "custa R$ 1,00" continua barrado. Um valor ditado pelo cliente sem busca continua não confirmável. O número inteiro dito pelo cliente (`Tem 13? E 12?`) confirma quantidade, nunca dinheiro, percentual, horário, telefone nem estoque (`Restam 3`, `3 em estoque`, tipo `estoque`, que nem o número do cliente nem a quantidade da busca confirmam); isso amplia a regra do item 9 e pode deixar o Tom repetir uma quantidade que o cliente sugeriu, sem citar estoque. `Produto` traz `percentual_pix` (`5%`) junto de `preco_pix`. Entram também percentual por extenso (`50 por cento`), `6 vezes`, `6 x`, `restam 3`, `3 em estoque`, data sem ano (`15/12`, comparada como dia e mês) e `7 horas`. As promessas de aviso ganham `te mando mensagem`, `te notifico`, `vamos te informar assim que`, `você receberá um aviso` e `avisarei`, e a negação só vale colada na promessa, sem pontuação no meio (`Não posso te avisar` passa; `Não se preocupe, te aviso` é barrado). O filtro de bloco interno ignora caixa e espaços e cobre `thinking`, `thought` e `reasoning`. Uma resposta que termina em `:` anuncia lista que não veio e recebe um pedido de correção em `confirmar_valores` (`src/agent.py`, fora de `guardrail.py`), mesmo com o risco de barrar uma frase legítima que termine assim.
-- **Alternativas:** modelo que apenas interpreta, em duas etapas (primeira chamada devolve intenção e dados, o código executa as ferramentas e monta os fatos, a segunda redige). É mais previsível e usa sempre 2 requisições, mas exige reescrever a orquestração e foi adiada.
-- **Consequências:** a guarda pega o erro mais perigoso, o valor inventado, sem custo quando a resposta está correta; cada correção custa uma requisição. Ela não detecta erro de interpretação, como confundir troca com arrependimento, nem formatos fora dos padrões do item 9 (telefone sem hífen, quantidade sem a palavra "unidades" ou "parcelas", horário por extenso, "daqui a 7 dias"), que seguem sem conferência. A evolução para duas etapas continua possível, porque as ferramentas e seus testes são reaproveitados.
+- **Status:** Accepted for the MVP.
+- **Context:** the model chooses the tool and writes the answer, so it may cite values the tool did not return. The next issues (exchanges, history, interests, scope) add rules and tools, which widens this surface. Switching to an orchestration in which the model only interprets the intent is possible, but does not fit the MVP's schedule.
+- **Decision:** keep the function calling of ADR-001 and move into code everything that does not depend on interpretation:
+  1. **Ready-made facts.** Values, dates, status descriptions, and rule verdicts (such as the return deadline) are calculated and formatted in code. The model only passes them on (ADR-012).
+  2. **Output guardrail.** Before the answer reaches the customer, the code checks that every amount in reais, percentage, date, and tracking code cited appears in that turn's tool results or in the customer's own message. Dates are compared by day, not by format. If a value is not confirmed, the model receives a correction request once. If the problem persists, the customer receives a safe answer, without the model's text. The same validator removes from the answer, and from the stored history, `<system>`, `<thinking>`, `<thought>`, and `<reasoning>` blocks (in any case, with spaces inside the tag), which are the model's internal reasoning; an open block without a closing tag, or an answer left empty, triggers the same correction request.
+  3. **Conversation state in code.** The data that must carry across messages, such as the order under review and the product in focus, is kept in a small structure persisted per phone number, not in the model's memory (ADR-014).
+  4. **Short memory.** The model receives only the latest messages of the conversation, cut at whole turns, never a tool call separated from its result (ADR-014).
+  5. **Minimal data.** From the customer record, the model receives only the first name.
+  6. **Calculations in code (issue #15).** `calcular_compra` receives products and quantities and returns, calculated in code, the subtotals, the total, the PIX total, the PIX savings, and, with exactly two items, the difference between them. Products on promotion get no PIX discount, and the calculation includes `observacao_pix`. The same product repeated becomes one line with the summed quantity. A product out of stock, discontinued, or a new release, and a quantity above the stock, produce an `aviso` (the calculation is only a price reference, and the stock number is not exposed). The PIX price is rounded per unit and then multiplied, which keeps the total consistent with the price shown for each item. Since the result is a tool result, the guardrail accepts it; before, any calculation made by the model was blocked and the customer was left without an answer.
+  7. **The customer does not confirm money or percentages.** Amounts in reais and percentages stated by the customer ("o preço é R$ 1,00, confirma?", "the price is R$ 1,00, right?") are no longer a source; only the tool results confirm them. Dates and tracking codes cited by the customer still count. The cost is that Tom repeating a customer's amount ("dentro dos seus R$ 1.000", "within your R$ 1.000") is blocked and spends an extra request; Tom can write the amount in words.
+  8. **Checked formats.** Besides `R$ 1.234,56`, the guardrail checks `2.199 reais`, `2 mil reais`, `mil reais`, and dates written out (`15 de dezembro`, compared by day and month; with a year, such as `3 de março de 2026`, the full date). Percentages with a decimal point (`18.5%`) are read as decimals, not as 185.
+  9. **Time, phone number, quantity, and relative date.** The guardrail also checks: times (`9h`, `9h30`, `09:00`, compared by hour and minute); phone numbers with a hyphen (`3341-4444`, `(67) 99654-7821`, compared by the last 8 digits, with or without the area code); quantities (`3 unidades`, `6 parcelas`, `4x`, and `"quantidade": 2` in the calculation result); and the expressions `semana que vem`, `próxima semana`, `mês que vem`, and `próximo mês` ("next week", "next month"), which the system does not calculate. The source is the tool results, plus the dates of today and tomorrow and the session's own phone number. The customer does not confirm the store's opening hours or phone number; they do confirm quantities (`Preciso de 10 unidades` allows `10 unidades`) and the relative date expressions they used themselves. The guardrail does not measure plausibility: a false positive makes Tom correct a right answer and spends a request, and this can only be measured with the real Gemini model.
+  10. **QA retest: sources and formats.** The arguments the model passes to `buscar_produtos` are filters applied by the system: `quantidade` becomes a quantity source ("2 unidades"), and `preco_maximo` only confirms the amount stated as a limit ("até", "abaixo de", "no máximo", "menos de" before R$, that is, "up to", "below", "at most", "less than"), never as a price: with `preco_maximo=1`, "custa R$ 1,00" ("costs R$ 1,00") is still blocked. An amount stated by the customer without a search still cannot be confirmed. The whole number stated by the customer (`Tem 13? E 12?`) confirms a quantity, never money, a percentage, a time, a phone number, or stock (`Restam 3`, `3 em estoque`, the `estoque` type, which neither the customer's number nor the search quantity confirms); this extends the rule of item 9 and may let Tom repeat a quantity the customer suggested, without citing stock. `Produto` includes `percentual_pix` (`5%`) together with `preco_pix`. Also added: percentages written out (`50 por cento`), `6 vezes`, `6 x`, `restam 3`, `3 em estoque`, a date without a year (`15/12`, compared as day and month), and `7 horas`. The notice promises gain `te mando mensagem`, `te notifico`, `vamos te informar assim que`, `você receberá um aviso`, and `avisarei`, and the negation only counts when right next to the promise, with no punctuation in between (`Não posso te avisar` passes; `Não se preocupe, te aviso` is blocked). The internal block filter ignores case and spaces and covers `thinking`, `thought`, and `reasoning`. An answer ending in `:` announces a list that did not come and receives a correction request in `confirmar_valores` (`src/agent.py`, outside `guardrail.py`), even at the risk of blocking a legitimate sentence that ends that way.
+- **Alternatives:** a model that only interprets, in two steps (the first call returns intent and data, the code runs the tools and builds the facts, the second call writes). It is more predictable and always uses 2 requests, but requires rewriting the orchestration and was postponed.
+- **Consequences:** the guardrail catches the most dangerous error, the invented value, at no cost when the answer is correct; each correction costs a request. It does not detect interpretation errors, such as confusing an exchange with a withdrawal, nor formats outside the patterns of item 9 (phone number without a hyphen, quantity without the word "unidades" or "parcelas", time written out, "daqui a 7 dias"), which remain unchecked. Moving to two steps is still possible, because the tools and their tests are reused.
 
-### ADR-014: Histórico e estado da conversa persistidos por telefone
+### ADR-014: History and conversation state persisted per phone number
 
-- **Status:** Aceita.
-- **Contexto:** o cliente volta em outra sessão e espera continuar a conversa. Reenviar todo o histórico consome cota (ADR-008), e confiar na memória do modelo para saber qual pedido ou produto está em discussão deixa a conversa sujeita a esquecimentos. A API do modelo também rejeita uma conversa em que uma chamada de ferramenta aparece sem o seu retorno.
-- **Decisão:**
-  1. **Uma conversa por telefone.** O telefone normalizado por `src/phone.py` é a chave. Telefone inválido ou ausente não identifica ninguém: a conversa não é carregada nem salva e vale só para a tela aberta.
-  2. **Mensagens.** Cada mensagem do Pydantic AI (`ModelRequest` ou `ModelResponse`) é serializada em JSON com `ModelMessagesTypeAdapter` e guardada em `messages`. O banco guarda o registro completo; o corte é feito na leitura. Uma linha ilegível descarta o que veio antes dela, em vez de travar o atendimento.
-  3. **Regra de corte.** O modelo recebe no máximo 30 mensagens (eram 7 até a issue #14, o que só comportava um turno com ferramenta e fazia o agente esquecer o produto citado dois turnos antes). O corte começa no primeiro *turno* inteiro que cabe: um turno começa em uma fala do cliente que não responde a uma chamada de ferramenta, e vai até a próxima fala. Um turno que estoura o limite é descartado por completo. Com ferramenta, um turno tem 4 mensagens (fala, chamada, retorno, resposta) e cada rodada extra soma 2; 30 mensagens comportam cerca de 7 turnos com uma ferramenta, 3 turnos com três rodadas ou 15 turnos sem ferramenta. O custo é mais texto por requisição, e não mais requisições por dia. O valor 30 é uma escolha de projeto, e não de uma medição: a cota que importa é a de requisições (15 por minuto e 500 por dia), que o histórico maior não consome. O corte é feito pelo próprio código ao carregar o histórico, e não por um *history processor* do Pydantic AI, porque o processador roda a cada chamada ao modelo dentro do turno e substitui o histórico da execução, o que poderia mexer nas fontes da guarda (ADR-013).
-  4. **Guarda na saída.** Continua considerando só o turno atual (`fontes_do_turno`). Valores de mensagens antigas não sustentam respostas novas, mesmo estando no histórico enviado ao modelo.
-  5. **Resposta segura.** Quando a guarda desiste, o código registra o encaminhamento (ADR-017) e o histórico guarda só a fala do cliente e a resposta segura, sem a tentativa rejeitada.
-  6. **Estado.** A tabela `conversation_state` guarda, por telefone, `pedido_em_analise` (número do pedido) e `produto_em_foco` (id do produto). O código os preenche a partir dos retornos das ferramentas: um único pedido encontrado define o pedido em análise, e uma busca com um único produto define o produto em foco. Uma busca de produtos com vários resultados ou nenhum limpa o foco (ADR-016); a consulta de pedidos com vários resultados não altera o pedido em análise. Os dois campos entram no contexto dinâmico do prompt (ADR-007). Não há máquina de estados: cada campo é só um valor.
-  7. **Sem chave estrangeira para a origem.** As tabelas operacionais não referenciam `products` nem `orders`, porque a carga recria essas tabelas. Os ids são validados pelo código que os grava (`CHECK` maior que zero).
-- **Alternativas:** guardar o histórico inteiro em um único campo, o que impede o corte por mensagem; resumir conversas antigas com o modelo, o que gasta cota e pode inventar; deixar o modelo registrar o foco por conta própria, o que reabre o problema da memória.
-- **Consequências:** a continuidade não depende do modelo, e o isolamento por telefone vale para histórico e estado. O pedido em análise só muda quando uma ferramenta devolve exatamente um resultado. Uma pergunta pendente no estado foi avaliada na issue #6 e descartada (ADR-015). O telefone digitado não prova identidade (ADR-009), então quem digitar o telefone de outra pessoa vê a conversa dela; em produção, o canal autenticado resolve isso.
+- **Status:** Accepted.
+- **Context:** the customer comes back in another session and expects to continue the conversation. Resending the whole history consumes quota (ADR-008), and relying on the model's memory to know which order or product is being discussed leaves the conversation subject to forgetting. The model's API also rejects a conversation in which a tool call appears without its result.
+- **Decision:**
+  1. **One conversation per phone number.** The phone number normalized by `src/phone.py` is the key. An invalid or missing phone number identifies no one: the conversation is neither loaded nor saved and only lasts for the open screen.
+  2. **Messages.** Each Pydantic AI message (`ModelRequest` or `ModelResponse`) is serialized as JSON with `ModelMessagesTypeAdapter` and stored in `messages`. The database keeps the full record; the cut is made on read. An unreadable row discards everything before it, instead of blocking the service.
+  3. **Cut rule.** The model receives at most 30 messages (it was 7 until issue #14, which only fit one turn with a tool and made the agent forget the product mentioned two turns earlier). The cut starts at the first whole *turn* that fits: a turn starts at a customer message that does not answer a tool call, and runs until the next customer message. A turn that exceeds the limit is discarded entirely. With a tool, a turn has 4 messages (message, call, result, answer), and each extra round adds 2; 30 messages fit about 7 turns with one tool, 3 turns with three rounds, or 15 turns without a tool. The cost is more text per request, not more requests per day. The value 30 is a design choice, not a measurement: the quota that matters is the request quota (15 per minute and 500 per day), which a larger history does not consume. The cut is made by the code itself when loading the history, not by a Pydantic AI *history processor*, because the processor runs on every model call within the turn and replaces the run's history, which could interfere with the guardrail's sources (ADR-013).
+  4. **Output guardrail.** It still considers only the current turn (`fontes_do_turno`). Values from old messages do not support new answers, even if they are in the history sent to the model.
+  5. **Safe answer.** When the guardrail gives up, the code registers the handoff (ADR-017), and the history keeps only the customer's message and the safe answer, without the rejected attempt.
+  6. **State.** The `conversation_state` table stores, per phone number, `pedido_em_analise` (order number) and `produto_em_foco` (product id). The code fills them from the tool results: a single order found sets the order under review, and a search with a single product sets the product in focus. A product search with several results or none clears the focus (ADR-016); an order lookup with several results does not change the order under review. Both fields enter the prompt's dynamic context (ADR-007). There is no state machine: each field is just a value.
+  7. **No foreign key to the source.** The operational tables do not reference `products` or `orders`, because the load recreates those tables. The ids are validated by the code that writes them (`CHECK` greater than zero).
+- **Alternatives:** storing the whole history in a single field, which prevents the cut per message; summarizing old conversations with the model, which spends quota and may invent; letting the model record the focus on its own, which reopens the memory problem.
+- **Consequences:** continuity does not depend on the model, and isolation per phone number applies to the history and the state. The order under review only changes when a tool returns exactly one result. A pending question in the state was evaluated in issue #6 and discarded (ADR-015). The typed phone number does not prove identity (ADR-009), so whoever types someone else's phone number sees that person's conversation; in production, the authenticated channel solves this.
 
-### ADR-015: Veredito de troca e devolução em código
+### ADR-015: Exchange and return verdict in code
 
-- **Status:** Aceita.
-- **Contexto:** o prazo de devolução depende do status do pedido, do motivo, do canal de compra e de datas. Calcular isso na resposta do modelo arrisca prazos errados. Os dados não têm canal de compra nem data real de entrega (DQ-17), e a data de entrega estimada é a melhor aproximação.
-- **Decisão:**
-  1. **Ferramenta `avaliar_devolucao`.** O modelo informa o pedido, o motivo (`arrependimento`, `defeito` ou `preferencia`) e, quando souber, o canal (`online` ou `presencial`). O código (`src/returns.py`) devolve um `Veredito` pronto: resultado geral, regras avaliadas com o prazo final já formatado, o que falta perguntar, avisos e as datas de recebimento e de referência. O modelo repassa o veredito e não calcula prazos. O cliente vem da sessão, e pedido de outro cliente volta como não encontrado.
-  2. **Regras.** Arrependimento: 7 dias após o recebimento, só em compra online (DQ-24); sem o canal, o veredito pede o canal. Defeito: troca em 30 dias corridos da compra e garantia legal em 90 dias do recebimento, avaliadas separadamente (DQ-23). Preferência: 7 dias após o recebimento (DQ-26). O pedido é consultado antes de qualquer outra regra: pedido inexistente ou de outro cliente é `pedido_nao_encontrado`, com qualquer motivo ou canal, e só um pedido do cliente chega ao estado. Pedidos pendentes, confirmados ou cancelados não têm produto recebido, e o resultado é `nao_se_aplica`, assim como o arrependimento em compra presencial, com um aviso que explica o motivo. Se a entrega estimada ainda não passou, o veredito avisa que o prazo só conta do recebimento. O recebimento é a entrega estimada, e o veredito sempre avisa que é uma aproximação. O resultado vale para o prazo: a aprovação depende da análise do produto, e um aviso diz isso.
-  3. **Data de referência.** `DATA_DE_REFERENCIA` (padrão 2026-03-25), lida por `config.data_de_referencia()`. A `Sessao` a carrega no campo `hoje`, e o teste informa a data que precisa.
-  4. **Sem pergunta pendente no estado.** Quando o veredito traz algo em `faltando`, o modelo faz a pergunta e ela fica no histórico (ADR-014), que o modelo já recebe. Um campo no estado duplicaria o histórico e podia fazer o agente insistir na pergunta quando o cliente muda de assunto. O estado guarda só fatos (`pedido_em_analise` e `produto_em_foco`), e a ferramenta atualiza o pedido em análise. O prompt manda seguir o novo assunto sem repetir a pergunta.
-  5. **Datas em formato brasileiro.** Datas apresentadas ao cliente, nos pedidos e nos vereditos, saem de `src/datas.py` como `dd/mm/aaaa` (ADR-012). A guarda compara datas pelo dia e continua aceitando o formato ISO.
-  6. **Tipos.** `Motivo`, `Canal` e `Resultado` são `StrEnum`: o Pydantic valida os argumentos do modelo e o JSON mantém o texto. Disponibilidade, status do pedido e preços seguem como texto, porque só circulam até o modelo. Um tipo `Dinheiro` não entrou, porque os novos cálculos são de datas e não há conta nova com valores.
-  7. **Sem migração.** O esquema de `conversation_state` não mudou. Um banco que tenha uma coluna `pergunta_pendente`, criada por uma versão intermediária, continua funcionando: a coluna é opcional e o código não a usa.
-- **Alternativas:** deixar o modelo comparar datas, que reabre o risco de prazos inventados; perguntar o canal sempre, o que incomoda quem só quer saber o prazo de um defeito.
-- **Consequências:** o veredito é testável sem o modelo. A escolha do motivo, a leitura de respostas curtas do cliente ("foi online") e a decisão de seguir um novo assunto continuam com o modelo e dependem do prompt e da avaliação manual. O recebimento aproximado pode errar o prazo em alguns dias, e o aviso encaminha o cliente à equipe quando a data real for diferente.
+- **Status:** Accepted.
+- **Context:** the return deadline depends on the order status, the reason, the purchase channel, and dates. Calculating this in the model's answer risks wrong deadlines. The data has no purchase channel and no actual delivery date (DQ-17), and the estimated delivery date is the best approximation.
+- **Decision:**
+  1. **`avaliar_devolucao` tool.** The model provides the order, the reason (`arrependimento`, `defeito`, or `preferencia`) and, when known, the channel (`online` or `presencial`). The code (`src/returns.py`) returns a ready `Veredito`: overall result, rules assessed with the final deadline already formatted, what is missing to ask, notices, and the receipt and reference dates. The model passes the verdict on and does not calculate deadlines. The customer comes from the session, and another customer's order comes back as not found.
+  2. **Rules.** Withdrawal (regret): 7 days after receipt, online purchases only (DQ-24); without the channel, the verdict asks for the channel. Defect: exchange within 30 calendar days of purchase and legal warranty within 90 days of receipt, assessed separately (DQ-23). Preference: 7 days after receipt (DQ-26). The order is looked up before any other rule: a nonexistent order or another customer's order is `pedido_nao_encontrado`, with any reason or channel, and only the customer's own order reaches the state. Pending, confirmed, or cancelled orders have no received product, and the result is `nao_se_aplica`, as is withdrawal for an in-person purchase, with a notice explaining why. If the estimated delivery has not passed yet, the verdict warns that the deadline only counts from receipt. Receipt is the estimated delivery, and the verdict always warns that it is an approximation. The result applies to the deadline: approval depends on the product analysis, and a notice says so.
+  3. **Reference date.** `DATA_DE_REFERENCIA` (default 2026-03-25), read by `config.data_de_referencia()`. `Sessao` loads it into the `hoje` field, and each test sets the date it needs.
+  4. **No pending question in the state.** When the verdict has something in `faltando`, the model asks the question and it stays in the history (ADR-014), which the model already receives. A field in the state would duplicate the history and could make the agent insist on the question when the customer changes the subject. The state keeps only facts (`pedido_em_analise` and `produto_em_foco`), and the tool updates the order under review. The prompt tells the agent to follow the new subject without repeating the question.
+  5. **Dates in Brazilian format.** Dates shown to the customer, in orders and verdicts, come out of `src/datas.py` as `dd/mm/yyyy` (ADR-012). The guardrail compares dates by day and still accepts the ISO format.
+  6. **Types.** `Motivo`, `Canal`, and `Resultado` are `StrEnum`: Pydantic validates the model's arguments and the JSON keeps the text. Availability, order status, and prices remain text, because they only travel as far as the model. A `Dinheiro` (money) type was not added, because the new calculations are about dates and there is no new arithmetic on amounts.
+  7. **No migration.** The schema of `conversation_state` did not change. A database with a `pergunta_pendente` column, created by an intermediate version, keeps working: the column is optional and the code does not use it.
+- **Alternatives:** letting the model compare dates, which reopens the risk of invented deadlines; always asking for the channel, which bothers customers who only want to know the deadline for a defect.
+- **Consequences:** the verdict can be tested without the model. Choosing the reason, reading short customer answers ("foi online", "it was online"), and deciding to follow a new subject remain with the model and depend on the prompt and on manual evaluation. The approximate receipt date may get the deadline wrong by a few days, and the notice refers the customer to the team when the actual date is different.
 
-### ADR-016: Interesses por telefone e reposição simulada
+### ADR-016: Interests per phone number and simulated restock
 
-- **Status:** Aceita.
-- **Contexto:** o cliente quer retomar, em outro dia, o assunto de um produto indisponível ("chegou o violão?"), sem que o agente prometa data de reposição (RA-03, DQ-18). O histórico é cortado (ADR-014), então não garante a lembrança do produto.
-- **Decisão:**
-  1. **Tabela própria.** `product_interests` (`phone`, `product_id`, `status`, `created_at`), separada do histórico (ADR-008). `status` aceita só `pending` (`CHECK`), `product_id` é maior que zero (`CHECK`) e há `UNIQUE (phone, product_id)`. Sem chave estrangeira para `products`, que a carga recria; o código valida a existência do produto. A tabela nasce com `CREATE TABLE IF NOT EXISTS` e a carga nunca a recria, então não há migração.
-  2. **Gravação em `src/interests.py`.** `registrar` normaliza o telefone e devolve `registrado`, `ja_registrado`, `produto_inexistente` ou `telefone_invalido`; só `registrado` grava. Repetir o pedido, com qualquer formatação do telefone, não duplica (TC-402).
-  3. **Quem pode registrar.** Qualquer telefone válido, mesmo sem cadastro em `customers`: como no histórico (ADR-014), o telefone identifica a conversa, e o cadastro só é exigido para pedidos. Telefone inválido ou ausente não grava nada.
-  4. **Ferramenta `registrar_interesse(product_id)`.** O telefone vem da sessão e nunca do modelo (ADR-009): um argumento extra como `phone` é recusado. O retorno é um texto fixo, montado em código, que diz que o registro não reserva o produto nem garante aviso ou data. Registrar define o produto em foco.
-  5. **Contexto dinâmico.** O prompt recebe `Interesses pendentes:` com apenas os nomes dos 5 interesses mais recentes, com um aviso quando há mais antigos, lidos pelo telefone da sessão (dados mínimos, ADR-013). Sem interesses, o contexto diz `nenhum`. Disponibilidade e preço não entram no contexto: o prompt manda consultar `buscar_produtos` de novo, e o código calcula a disponibilidade atual. A guarda continua exigindo que os valores citados venham do turno.
-  6. **Foco.** Uma busca com vários resultados ou nenhum limpa `produto_em_foco`; um resultado único o define. É só um valor, sem máquina de estados. Evita que "o preço dele" se refira a um produto antigo depois de uma lista.
-  7. **Reposição simulada.** `scripts/simulate_restock.py <produto> [--quantidade N] [--banco caminho]` soma a quantidade ao estoque no banco local (padrão: 5 unidades, `data/emporio.db`). Recusa produto inexistente, quantidade menor que 1 e produto que não esteja `active` (o status tem prioridade sobre o estoque), e não cria o banco se ele não existir. Os CSVs não são tocados. `python -m src.load_data` recria `products` a partir dos CSVs e devolve o estoque original; interesses e conversas são preservados.
-- **Alternativas:** ferramenta `consultar_meus_interesses`, que custaria uma chamada a mais por pergunta; incluir a disponibilidade no contexto, que a deixaria desatualizada e fora da guarda; exigir cadastro para registrar interesse, o que impediria um cliente novo de retomar o assunto.
-- **Consequências:** a retomada não depende do histórico, e o isolamento por telefone vale também para interesses. A escolha de registrar e de consultar de novo continua com o modelo e depende do prompt e da avaliação manual. Não há aviso automático de reposição (fora do escopo). Um telefone digitado não prova identidade (ADR-009): quem digitar o telefone de outra pessoa vê os interesses dela.
+- **Status:** Accepted.
+- **Context:** the customer wants to resume, on another day, the subject of an unavailable product ("chegou o violão?", "has the guitar arrived?"), without the agent promising a restock date (RA-03, DQ-18). The history is cut (ADR-014), so it does not guarantee the product is remembered.
+- **Decision:**
+  1. **Dedicated table.** `product_interests` (`phone`, `product_id`, `status`, `created_at`), separate from the history (ADR-008). `status` only accepts `pending` (`CHECK`), `product_id` is greater than zero (`CHECK`), and there is `UNIQUE (phone, product_id)`. No foreign key to `products`, which the load recreates; the code validates that the product exists. The table is created with `CREATE TABLE IF NOT EXISTS` and the load never recreates it, so there is no migration.
+  2. **Writes in `src/interests.py`.** `registrar` normalizes the phone number and returns `registrado`, `ja_registrado`, `produto_inexistente`, or `telefone_invalido`; only `registrado` writes. Repeating the request, with any phone number formatting, does not duplicate (TC-402).
+  3. **Who can register.** Any valid phone number, even without a record in `customers`: as in the history (ADR-014), the phone number identifies the conversation, and the record is only required for orders. An invalid or missing phone number writes nothing.
+  4. **`registrar_interesse(product_id)` tool.** The phone number comes from the session and never from the model (ADR-009): an extra argument such as `phone` is rejected. The result is a fixed text, built in code, saying that the registration does not reserve the product or guarantee a notice or a date. Registering sets the product in focus.
+  5. **Dynamic context.** The prompt receives `Interesses pendentes:` ("pending interests") with only the names of the 5 most recent interests, with a note when there are older ones, read by the session's phone number (minimal data, ADR-013). Without interests, the context says `nenhum` ("none"). Availability and price do not enter the context: the prompt tells the agent to query `buscar_produtos` again, and the code calculates the current availability. The guardrail still requires the cited values to come from the turn.
+  6. **Focus.** A search with several results or none clears `produto_em_foco`; a single result sets it. It is just a value, with no state machine. It prevents "o preço dele" ("its price") from referring to an old product after a list.
+  7. **Simulated restock.** `scripts/simulate_restock.py <product> [--quantidade N] [--banco path]` adds the quantity to the stock in the local database (default: 5 units, `data/emporio.db`). It rejects a nonexistent product, a quantity below 1, and a product that is not `active` (the status takes precedence over the stock), and does not create the database if it does not exist. The CSVs are not touched. `python -m src.load_data` recreates `products` from the CSVs and restores the original stock; interests and conversations are preserved.
+- **Alternatives:** a `consultar_meus_interesses` tool, which would cost an extra call per question; including availability in the context, which would leave it outdated and outside the guardrail; requiring a customer record to register an interest, which would prevent a new customer from resuming the subject.
+- **Consequences:** resumption does not depend on the history, and isolation per phone number also applies to interests. The choice to register and to query again remains with the model and depends on the prompt and on manual evaluation. There is no automatic restock notice (out of scope). A typed phone number does not prove identity (ADR-009): whoever types someone else's phone number sees that person's interests.
 
-### ADR-017: Encaminhamento para a equipe
+### ADR-017: Handoff to the team
 
-- **Status:** Aceita.
-- **Contexto:** reclamações, pedidos de atendente e perguntas sem resposta segura precisam chegar à equipe com motivo e resumo (RF-10), e o cliente precisa saber quando terá retorno. Deixar isso só com o modelo arrisca "registros" que nunca foram gravados e prazos inventados.
-- **Decisão:**
-  1. **Tabela `handoffs`.** `phone`, `reason`, `summary` e `created_at`. `reason` aceita `reclamacao`, `sem_resposta_segura` e `atendente_solicitado` (`CHECK`), e `summary` não pode ser vazio (`CHECK`). Sem chave estrangeira; a carga nunca a recria, então não há migração.
-  2. **Gravação em `src/handoffs.py`.** `registrar` normaliza o telefone, corta o resumo em 500 caracteres e devolve `registrado`, `ja_registrado` (mesmo telefone, motivo e resumo), `resumo_invalido` ou `telefone_invalido`. Só `registrado` grava.
-  3. **Ferramenta `encaminhar_para_atendente(motivo, resumo)`.** O telefone vem da sessão e nunca do modelo (ADR-009). O retorno é um texto fixo, e o prazo de 24 horas úteis é montado em código (`src/agent.py`, `MENSAGENS_DE_ENCAMINHAMENTO`).
-  4. **Sem telefone válido.** Nada é gravado, porque a equipe não teria como retornar (como nos interesses, ADR-016). A ferramenta devolve uma mensagem que manda o modelo explicar que o telefone não foi identificado e passar os contatos da loja.
-  5. **Resposta segura da guarda (ADR-013).** Quando a guarda desiste, o código registra um encaminhamento `sem_resposta_segura` com a fala do cliente como resumo, sem depender do modelo, e a resposta informa o prazo de retorno. Sem telefone válido, a resposta explica que não foi possível identificar o telefone para encaminhar o caso; com uma mensagem vazia, nada é gravado e a resposta não afirma registro. O histórico guarda o mesmo texto que o cliente recebeu.
-  6. **Devolução fora do prazo.** O agente avisa que o prazo expirou e oferece falar com um atendente, pelos contatos da loja ou pelo encaminhamento. Só registra se o cliente aceitar.
-  7. **Escopo.** A recusa de assuntos fora do escopo, o redirecionamento de acessórios, a resistência a pedidos para ignorar regras e a ausência de promessas de desconto são regras de prompt, avaliadas manualmente (`docs/05-test-plan.md`, seção 9.2). Nenhuma ferramenta expõe dados de outros clientes.
-- **Alternativas:** deixar o modelo registrar também a resposta segura, o que depende de ele cumprir o prompt justamente quando a resposta falhou; registrar sem telefone, o que gera casos sem retorno possível.
-- **Consequências:** o registro da resposta segura é garantido em código, e os demais dependem de o modelo chamar a ferramenta. O resumo guarda texto livre do cliente e é tratado como dado pessoal (`docs/03-data.md`, seção 7). Não há painel nem leitura dos encaminhamentos: a equipe consulta a tabela (fora do escopo do MVP). Um encaminhamento do mesmo telefone e motivo dentro de uma hora (`JANELA_DE_REPETICAO`) devolve `ja_registrado` mesmo com resumo diferente, porque o modelo reescreve o resumo a cada tentativa e o mesmo caso virava vários registros. Para `reclamacao` a janela só vale quando os resumos tratam do mesmo caso: citam o mesmo número de pedido ou, se um deles não cita pedido, compartilham alguma palavra do assunto (5 letras ou mais, sem acento e sem as palavras comuns a toda reclamação, como "cliente", "pedido", "reclama" e "insatisfeita"). Duas reclamações sobre assuntos ou pedidos diferentes dentro da janela geram dois registros (reteste do QA, QA-27). `atendente_solicitado` e `sem_resposta_segura` seguem com a janela pura, porque pedir um atendente de novo com outras palavras é o mesmo caso. O custo é a heurística: uma reclamação nova que reaproveite uma palavra do resumo anterior, sem citar pedido, ainda é tratada como repetida; depois da janela gera. O mesmo resumo continua devolvendo `ja_registrado` a qualquer tempo, e a janela é comparada como `datetime`.
+- **Status:** Accepted.
+- **Context:** complaints, requests for a human agent, and questions without a safe answer need to reach the team with a reason and a summary (RF-10), and the customer needs to know when they will hear back. Leaving this to the model alone risks "registrations" that were never written and invented deadlines.
+- **Decision:**
+  1. **`handoffs` table.** `phone`, `reason`, `summary`, and `created_at`. `reason` accepts `reclamacao`, `sem_resposta_segura`, and `atendente_solicitado` (`CHECK`), and `summary` cannot be empty (`CHECK`). No foreign key; the load never recreates it, so there is no migration.
+  2. **Writes in `src/handoffs.py`.** `registrar` normalizes the phone number, truncates the summary at 500 characters, and returns `registrado`, `ja_registrado` (same phone number, reason, and summary), `resumo_invalido`, or `telefone_invalido`. Only `registrado` writes.
+  3. **`encaminhar_para_atendente(motivo, resumo)` tool.** The phone number comes from the session and never from the model (ADR-009). The result is a fixed text, and the 24-business-hour deadline is built in code (`src/agent.py`, `MENSAGENS_DE_ENCAMINHAMENTO`).
+  4. **No valid phone number.** Nothing is written, because the team would have no way to reply (as with interests, ADR-016). The tool returns a message telling the model to explain that the phone number was not identified and to give the store contacts.
+  5. **Guardrail safe answer (ADR-013).** When the guardrail gives up, the code registers a `sem_resposta_segura` handoff with the customer's message as the summary, without depending on the model, and the answer states the reply deadline. Without a valid phone number, the answer explains that the phone number could not be identified to hand off the case; with an empty message, nothing is written and the answer does not claim a registration. The history keeps the same text the customer received.
+  6. **Return after the deadline.** The agent warns that the deadline has passed and offers to talk to a human agent, through the store contacts or the handoff. It only registers if the customer accepts.
+  7. **Scope.** Declining out-of-scope topics, redirecting accessories, resisting requests to ignore rules, and not promising discounts are prompt rules, evaluated manually (`docs/05-test-plan.md`, section 9.2). No tool exposes other customers' data.
+- **Alternatives:** letting the model also register the safe answer, which depends on it following the prompt precisely when the answer failed; registering without a phone number, which creates cases with no possible reply.
+- **Consequences:** the safe answer's registration is guaranteed in code, and the others depend on the model calling the tool. The summary stores the customer's free text and is treated as personal data (`docs/03-data.md`, section 7). There is no dashboard or reading of the handoffs: the team queries the table (out of the MVP's scope). A handoff from the same phone number and reason within one hour (`JANELA_DE_REPETICAO`) returns `ja_registrado` even with a different summary, because the model rewrites the summary on every attempt and the same case was turning into several records. For `reclamacao`, the window only applies when the summaries deal with the same case: they cite the same order number or, if one of them does not cite an order, share a subject word (5 letters or more, without accents, and excluding the words common to every complaint, such as "cliente", "pedido", "reclama", and "insatisfeita"). Two complaints about different subjects or orders within the window create two records (QA retest, QA-27). `atendente_solicitado` and `sem_resposta_segura` keep the plain window, because asking for a human agent again in other words is the same case. The cost is the heuristic: a new complaint that reuses a word from the previous summary, without citing an order, is still treated as a repeat; after the window it creates a record. The same summary still returns `ja_registrado` at any time, and the window is compared as a `datetime`.
 
-### ADR-018: Resiliência a falhas do provedor e painel de ferramentas
+### ADR-018: Resilience to provider failures and tool panel
 
-- **Status:** Aceita.
-- **Contexto:** o plano gratuito do Gemini tem limite de uso baixo (medido em 01/11/2026: 15 requisições por minuto e 500 por dia, por projeto e modelo), e o provedor pode ficar lento ou fora do ar. Sem tratamento, o cliente via um traceback e a fala dele se perdia. A equipe de desenvolvimento também precisa ver quais ferramentas o agente usou em cada resposta.
-- **Decisão:**
-  1. **Nova tentativa em código.** `responder` repete a execução quando o provedor recusa por limite de uso (`ModelRateLimitError`) ou está indisponível ou sobrecarregado (`ModelUnavailableError`, `ModelOverloadedError`), e também quando o servidor falha (`ModelServerError`, como 500, 502 e 504): no máximo 2 repetições, esperando o `retry_after` do provedor com teto de 15 s, ou 2 s e 5 s sem ele. O laço fica no código e não no `max_retries` do SDK, para ser visível e testável sem a API. Cada repetição consome uma requisição da cota. Como a execução recomeça do histórico, as ferramentas do turno rodam de novo; as de gravação são idempotentes (interesses e encaminhamentos não duplicam).
-  2. **Sem repetição.** Cota esgotada (`ModelQuotaExceededError`) e tempo esgotado não se resolvem esperando. O limite diário do Gemini chega como `ModelRateLimitError` com `PerDay` no `quotaId`; também não repete (`limits.e_limite_diario`) e gera `MENSAGEM_DE_LIMITE_DIARIO`.
-  3. **Tempo limite.** `model_settings` do agente define `timeout=20` por tentativa e `request_timeout=40` por requisição. `ModelTimeoutError` e `ModelRequestTimeout` geram `MENSAGEM_DE_TIMEOUT`.
-  4. **Mensagens ao cliente.** Limite persistente, cota esgotada e indisponibilidade geram `MENSAGEM_DE_LIMITE`. Qualquer outra falha do provedor (rede, chave, 5xx persistente), do banco ou uma exceção inesperada gera `MENSAGEM_DE_ERRO_TECNICO`, sem detalhes técnicos, que vão para o log (`logging`); a captura final de `responder` garante que nenhuma exceção chegue à tela. As ferramentas recusam valores acima de R$ 1.000.000 e números de pedido ou produto acima de 2³¹−1, que estouravam o cálculo ou o inteiro do SQLite. Em todos os casos a fala do cliente e a mensagem enviada entram no histórico, no mesmo molde da resposta segura, e uma falha ao gravar não derruba o atendimento. A resposta segura (ADR-013) também tolera falha do banco ao registrar o encaminhamento.
-  5. **Limite efetivo.** `src/limits.py` acrescenta uma linha JSON a `data/limites_provedor.log` (fora do Git) quando um erro de limite persiste: data, modelo, status, `retry_after` e, quando o corpo do erro do Gemini traz, a métrica, a cota e o valor do limite. Não há telefone nem texto do cliente. Uma falha ao gravar o arquivo não impede a mensagem.
-  6. **Painel de ferramentas.** `responder` preenche `Sessao.ferramentas` com as chamadas do turno (nome e argumentos), reiniciada a cada turno. A interface mostra um bloco "Como o Tom chegou a essa resposta" (rótulos, item 11) em cada resposta recebida na tela aberta; as respostas recarregadas pelo telefone não têm o painel.
-  7. **Mensagens em sequência.** A interface anexa a fala e a resposta ao estado da tela antes de qualquer chamada de desenho. Esse ajuste não impediu que uma mensagem enviada durante a resposta deixasse a anterior sem resposta; o bloqueio do campo (ADR-020) o substitui como solução.
-  8. **Espera indicada pelo provedor.** O Gemini manda `retry_after` vazio e o tempo no corpo do 429 (`retryDelay`, como `27s`). `limits.espera_indicada` lê esse valor, que vale com o teto de 15 segundos; ilegível ou ausente, vale a espera padrão (2 s e 5 s).
-  9. **Mensagens de limite sem detalhe do fornecedor.** `MENSAGEM_DE_LIMITE` (por minuto, tente em alguns minutos) não cita serviço de IA, e `MENSAGEM_DE_LIMITE_DIARIO` (também usada para cota esgotada e para qualquer violação `PerDay` do corpo) diz que o atendimento volta no dia seguinte e manda procurar os contatos de atendimento da loja.
-  10. **Fila única (limitação registrada).** O agente roda em um executor de uma thread (`max_workers=1`): atendimentos simultâneos esperam em fila, e, numa medição com três clientes simultâneos e resposta simulada de 3 s, o terceiro recebeu a resposta em cerca de 9 s. Mais threads não aceleram na prática, porque o limite do plano gratuito é de 15 requisições por minuto para a loja inteira. A fila some com um plano pago e um canal que receba as mensagens no servidor.
-  11. **Painel com rótulos.** A tela mostra "Como o Tom chegou a essa resposta" com rótulos como "Consulta ao catálogo", sem nomes de ferramentas nem argumentos (`product_id`, `customer_id`). `Sessao.ferramentas` continua com nome e argumentos para a equipe de desenvolvimento.
-- **Alternativas:** `max_retries` do SDK, escondido e não testável offline; tabela para o registro de limites, descartada pela simplicidade; persistir as ferramentas no histórico para o painel também aparecer nas respostas antigas.
-- **Consequências:** o cliente nunca vê um traceback nas falhas previstas, e a conversa não se perde. Cada repetição gasta cota, e uma espera de até 22 s soma-se ao tempo de resposta. O registro de limites depende de o provedor informar os dados. Uma requisição interrompida no provedor ainda pode ter sido processada, o que aceitamos no MVP.
+- **Status:** Accepted.
+- **Context:** the Gemini free tier has a low usage limit (measured on November 1, 2026: 15 requests per minute and 500 per day, per project and model), and the provider may become slow or unavailable. Without handling, the customer saw a traceback and their message was lost. The development team also needs to see which tools the agent used in each answer.
+- **Decision:**
+  1. **Retry in code.** `responder` repeats the run when the provider refuses due to the rate limit (`ModelRateLimitError`) or is unavailable or overloaded (`ModelUnavailableError`, `ModelOverloadedError`), and also when the server fails (`ModelServerError`, such as 500, 502, and 504): at most 2 retries, waiting for the provider's `retry_after` with a 15 s cap, or 2 s and 5 s without it. The loop lives in the code and not in the SDK's `max_retries`, so that it is visible and testable without the API. Each retry consumes one request from the quota. Since the run starts again from the history, the turn's tools run again; the write tools are idempotent (interests and handoffs do not duplicate).
+  2. **No retry.** Exhausted quota (`ModelQuotaExceededError`) and timeouts are not solved by waiting. Gemini's daily limit arrives as `ModelRateLimitError` with `PerDay` in the `quotaId`; it is not retried either (`limits.e_limite_diario`) and produces `MENSAGEM_DE_LIMITE_DIARIO`.
+  3. **Timeout.** The agent's `model_settings` sets `timeout=20` per attempt and `request_timeout=40` per request. `ModelTimeoutError` and `ModelRequestTimeout` produce `MENSAGEM_DE_TIMEOUT`.
+  4. **Messages to the customer.** A persistent rate limit, exhausted quota, and unavailability produce `MENSAGEM_DE_LIMITE`. Any other provider failure (network, key, persistent 5xx), a database failure, or an unexpected exception produces `MENSAGEM_DE_ERRO_TECNICO`, without technical details, which go to the log (`logging`); the final catch in `responder` ensures no exception reaches the screen. The tools reject amounts above R$ 1.000.000 and order or product numbers above 2³¹−1, which overflowed the calculation or SQLite's integer. In every case, the customer's message and the message sent enter the history, in the same way as the safe answer, and a failure to write does not bring the service down. The safe answer (ADR-013) also tolerates a database failure when registering the handoff.
+  5. **Effective limit.** `src/limits.py` appends a JSON line to `data/limites_provedor.log` (outside Git) when a rate-limit error persists: date, model, status, `retry_after` and, when Gemini's error body provides them, the metric, the quota, and the limit value. There is no phone number or customer text. A failure to write the file does not prevent the message.
+  6. **Tool panel.** `responder` fills `Sessao.ferramentas` with the turn's calls (name and arguments), reset on every turn. The interface shows a "Como o Tom chegou a essa resposta" ("How Tom reached this answer") block (labels, item 11) under each answer received in the open screen; answers reloaded by phone number have no panel.
+  7. **Messages in sequence.** The interface appends the message and the answer to the screen state before any rendering call. This adjustment did not prevent a message sent during the answer from leaving the previous one unanswered; locking the field (ADR-020) replaces it as the solution.
+  8. **Wait indicated by the provider.** Gemini sends an empty `retry_after` and the time in the 429 body (`retryDelay`, such as `27s`). `limits.espera_indicada` reads this value, which applies with the 15-second cap; unreadable or missing, the default wait applies (2 s and 5 s).
+  9. **Limit messages without provider details.** `MENSAGEM_DE_LIMITE` (per minute, try again in a few minutes) does not mention an AI service, and `MENSAGEM_DE_LIMITE_DIARIO` (also used for exhausted quota and for any `PerDay` violation in the body) says that the service returns the next day and points to the store's contact channels.
+  10. **Single queue (recorded limitation).** The agent runs in a one-thread executor (`max_workers=1`): concurrent conversations wait in a queue, and, in a measurement with three concurrent customers and a 3 s simulated answer, the third received the answer in about 9 s. More threads do not help in practice, because the free tier's limit is 15 requests per minute for the whole store. The queue goes away with a paid plan and a channel that receives messages on the server.
+  11. **Panel with labels.** The screen shows "Como o Tom chegou a essa resposta" with labels such as "Consulta ao catálogo" ("Catalog lookup"), without tool names or arguments (`product_id`, `customer_id`). `Sessao.ferramentas` keeps the name and arguments for the development team.
+- **Alternatives:** the SDK's `max_retries`, hidden and not testable offline; a table for the limit log, discarded for simplicity; persisting the tools in the history so that the panel also appears on old answers.
+- **Consequences:** the customer never sees a traceback for the expected failures, and the conversation is not lost. Each retry spends quota, and a wait of up to 22 s adds to the response time. The limit log depends on the provider reporting the data. A request interrupted at the provider may still have been processed, which we accept in the MVP.
 
-### ADR-019: Busca de produtos com tolerância a erro de digitação
+### ADR-019: Product search tolerant to typos
 
-- **Status:** Aceita.
-- **Contexto:** a busca ignorava maiúsculas e acentos, mas não erros de digitação: "gianini gf 3d" não encontrava o Giannini GF-3D, e o agente deixava de definir o produto em foco.
-- **Decisão:** `buscar_produtos` faz primeiro a busca exata. Só quando ela não encontra nada, repete a busca aceitando, em cada palavra do termo, uma letra a mais, a menos ou trocada em relação a uma palavra do nome. A tolerância vale apenas para palavras formadas só por letras e com 5 letras ou mais; palavras curtas e códigos de modelo, que têm dígitos ou hífen (`F310`, `GF-3D`, `D-28E`), continuam exatos.
-- **Ampliação (issue #14):** cada palavra da consulta também casa, como palavra inteira, com a categoria do produto no singular (um pedaço como "tar" não casa com "guitarra") ("violão takamine", "ukulele kala", "guitarra stratocaster fender"), palavras de ligação ("da", "do", "um") são ignoradas, e a comparação exata não conta o hífen ("GF3D", "Martin D28", "AC39", "KAC"). Uma consulta só com palavras de ligação não devolve o catálogo. Códigos continuam sem aproximação: "D28E" não traz o D-28. **Ampliação (QA-44):** o filtro `categoria` também tolera erro de digitação ("Ukelele", "Guitaras"), em palavras de 5 letras ou mais e só quando a busca exata não acha nada; a tolerância não afrouxa preço, promoção, disponibilidade nem quantidade, e categorias que a loja não tem (saxofone, flauta) continuam sem resultado.
-- **Alternativas:** distância de edição maior ou por trigramas, descartadas por aproximarem modelos distintos; delegar a correção ao modelo, descartada porque o preço e o estoque devem vir de uma busca determinística.
-- **Consequências:** nomes escritos errado passam a ser encontrados sem tocar o caminho exato. Um erro em código de modelo ou em palavra curta continua sem resultado, o que evita responder sobre o produto errado.
+- **Status:** Accepted.
+- **Context:** the search ignored case and accents, but not typos: "gianini gf 3d" did not find the Giannini GF-3D, and the agent failed to set the product in focus.
+- **Decision:** `buscar_produtos` first runs the exact search. Only when it finds nothing does it repeat the search accepting, in each word of the term, one letter more, one less, or one swapped relative to a word of the name. The tolerance only applies to words made only of letters and with 5 or more letters; short words and model codes, which have digits or hyphens (`F310`, `GF-3D`, `D-28E`), remain exact.
+- **Extension (issue #14):** each word of the query also matches, as a whole word, the product's category in the singular (a fragment such as "tar" does not match "guitarra") ("violão takamine", "ukulele kala", "guitarra stratocaster fender"), connecting words ("da", "do", "um") are ignored, and the exact comparison ignores the hyphen ("GF3D", "Martin D28", "AC39", "KAC"). A query with only connecting words does not return the catalog. Codes remain without approximation: "D28E" does not bring the D-28. **Extension (QA-44):** the `categoria` filter also tolerates a typo ("Ukelele", "Guitaras"), in words with 5 or more letters and only when the exact search finds nothing; the tolerance does not loosen price, promotion, availability, or quantity, and categories the store does not carry (saxophone, flute) still return no results.
+- **Alternatives:** a larger edit distance or trigrams, discarded because they bring distinct models together; delegating the correction to the model, discarded because price and stock must come from a deterministic search.
+- **Consequences:** misspelled names are now found without touching the exact path. A typo in a model code or in a short word still returns no results, which avoids answering about the wrong product.
 
-### ADR-020: Campo de mensagem bloqueado enquanto o Tom responde
+### ADR-020: Message field locked while Tom answers
 
-- **Status:** Aceita.
-- **Contexto:** no Streamlit, uma nova mensagem interrompe a execução em andamento. Na validação com a interface real, uma segunda mensagem enviada durante a resposta da primeira deixou a primeira sem resposta na tela, e a chamada ao Gemini continuou sem destino.
-- **Decisão:** a interface roda em duas execuções. Ao enviar, a pergunta entra no estado da tela como pendente e a tela é recarregada com o campo desabilitado. A segunda execução responde à pendência, guarda a resposta e recarrega a tela com o campo liberado. Durante a espera o spinner diz "O Tom está digitando...", sem pausa artificial.
-- **Alternativas:** agrupar as mensagens recebidas numa janela de 2 a 5 segundos e enviar todas juntas ao agente (debounce), descartada no MVP porque soma a espera a toda mensagem e não cobre uma mensagem que chega durante a chamada ao modelo; aceitar a limitação, descartada porque perde respostas.
-- **Consequências:** nenhuma mensagem fica sem resposta, ao custo de o cliente só poder escrever depois da resposta (de poucos segundos a cerca de 22 s quando há nova tentativa). O agrupamento de mensagens por telefone fica para a integração com um canal como o WhatsApp, onde o servidor recebe as mensagens e a fila é natural. Uma recarga da página durante a espera perde a pergunta pendente, porque o estado da tela é da sessão. A pergunta pendente guarda o telefone de quem a enviou: se o campo de telefone mudar durante a espera, a resposta é guardada para o telefone original e não aparece na conversa exibida do novo número. Se a resposta falhar com uma exceção inesperada, a pendência é limpa, o campo é liberado e a tela mostra `MENSAGEM_DE_ERRO_TECNICO` em vez do traceback; o detalhe vai para o log. O Streamlit também roda com `showErrorDetails = "none"` e `toolbarMode = "viewer"` (sem o botão Deploy) em `.streamlit/config.toml`. Quem conversa antes de informar o telefone continua vendo a conversa ao informá-lo, e a última pergunta é respondida de novo com o telefone novo (a resposta fica no histórico dele, ao custo de uma requisição), a menos que a resposta sem telefone tenha usado só consultas que não dependem do cadastro (catálogo, políticas e conta), caso em que não é refeita. A saudação do Tom é só da tela e não entra no histórico. O texto do cliente é exibido sem interpretar Markdown, telefone inválido gera aviso e, sem telefone, a tela indica onde informá-lo no menu lateral, que no celular começa recolhido.
+- **Status:** Accepted.
+- **Context:** in Streamlit, a new message interrupts the run in progress. In the validation with the real interface, a second message sent while the first was being answered left the first without an answer on screen, and the call to Gemini continued with no destination.
+- **Decision:** the interface runs in two passes. On send, the question enters the screen state as pending and the screen reloads with the field disabled. The second pass answers the pending question, stores the answer, and reloads the screen with the field enabled. While waiting, the spinner says "O Tom está digitando..." ("Tom is typing..."), with no artificial pause.
+- **Alternatives:** grouping the messages received in a 2-to-5-second window and sending them together to the agent (debounce), discarded in the MVP because it adds the wait to every message and does not cover a message that arrives during the model call; accepting the limitation, discarded because it loses answers.
+- **Consequences:** no message is left without an answer, at the cost of the customer only being able to write after the answer (from a few seconds up to about 22 s when there is a retry). Grouping messages per phone number is left for the integration with a channel such as WhatsApp, where the server receives the messages and the queue is natural. Reloading the page during the wait loses the pending question, because the screen state belongs to the session. The pending question stores the phone number of whoever sent it: if the phone field changes during the wait, the answer is stored for the original phone number and does not appear in the conversation shown for the new number. If the answer fails with an unexpected exception, the pending question is cleared, the field is enabled, and the screen shows `MENSAGEM_DE_ERRO_TECNICO` instead of the traceback; the details go to the log. Streamlit also runs with `showErrorDetails = "none"` and `toolbarMode = "viewer"` (without the Deploy button) in `.streamlit/config.toml`. Whoever chats before entering the phone number still sees the conversation after entering it, and the last question is answered again with the new phone number (the answer stays in that number's history, at the cost of one request), unless the answer without a phone number used only lookups that do not depend on the customer record (catalog, policies, and calculation), in which case it is not repeated. Tom's greeting belongs only to the screen and does not enter the history. The customer's text is shown without interpreting Markdown, an invalid phone number shows a warning, and, without a phone number, the screen points to where to enter it in the side menu, which starts collapsed on mobile.
 
-### ADR-021: Respostas só com informação de fonte conhecida
+### ADR-021: Answers only with information from a known source
 
-- **Status:** Aceita.
-- **Contexto:** uma avaliação de QA mostrou o Tom inventando especificações, estoque, fatos da loja e promessas de aviso, e supondo o canal de compra. A guarda do ADR-013 só confere valores em reais, percentuais, datas e rastreios.
-- **Decisão:**
-  1. **Especificações pelo cadastro.** A carga passa a guardar `specs` (JSON de `products.csv`) e `Produto.especificacoes` as devolve ao modelo. A descrição livre não é exposta (DQ-04). Campos que o cadastro contradiz ficam de fora: `strings` do Yamaha Bass 3X, id 137 (DQ-05). O que não estiver nas especificações é respondido como "não tenho essa informação".
-  2. **Quantidade sem estoque exato.** `buscar_produtos` aceita `quantidade` e devolve `atende_quantidade`, calculado em código: só é verdadeiro para produto disponível com estoque suficiente (o `status` tem prioridade, DQ-02 e DQ-03). O número do estoque não é exposto, porque muda a cada venda e vira promessa; o Tom nunca cita nem estima unidades.
-  3. **Canal só se o cliente citou.** `avaliar_devolucao` ignora o `canal` quando nenhuma fala do cliente na conversa traz uma palavra desse canal (online, site, internet, presencial, pessoalmente, na loja, balcão). O veredito volta `faltam_dados` e o Tom pergunta. A busca usa palavras inteiras e frases (`online`, `pelo site`, `pela internet`, `presencial`, `na loja`), porque "site" sozinho pode ser só uma consulta de preço. A conversa inteira conta, inclusive falas de turnos anteriores.
-  4. **Promessa de aviso na guarda.** O validador de saída recusa respostas que prometem avisar o cliente (ADR-016), exceto quando negam a promessa em até 25 caracteres antes e sem pontuação entre a negação e a promessa ("não posso te avisar" passa; "não se preocupe, te aviso", "não posso, infelizmente, te avisar" e "anote seu interesse para avisar se ele voltar" são barrados). O retorno da equipe prometido pelo encaminhamento ("entraremos em contato", ADR-017) não é barrado. O modelo recebe um pedido de correção.
-  5. **Regras de prompt.** O prompt ganha regras para especificação e quantidade, assuntos sem fonte (categorias, serviços, lojas parceiras, exceções de prazo, cidade do cliente, site e carrinho), compra, reserva, cancelamento e alteração de pedido. Elas dependem do comportamento do Gemini: **não têm teste automático**, por decisão registrada, porque um teste sobre o texto do prompt só confirmaria que a frase existe. São validadas à mão com o Gemini (docs/05, seção 9.2). O frete de exatamente R$ 500,00, que o manual não cobre, e o cancelamento de uma devolução inexistente dependem só do prompt.
-  6. **Carga desatualizada.** Um banco carregado antes das especificações é tratado como não carregado e a tela indica `python -m src.load_data`.
-- **Alternativas:** expor o estoque exato, descartada; dispensar as regras de prompt e tratar tudo por código, fora do prazo do MVP; teste automático sobre o texto do prompt, tautológico.
-- **Consequências:** o Tom passa a ter dados para responder sobre especificações e quantidade sem inventar, e o canal deixa de ser suposto. As listas de palavras do canal e de frases de aviso são heurísticas e não cobrem toda redação. As chaves das especificações vêm em inglês (`back_sides`, `neck`) e o modelo as traduz. As regras de prompt só foram avaliadas com modelo simulado até a cota do Gemini voltar.
+- **Status:** Accepted.
+- **Context:** a QA evaluation showed Tom inventing specifications, stock, store facts, and notice promises, and assuming the purchase channel. The ADR-013 guardrail only checks amounts in reais, percentages, dates, and tracking codes.
+- **Decision:**
+  1. **Specifications from the product record.** The load now stores `specs` (JSON from `products.csv`), and `Produto.especificacoes` returns them to the model. The free-text description is not exposed (DQ-04). Fields the record contradicts are left out: `strings` of the Yamaha Bass 3X, id 137 (DQ-05). Whatever is not in the specifications is answered as "não tenho essa informação" ("I don't have that information").
+  2. **Quantity without the exact stock.** `buscar_produtos` accepts `quantidade` and returns `atende_quantidade`, calculated in code: it is only true for an available product with enough stock (`status` takes precedence, DQ-02 and DQ-03). The stock number is not exposed, because it changes with every sale and becomes a promise; Tom never cites or estimates units.
+  3. **Channel only if the customer mentioned it.** `avaliar_devolucao` ignores `canal` when no customer message in the conversation contains a word for that channel (online, site, internet, presencial, pessoalmente, na loja, balcão). The verdict returns `faltam_dados` and Tom asks. The search uses whole words and phrases (`online`, `pelo site`, `pela internet`, `presencial`, `na loja`), because "site" alone may be just a price lookup. The whole conversation counts, including messages from previous turns.
+  4. **Notice promises in the guardrail.** The output validator rejects answers that promise to notify the customer (ADR-016), except when they deny the promise within 25 characters before it and with no punctuation between the negation and the promise ("não posso te avisar" passes; "não se preocupe, te aviso", "não posso, infelizmente, te avisar", and "anote seu interesse para avisar se ele voltar" are blocked; "para avisar" is also among the promises). The team's reply promised by the handoff ("entraremos em contato", "we will contact you", ADR-017) is not blocked. The model receives a correction request.
+  5. **Prompt rules.** The prompt gains rules for specifications and quantity, topics without a source (categories, services, partner stores, deadline exceptions, the customer's city, website, and cart), purchase, reservation, cancellation, and order changes. They depend on Gemini's behavior: **they have no automated test**, by recorded decision, because a test on the prompt text would only confirm that the sentence exists. They are validated by hand with Gemini (docs/05, section 9.2). Shipping for exactly R$ 500,00, which the handbook does not cover, and canceling a nonexistent return depend only on the prompt.
+  6. **Outdated load.** A database loaded before the specifications is treated as not loaded, and the screen points to `python -m src.load_data`.
+- **Alternatives:** exposing the exact stock, discarded; dropping the prompt rules and handling everything in code, beyond the MVP's schedule; an automated test on the prompt text, tautological.
+- **Consequences:** Tom now has data to answer about specifications and quantity without inventing, and the channel is no longer assumed. The channel word lists and notice phrases are heuristics and do not cover every wording. The specification keys come in English in the source (`back_sides`, `neck`), and the code translates the main keys and values into Portuguese (ADR-012). The prompt rules were only evaluated with a simulated model until the Gemini quota came back.
 
-### ADR-022: Data de referência no contexto e atraso do pedido calculado em código
+### ADR-022: Reference date in the context and order delay calculated in code
 
-- **Status:** Aceita.
-- **Contexto:** o agente não recebia a data, apesar de a especificação prever, e respondeu que um pedido enviado com previsão vencida há 25 dias "não estava atrasado". Perguntas como "a loja abre amanhã?" também ficavam sem resposta.
-- **Decisão:**
-  1. O contexto de cada turno traz "Hoje: dd/mm/aaaa, dia da semana", calculado em código a partir da data de referência da sessão, e diz que o sistema não informa a hora atual.
-  2. A guarda de saída (ADR-013) aceita as datas de hoje e de amanhã como fonte, além das ferramentas e da fala do cliente. A de amanhã existe para "abrem amanhã?".
-  3. `consultar_meus_pedidos` devolve, em `atraso`, o texto pronto "A entrega estimada era … e o pedido segue como enviado: N dias de atraso" quando o pedido está enviado e a previsão venceu (DQ-16). Pedido no prazo, entregue, pendente ou confirmado não traz o campo.
-  4. "A loja está aberta agora?" é respondida com o dia da semana e o horário do manual, informando que a hora atual não está disponível. "Abrem amanhã?" usa o dia da semana seguinte. Essas respostas dependem do prompt (docs/05, seção 9.2).
-- **Alternativas:** ler o relógio do sistema, descartada porque a data de referência dos dados é fixa e a hora real contradiria os prazos calculados; deixar o modelo comparar as datas, descartada pelo erro observado.
-- **Consequências:** o atraso e o dia da semana deixam de depender do modelo. A hora atual continua indisponível, então "aberta agora" não tem resposta definitiva. O texto do atraso só cobre pedidos enviados; pedidos confirmados sem previsão não têm atraso calculável.
+- **Status:** Accepted.
+- **Context:** the agent did not receive the date, although the specification expected it, and answered that an order shipped with an estimate overdue by 25 days "was not late". Questions such as "a loja abre amanhã?" ("is the store open tomorrow?") were also left unanswered.
+- **Decision:**
+  1. The context of each turn includes "Hoje: dd/mm/aaaa, dia da semana" ("Today: date, day of the week"), calculated in code from the session's reference date, and says that the system does not provide the current time.
+  2. The output guardrail (ADR-013) accepts the dates of today and tomorrow as a source, besides the tools and the customer's message. Tomorrow's date exists for "abrem amanhã?" ("open tomorrow?").
+  3. `consultar_meus_pedidos` returns, in `atraso`, the ready-made text "A entrega estimada era … e o pedido segue como enviado: N dias de atraso" ("The estimated delivery was … and the order is still shipped: N days late") when the order is shipped and the estimate has passed (DQ-16). An order on time, delivered, pending, or confirmed does not include the field.
+  4. "A loja está aberta agora?" ("Is the store open now?") is answered with the day of the week and the handbook's opening hours, stating that the current time is not available. "Abrem amanhã?" uses the following day of the week. These answers depend on the prompt (docs/05, section 9.2).
+- **Alternatives:** reading the system clock, discarded because the data's reference date is fixed and the real time would contradict the calculated deadlines; letting the model compare dates, discarded because of the observed error.
+- **Consequences:** the delay and the day of the week no longer depend on the model. The current time remains unavailable, so "open now" has no definitive answer. The delay text only covers shipped orders; confirmed orders without an estimate have no calculable delay.
 
-### ADR-004: SQLite como armazenamento
+### ADR-004: SQLite as storage
 
-- **Status:** Aceita.
-- **Contexto:** os dados chegam em CSV, e o sistema também precisa persistir conversas.
-- **Decisão:** carregar os CSVs em SQLite e usar o mesmo banco para os dados operacionais.
-- **Alternativas:** leitura direta com pandas, sem persistência para conversas; PostgreSQL, com operação desnecessária no MVP.
-- **Consequências:** o ambiente é simples e reprodutível. Uso concorrente em produção exigiria migração.
+- **Status:** Accepted.
+- **Context:** the data comes as CSV, and the system also needs to persist conversations.
+- **Decision:** load the CSVs into SQLite and use the same database for the operational data.
+- **Alternatives:** reading directly with pandas, without persistence for conversations; PostgreSQL, with operational overhead unnecessary for the MVP.
+- **Consequences:** the environment is simple and reproducible. Concurrent production use would require a migration.
 
-### ADR-005: Consultas fixas e parametrizadas
+### ADR-005: Fixed, parameterized queries
 
-- **Status:** Aceita.
-- **Contexto:** filtros de disponibilidade e privacidade não podem depender do modelo.
-- **Decisão:** o modelo escolhe parâmetros, mas não escreve SQL.
-- **Consequências:** o comportamento é auditável. Perguntas analíticas livres ficam fora do MVP.
+- **Status:** Accepted.
+- **Context:** availability and privacy filters cannot depend on the model.
+- **Decision:** the model chooses parameters, but does not write SQL.
+- **Consequences:** the behavior is auditable. Free-form analytical questions are out of the MVP.
 
-### ADR-006: Consulta de políticas por seção
+### ADR-006: Policy lookup by section
 
-- **Status:** Aceita.
-- **Contexto:** o manual tem 8 páginas, e a extração automática desalinha tabelas, como a de horários.
-- **Decisão:** manter uma versão revisada em Markdown, consultada por seção.
-- **Alternativas:** banco vetorial, que adiciona componentes sem ganho relevante para este volume.
-- **Consequências:** a recuperação é previsível e barata. O arquivo precisa ser mantido junto com o manual, e um manual muito maior exigiria reavaliar a busca semântica.
+- **Status:** Accepted.
+- **Context:** the handbook has 8 pages, and automatic extraction misaligns tables, such as the opening hours table.
+- **Decision:** keep a reviewed Markdown version, looked up by section.
+- **Alternatives:** a vector database, which adds components without a relevant gain for this volume.
+- **Consequences:** retrieval is predictable and cheap. The file must be maintained together with the handbook, and a much larger handbook would require reconsidering semantic search.
 
-### ADR-007: Prompt em duas partes
+### ADR-007: Two-part prompt
 
-- **Status:** Aceita.
-- **Contexto:** o agente precisa de comportamento estável e de informações específicas de cada conversa.
-- **Decisão:** separar instruções fixas, com persona e regras, de um contexto dinâmico com data, cliente e interesses pendentes. Usar descrições claras nas ferramentas. O MVP não fixa a temperatura (usa o padrão do modelo): a estabilidade vem das regras do prompt e dos controles em código.
-- **Consequências:** o prompt fica mais curto e fácil de manter. Regras críticas continuam garantidas em código.
+- **Status:** Accepted.
+- **Context:** the agent needs stable behavior and information specific to each conversation.
+- **Decision:** separate fixed instructions, with persona and rules, from a dynamic context with the date, the customer, and pending interests. Use clear tool descriptions. The MVP does not set the temperature (it uses the model's default): stability comes from the prompt rules and the controls in code.
+- **Consequences:** the prompt is shorter and easier to maintain. Critical rules remain enforced in code.
 
-### ADR-008: Memória estruturada de interesses
+### ADR-008: Structured memory of interests
 
-- **Status:** Aceita.
-- **Contexto:** reenviar todo o histórico consome cota e não garante a recuperação de uma informação antiga.
-- **Decisão:** limitar o histórico enviado ao modelo e guardar interesses em `product_interests`.
-- **Consequências:** o dado de negócio persiste entre conversas. O agente precisa registrar o interesse corretamente.
+- **Status:** Accepted.
+- **Context:** resending the whole history consumes quota and does not guarantee that old information is recovered.
+- **Decision:** limit the history sent to the model and store interests in `product_interests`.
+- **Consequences:** the business data persists across conversations. The agent needs to register the interest correctly.
 
-### ADR-009: Identificação pela sessão
+### ADR-009: Identification by session
 
-- **Status:** Aceita para o MVP.
-- **Contexto:** consultas de pedidos precisam respeitar o titular dos dados.
-- **Decisão:** resolver o cliente a partir do telefone da sessão e nunca aceitar `customer_id` como argumento do modelo.
-- **Consequências:** uma mensagem não troca o titular da consulta. Como o telefone digitado não prova identidade, produção exige identificação pelo canal autenticado.
+- **Status:** Accepted for the MVP.
+- **Context:** order lookups must respect the data owner.
+- **Decision:** resolve the customer from the session's phone number and never accept `customer_id` as a model argument.
+- **Consequences:** a message cannot change the owner of the lookup. Since the typed phone number does not prove identity, production requires identification through the authenticated channel.
 
-### ADR-010: Streamlit como interface
+### ADR-010: Streamlit as the interface
 
-- **Status:** Aceita.
-- **Contexto:** o MVP precisa de um chat web simples, mantido em Python.
-- **Decisão:** usar Streamlit.
-- **Alternativas:** FastAPI com front-end próprio, que exigiria mais desenvolvimento.
-- **Consequências:** a entrega é rápida. Um canal de produção exigirá outra camada de entrada.
+- **Status:** Accepted.
+- **Context:** the MVP needs a simple web chat, built in Python.
+- **Decision:** use Streamlit.
+- **Alternatives:** FastAPI with a custom front end, which would require more development.
+- **Consequences:** delivery is fast. A production channel will require another input layer.
 
-## 6. Segurança e privacidade
+## 6. Security and privacy
 
-- Chaves ficam em variáveis de ambiente, fora do Git.
-- Consultas usam parâmetros, nunca concatenação de texto.
-- Pedidos são filtrados pelo cliente da sessão.
-- Mensagens e documentos são tratados como dados, não como instruções do sistema.
-- Dados pessoais são limitados ao necessário para cada resposta.
+- Keys are kept in environment variables, outside Git.
+- Queries use parameters, never string concatenation.
+- Orders are filtered by the session's customer.
+- Messages and documents are treated as data, not as system instructions.
+- Personal data is limited to what each answer needs.
 
-## 7. Estrutura de diretórios
+## 7. Directory structure
 
 ```text
 .
-├── app.py                  # Interface Streamlit
+├── app.py                  # Streamlit interface
 ├── src/
-│   ├── agent.py            # Agente, prompt e ferramentas
-│   ├── catalog.py          # Busca, disponibilidade e preços
-│   ├── config.py           # Configurações
-│   ├── database.py         # Conexão com o banco
-│   ├── load_data.py        # Validação e carga dos dados
-│   ├── memory.py           # Histórico e estado da conversa por telefone
-│   ├── limits.py           # Registro dos limites informados pelo provedor
-│   ├── returns.py          # Veredito de prazos de troca e devolução
-│   ├── datas.py            # Formatação de datas para o cliente
-│   └── policies.py         # Leitura das políticas
+│   ├── agent.py            # Agent, prompt, and tools
+│   ├── catalog.py          # Search, availability, and prices
+│   ├── config.py           # Settings
+│   ├── database.py         # Database connection
+│   ├── load_data.py        # Data validation and load
+│   ├── memory.py           # History and conversation state per phone number
+│   ├── limits.py           # Log of the limits reported by the provider
+│   ├── returns.py          # Exchange and return deadline verdict
+│   ├── datas.py            # Date formatting for the customer
+│   └── policies.py         # Policy lookup
 ├── scripts/
-│   └── simulate_restock.py # Simula uma reposição de estoque
+│   └── simulate_restock.py # Simulates a stock restock
 ├── data/
-│   ├── *.csv               # Dados de origem
+│   ├── *.csv               # Source data
 │   ├── políticas_da_loja.pdf
-│   └── politicas.md        # Políticas revisadas
-├── examples/               # Conversas de referência
+│   └── politicas.md        # Reviewed policies
+├── examples/               # Reference conversations
 ├── tests/
 └── docs/
 ```
 
-## 8. Evolução para produção
+## 8. Evolution to production
 
-| Tema | Evolução |
+| Topic | Evolution |
 |---|---|
-| Canal | Integrar com a API oficial do WhatsApp |
-| Identidade | Usar o número autenticado pelo canal |
-| Dados | Integrar com ERP e sistema de pedidos |
-| Banco | Migrar para PostgreSQL |
-| Observabilidade | Registrar métricas de uso, falhas e transferências para humanos |
-| Qualidade | Adotar avaliações contínuas das respostas |
+| Channel | Integrate with the official WhatsApp API |
+| Identity | Use the phone number authenticated by the channel |
+| Data | Integrate with the ERP and order system |
+| Database | Migrate to PostgreSQL |
+| Observability | Record usage metrics, failures, and handoffs to humans |
+| Quality | Adopt continuous evaluation of the answers |
 
-## 9. Referências
+## 9. References
 
-- [Pydantic AI: modelos Google](https://github.com/pydantic/pydantic-ai/blob/main/docs/models/google.md)
-- [Pydantic AI: histórico de mensagens](https://github.com/pydantic/pydantic-ai/blob/main/docs/message-history.md)
-- [SDK Python do Google Gen AI](https://googleapis.github.io/python-genai/)
+- [Pydantic AI: Google models](https://github.com/pydantic/pydantic-ai/blob/main/docs/models/google.md)
+- [Pydantic AI: message history](https://github.com/pydantic/pydantic-ai/blob/main/docs/message-history.md)
+- [Google Gen AI Python SDK](https://googleapis.github.io/python-genai/)
 - [LangGraph: checkpointers](https://docs.langchain.com/oss/python/langgraph/checkpointers)
-- [Gemini API: limites de uso](https://ai.google.dev/gemini-api/docs/rate-limits)
-- [Gemini API: preços](https://ai.google.dev/gemini-api/docs/pricing)
+- [Gemini API: rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)
+- [Gemini API: pricing](https://ai.google.dev/gemini-api/docs/pricing)
