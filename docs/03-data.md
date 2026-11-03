@@ -1,204 +1,204 @@
-# Dados
+# Data
 
-## 1. Fontes
+## 1. Sources
 
-| Arquivo | Conteúdo | Registros | Uso no sistema |
+| File | Content | Records | Use in the system |
 |---|---|---|---|
-| `products.csv` | Catálogo, preços, estoque, status e especificações | 65 | Busca de produtos |
-| `categories.csv` | Categorias de instrumentos | 9 | Filtro de busca |
-| `promotions.csv` | Descontos por produto | 25, sendo 4 ativas | Cálculo de preços |
-| `customers.csv` | Cadastro de clientes | 50 | Identificação e personalização |
-| `orders.csv` | Pedidos, pagamento, status e rastreio | 20 | Consulta de pedidos |
-| `order_items.csv` | Itens de cada pedido | 22 | Detalhes do pedido |
-| `políticas_da_loja.pdf` | Manual de atendimento, versão 2.1 | 8 páginas | Origem de `politicas.md` |
+| `products.csv` | Catalog, prices, stock, status, and specifications | 65 | Product search |
+| `categories.csv` | Instrument categories | 9 | Search filter |
+| `promotions.csv` | Discounts per product | 25, of which 4 are active | Price calculation |
+| `customers.csv` | Customer records | 50 | Identification and personalization |
+| `orders.csv` | Orders, payment, status, and tracking | 20 | Order lookup |
+| `order_items.csv` | Items of each order | 22 | Order details |
+| `políticas_da_loja.pdf` | Customer service handbook, version 2.1 | 8 pages | Source of `politicas.md` |
 
-Os arquivos de origem são somente leitura. O banco SQLite é um artefato gerado e pode ser recriado a qualquer momento.
+The source files are read-only. The SQLite database is a generated artifact and can be recreated at any time.
 
-## 2. Relacionamentos
+## 2. Relationships
 
 ```mermaid
 erDiagram
-    CATEGORIES ||--o{ PRODUCTS : classifica
-    PRODUCTS ||--o{ PROMOTIONS : recebe
-    CUSTOMERS ||--o{ ORDERS : realiza
-    ORDERS ||--|{ ORDER_ITEMS : contem
-    PRODUCTS ||--o{ ORDER_ITEMS : compoe
+    CATEGORIES ||--o{ PRODUCTS : classifies
+    PRODUCTS ||--o{ PROMOTIONS : receives
+    CUSTOMERS ||--o{ ORDERS : places
+    ORDERS ||--|{ ORDER_ITEMS : contains
+    PRODUCTS ||--o{ ORDER_ITEMS : composes
 ```
 
-A validação inicial não encontrou registros órfãos nem ids duplicados.
+The initial validation found no orphan records and no duplicate ids.
 
-## 3. Regras de disponibilidade
+## 3. Availability rules
 
-O `status` tem prioridade sobre o estoque.
+`status` takes precedence over stock.
 
-| Status | Estoque | Classificação | Comportamento |
+| Status | Stock | Classification | Behavior |
 |---|---|---|---|
-| `active` | Maior que 0 | Disponível | Pode ser oferecido |
-| `active` | 0 | Indisponível | Sugerir alternativas e registrar interesse |
-| `coming_soon` | Qualquer | Lançamento | Não confirmar disponibilidade |
-| `discontinued` | Qualquer | Fora de catálogo | Sugerir modelos equivalentes |
+| `active` | Greater than 0 | Available | Can be offered |
+| `active` | 0 | Unavailable | Suggest alternatives and register interest |
+| `coming_soon` | Any | New release | Do not confirm availability |
+| `discontinued` | Any | Discontinued | Suggest equivalent models |
 
-## 4. Qualidade dos dados
+## 4. Data quality
 
-### 4.1 Catálogo
+### 4.1 Catalog
 
-| ID | Achado | Tratamento |
+| ID | Finding | Handling |
 |---|---|---|
-| DQ-01 | Giannini GF-3D (id 96) está ativo e com estoque 0 | Classificar como indisponível |
-| DQ-02 | Ibanez Bass 2X (id 136) está descontinuado com estoque 13 | Classificar como fora de catálogo |
-| DQ-03 | Kala KA-ABP-CTG (id 130) é `coming_soon`, tem estoque 2 e aparece em pedidos | Classificar como lançamento |
-| DQ-04 | Vários produtos entre os ids 135 e 144 têm nome e descrição de marcas ou modelos diferentes | Usar o nome como fonte oficial e não afirmar marca pela descrição |
-| DQ-05 | Yamaha Bass 3X (id 137) cita 5 cordas na descrição e 4 nas especificações | Não afirmar o número de cordas sem validação; a ferramenta omite `strings` desse produto (ADR-021) |
-| DQ-06 | As categorias 6, 7 e 8 não têm produtos, e o manual cita mais de 300 itens | Responder conforme o catálogo disponível |
+| DQ-01 | Giannini GF-3D (id 96) is active with stock 0 | Classify as unavailable |
+| DQ-02 | Ibanez Bass 2X (id 136) is discontinued with stock 13 | Classify as discontinued |
+| DQ-03 | Kala KA-ABP-CTG (id 130) is `coming_soon`, has stock 2, and appears in orders | Classify as a new release |
+| DQ-04 | Several products between ids 135 and 144 have names and descriptions of different brands or models | Use the name as the official source and do not state the brand from the description |
+| DQ-05 | Yamaha Bass 3X (id 137) mentions 5 strings in the description and 4 in the specifications | Do not state the number of strings without validation; the tool omits `strings` for this product (ADR-021) |
+| DQ-06 | Categories 6, 7, and 8 have no products, and the handbook mentions more than 300 items | Answer according to the available catalog |
 
-### 4.2 Promoções
+### 4.2 Promotions
 
-| ID | Achado | Tratamento |
+| ID | Finding | Handling |
 |---|---|---|
-| DQ-07 | 21 de 25 promoções estão inativas | Considerar apenas `is_active = 1` |
-| DQ-08 | Promoções não têm data de início nem de fim | Usar `is_active` como indicador de vigência |
-| DQ-09 | Há campanhas que não aparecem no manual | Usar `promotions.csv` como fonte dos descontos vigentes |
+| DQ-07 | 21 of 25 promotions are inactive | Consider only `is_active = 1` |
+| DQ-08 | Promotions have no start or end date | Use `is_active` as the validity indicator |
+| DQ-09 | Some campaigns do not appear in the handbook | Use `promotions.csv` as the source of current discounts |
 
-### 4.3 Clientes
+### 4.3 Customers
 
-| ID | Achado | Tratamento |
+| ID | Finding | Handling |
 |---|---|---|
-| DQ-10 | Os clientes 11 e 43 usam o mesmo e-mail e têm nomes parecidos | Identificar pelo telefone e não unificar cadastros automaticamente |
+| DQ-10 | Customers 11 and 43 share the same e-mail and have similar names | Identify by phone number and do not merge records automatically |
 
-### 4.4 Pedidos
+### 4.4 Orders
 
-| ID | Achado | Tratamento |
+| ID | Finding | Handling |
 |---|---|---|
-| DQ-11 | Pedido 3: total de R$ 3.450,00; soma dos itens, R$ 3.498,00 | Exibir `total_brl` como total registrado |
-| DQ-12 | Pedido 20: total de R$ 1.400,00; soma dos itens, R$ 1.488,00 | Exibir `total_brl` como total registrado |
-| DQ-13 | Pedidos pagos com PIX não refletem os 5% de desconto no total | Não inferir o valor efetivamente pago |
-| DQ-14 | Pedidos 9, 16 e 18 têm parcelas abaixo do mínimo vigente | Preservar o histórico; a regra vale para novas orientações |
-| DQ-15 | Pedidos 3 e 14 incluem um produto `coming_soon` | Preservar o histórico |
-| DQ-16 | Pedido 8 segue como `shipped` após a entrega estimada | Informar o status registrado e encaminhar se houver atraso relatado |
-| DQ-17 | Pedidos não têm canal de compra nem data real de entrega | Perguntar o canal e usar `estimated_delivery` como aproximação |
-| DQ-18 | Não há previsão de reposição de estoque | Informar apenas o estoque atual |
+| DQ-11 | Order 3: total of R$ 3.450,00; sum of items, R$ 3.498,00 | Show `total_brl` as the recorded total |
+| DQ-12 | Order 20: total of R$ 1.400,00; sum of items, R$ 1.488,00 | Show `total_brl` as the recorded total |
+| DQ-13 | Orders paid with PIX do not reflect the 5% discount in the total | Do not infer the amount actually paid |
+| DQ-14 | Orders 9, 16, and 18 have installments below the current minimum | Preserve the history; the rule applies to new guidance |
+| DQ-15 | Orders 3 and 14 include a `coming_soon` product | Preserve the history |
+| DQ-16 | Order 8 remains `shipped` after the estimated delivery | Report the recorded status and hand off if a delay is reported |
+| DQ-17 | Orders have no purchase channel and no actual delivery date | Ask for the channel and use `estimated_delivery` as an approximation |
+| DQ-18 | There is no restock forecast | Report only the current stock |
 
-### 4.5 Manual de políticas
+### 4.5 Policy handbook
 
-| ID | Achado | Tratamento |
+| ID | Finding | Handling |
 |---|---|---|
-| DQ-19 | Telefone (67) 3341-4444 e WhatsApp (67) 3321-4500 divergem | Usar 3341-4444 como telefone geral e 3321-4500 como WhatsApp |
-| DQ-20 | E-mail aparece com e sem acento | Usar `contato@emporiodamusica.com.br` |
-| DQ-21 | Tabela de pagamento e seção 3.1 divergem sobre a parcela mínima | Usar a seção 3.1, por ser mais específica |
-| DQ-22 | Até 3x, o texto cita "sem valor mínimo (exceto abaixo de R$ 50,00)" | Interpretar como parcela mínima de R$ 50,00 |
-| DQ-23 | Troca por defeito em 30 dias da compra e garantia legal de 90 dias do recebimento | Tratar como regras distintas |
-| DQ-24 | Arrependimento é citado apenas para compras online | Confirmar o canal antes de concluir |
-| DQ-25 | Lojas parceiras são citadas, mas não há lista | Redirecionar sem indicar lojas |
-| DQ-26 | A troca por preferência tem prazo de 7 dias, mas o manual não diz a partir de quando | Contar a partir do recebimento, como o arrependimento |
+| DQ-19 | Phone (67) 3341-4444 and WhatsApp (67) 3321-4500 differ | Use 3341-4444 as the general phone and 3321-4500 as WhatsApp |
+| DQ-20 | The e-mail appears with and without an accent | Use `contato@emporiodamusica.com.br` |
+| DQ-21 | The payment table and section 3.1 differ on the minimum installment | Use section 3.1, as it is more specific |
+| DQ-22 | Up to 3x, the text says "sem valor mínimo (exceto abaixo de R$ 50,00)" ("no minimum amount, except below R$ 50,00") | Interpret as a minimum installment of R$ 50,00 |
+| DQ-23 | Exchange for defect within 30 days of purchase and legal warranty of 90 days from receipt | Treat as separate rules |
+| DQ-24 | The right of withdrawal is mentioned only for online purchases | Confirm the channel before concluding |
+| DQ-25 | Partner stores are mentioned, but there is no list | Redirect without naming stores |
+| DQ-26 | Exchange by preference has a 7-day deadline, but the handbook does not say from when | Count from receipt, like the right of withdrawal |
 
-Os itens DQ-19 a DQ-24 e DQ-26 devem ser validados com a gestão da loja antes de um uso em produção.
+Items DQ-19 to DQ-24 and DQ-26 must be validated with store management before any production use.
 
-## 5. Regras de negócio
+## 5. Business rules
 
-### 5.1 Preço
+### 5.1 Price
 
-- Preço promocional deve aparecer com o preço original e o percentual de desconto.
-- O PIX tem 5% de desconto sobre o preço de tabela.
-- Promoções não são cumulativas, e o desconto do PIX não se aplica a preços promocionais.
-- Valores são calculados em código e arredondados para duas casas decimais.
+- A promotional price must be shown with the original price and the discount percentage.
+- PIX has a 5% discount on the list price.
+- Promotions do not stack, and the PIX discount does not apply to promotional prices.
+- Amounts are calculated in code and rounded to two decimal places.
 
-### 5.2 Parcelamento
+### 5.2 Installments
 
-| Parcelas | Parcela mínima |
+| Installments | Minimum installment |
 |---|---|
-| 1x a 3x | R$ 50,00 |
-| 4x a 6x | R$ 80,00 |
-| 7x a 12x | R$ 100,00 |
+| 1x to 3x | R$ 50,00 |
+| 4x to 6x | R$ 80,00 |
+| 7x to 12x | R$ 100,00 |
 
-### 5.3 Data de referência
+### 5.3 Reference date
 
-Os pedidos vão até 2026-03-22, então o sistema usa a data configurável `2026-03-25`. Isso mantém prazos coerentes com os dados e permite testes repetíveis.
+Orders go up to 2026-03-22, so the system uses the configurable date `2026-03-25`. This keeps deadlines consistent with the data and makes tests repeatable.
 
-Com esse valor, nenhum pedido entregue está dentro dos 7 dias de arrependimento. O mais recente tem entrega estimada em 2026-02-17, 36 dias antes. Os casos dentro do prazo são validados em testes, com a data informada pelo próprio teste.
+With this value, no delivered order is within the 7-day withdrawal period. The most recent one has an estimated delivery on 2026-02-17, 36 days earlier. Cases within the deadline are validated in tests, with the date set by the test itself.
 
-O valor vem da variável de ambiente `DATA_DE_REFERENCIA` (formato `AAAA-MM-DD`), lida por `config.data_de_referencia()`. Um valor inválido interrompe a execução com uma mensagem que indica o formato.
+The value comes from the `DATA_DE_REFERENCIA` environment variable (format `YYYY-MM-DD`), read by `config.data_de_referencia()`. An invalid value stops execution with a message stating the format.
 
-### 5.4 Prazos de troca e devolução
+### 5.4 Exchange and return deadlines
 
-Calculados em `src/returns.py`, a partir do manual (DQ-23, DQ-24 e DQ-26). O recebimento é a entrega estimada do pedido (DQ-17), sempre apresentada como aproximação.
+Calculated in `src/returns.py`, from the handbook (DQ-23, DQ-24, and DQ-26). Receipt is the order's estimated delivery (DQ-17), always presented as an approximation.
 
-| Motivo | Regra | Contagem |
+| Reason | Rule | Counted from |
 |---|---|---|
-| Arrependimento | 7 dias corridos, só em compra online | Recebimento |
-| Defeito (troca) | 30 dias corridos | Compra |
-| Defeito (garantia legal) | 90 dias corridos | Recebimento |
-| Preferência | 7 dias corridos | Recebimento |
+| Withdrawal (regret) | 7 calendar days, online purchases only | Receipt |
+| Defect (exchange) | 30 calendar days | Purchase |
+| Defect (legal warranty) | 90 calendar days | Receipt |
+| Preference | 7 calendar days | Receipt |
 
-O último dia da contagem ainda está dentro do prazo. Pedidos `pending`, `confirmed` e `cancelled` não têm produto recebido. Em arrependimento, o canal de compra precisa ser perguntado ao cliente. Datas apresentadas ao cliente saem em `dd/mm/aaaa`.
+The last day of the count is still within the deadline. `pending`, `confirmed`, and `cancelled` orders have no received product. For withdrawal, the customer must be asked for the purchase channel. Dates shown to the customer use `dd/mm/yyyy`.
 
-## 6. Pipeline de carga
+## 6. Load pipeline
 
-1. Ler os arquivos de origem sem alterá-los.
-2. Converter números, datas e booleanos.
-3. Interpretar `specs` como JSON.
-4. Normalizar telefones para conter apenas dígitos, sem o código do país.
-5. Validar cada registro conforme a seção 8, antes de alterar o banco.
-6. Criar as tabelas e os índices no SQLite.
-7. Criar as tabelas operacionais.
-8. Registrar os erros de validação e interromper a carga em caso de falha crítica.
+1. Read the source files without changing them.
+2. Convert numbers, dates, and booleans.
+3. Parse `specs` as JSON.
+4. Normalize phone numbers to digits only, without the country code.
+5. Validate each record according to section 8, before changing the database.
+6. Create the tables and indexes in SQLite.
+7. Create the operational tables.
+8. Report validation errors and stop the load on a critical failure.
 
-## 7. Privacidade
+## 7. Privacy
 
-- Apenas o cliente da sessão pode consultar seus pedidos.
-- E-mail e cidade não são necessários para as respostas do MVP e não são expostos ao agente.
-- Do cadastro, o modelo recebe apenas o primeiro nome. Sobrenome e telefone ficam no código.
-- Os dados versionados são fictícios. Telefones podem coincidir com números reais, então não devem ser usados para contato.
-- O histórico (`messages`) guarda o que o cliente digitou e o que o agente respondeu, incluindo os retornos das ferramentas do turno, como itens e totais de pedidos. Ele pode conter dados pessoais, como nomes, endereços ou números de pedido informados livremente, e é tratado como dado pessoal: fica no banco local, fora do Git, e é associado só ao telefone da conversa.
-- O estado da conversa guarda apenas ids (de pedido e de produto) por telefone.
-- Os encaminhamentos guardam o telefone, o motivo e um resumo em texto livre, escrito pelo modelo ou, na resposta segura, a própria fala do cliente. O resumo pode conter dados pessoais e é tratado como o histórico: fica no banco local, fora do Git, e é associado só ao telefone.
-- Os interesses guardam o telefone e o id do produto. Ao modelo chegam só os nomes dos produtos do telefone da sessão.
-- Dados reais só podem ser usados após a revisão dos termos do provedor e a adequação à LGPD.
-- Revisão dos termos do Gemini API (versão em vigor desde 23/03/2026, atualizada em 28/04/2026): no serviço gratuito, o Google pode usar os prompts e as respostas para melhorar seus produtos, e revisores humanos podem lê-los, depois de desvinculados da conta e da chave. Os termos orientam a não enviar informação pessoal, sensível ou confidencial a esse serviço. No serviço pago, o conteúdo não é usado para melhorar produtos. Por isso o plano gratuito serve apenas para os dados fictícios deste projeto; qualquer dado real exige o plano pago e a adequação à LGPD.
+- Only the session's customer can look up their orders.
+- E-mail and city are not needed for the MVP's answers and are not exposed to the agent.
+- From the customer record, the model receives only the first name. Last name and phone number stay in the code.
+- The committed data is fictitious. Phone numbers may match real numbers, so they must not be used for contact.
+- The history (`messages`) stores what the customer typed and what the agent answered, including the tool results of the turn, such as order items and totals. It may contain personal data, such as names, addresses, or order numbers given freely, and is treated as personal data: it stays in the local database, outside Git, and is linked only to the conversation's phone number.
+- The conversation state stores only ids (of order and product) per phone number.
+- Handoffs store the phone number, the reason, and a free-text summary, written by the model or, for the safe answer, the customer's own message. The summary may contain personal data and is treated like the history: it stays in the local database, outside Git, and is linked only to the phone number.
+- Interests store the phone number and the product id. The model receives only the product names for the session's phone number.
+- Real data can only be used after reviewing the provider's terms and complying with the LGPD (Brazil's General Data Protection Law).
+- Review of the Gemini API terms (version in force since March 23, 2026, updated on April 28, 2026): in the free service, Google may use prompts and responses to improve its products, and human reviewers may read them after they are disconnected from the account and the key. The terms advise against sending personal, sensitive, or confidential information to this service. In the paid service, content is not used to improve products. For this reason, the free tier serves only this project's fictitious data; any real data requires the paid tier and LGPD compliance.
 
-## 8. Validação de entrada
+## 8. Input validation
 
-Nenhum dado entra no sistema sem validação. Há duas fronteiras: a carga dos arquivos de origem e os argumentos das ferramentas do agente.
+No data enters the system without validation. There are two boundaries: loading the source files and the arguments of the agent's tools.
 
-### 8.1 Carga dos arquivos
+### 8.1 Loading the files
 
-Qualquer violação interrompe a carga com `ErroDeCarga`, que informa a entidade e o id. Toda a validação ocorre antes de recriar as tabelas, então uma carga que falha preserva o banco anterior.
+Any violation stops the load with `ErroDeCarga`, which reports the entity and the id. All validation happens before the tables are recreated, so a failed load preserves the previous database.
 
-| Entidade | Regras |
+| Entity | Rules |
 |---|---|
-| Todas | Id numérico e sem duplicidade |
-| Produto | Categoria existente; preço não negativo e sem fração de centavo; estoque inteiro não negativo; `status` em `active`, `coming_soon` ou `discontinued` |
-| Promoção | Produto existente; desconto de 0 a 100; `is_active` igual a 0 ou 1 |
-| Cliente | Nome preenchido; telefone brasileiro com 10 ou 11 dígitos, aceitando `+55`; telefone sem duplicidade entre clientes |
-| Pedido | Cliente existente; total não negativo e sem fração de centavo; `status` em `pending`, `confirmed`, `shipped`, `delivered` ou `cancelled`; pagamento em `pix`, `debit`, `boleto` ou `credit_1x` a `credit_12x` |
-| Item de pedido | Pedido e produto existentes; quantidade positiva |
+| All | Numeric id, no duplicates |
+| Product | Existing category; non-negative price with no fraction of a cent; non-negative integer stock; `status` in `active`, `coming_soon`, or `discontinued` |
+| Promotion | Existing product; discount from 0 to 100; `is_active` equal to 0 or 1 |
+| Customer | Name filled in; Brazilian phone number with 10 or 11 digits, accepting `+55`; no duplicate phone numbers across customers |
+| Order | Existing customer; non-negative total with no fraction of a cent; `status` in `pending`, `confirmed`, `shipped`, `delivered`, or `cancelled`; payment in `pix`, `debit`, `boleto`, or `credit_1x` to `credit_12x` |
+| Order item | Existing order and product; positive quantity |
 
-Valores monetários com mais de duas casas são recusados, e não arredondados, para que um erro na origem não passe despercebido.
+Monetary values with more than two decimal places are rejected, not rounded, so that an error in the source does not go unnoticed.
 
-### 8.1.1 Tabelas operacionais
+### 8.1.1 Operational tables
 
-As tabelas de conversa não vêm de arquivos, mas seguem o mesmo rigor na gravação. Elas são criadas com `CREATE TABLE IF NOT EXISTS` e nunca são recriadas pela carga, para não apagar conversas.
+The conversation tables do not come from files, but writes to them follow the same rigor. They are created with `CREATE TABLE IF NOT EXISTS` and never recreated by the load, so conversations are not erased.
 
-| Tabela | Regras |
+| Table | Rules |
 |---|---|
-| `conversations` | Telefone normalizado com 10 ou 11 dígitos, único; telefone inválido não grava nada |
-| `messages` | Conversa existente; conteúdo é uma mensagem do Pydantic AI serializada pelo próprio adaptador. Na leitura, uma linha que não valida é descartada com tudo o que veio antes dela |
-| `conversation_state` | Telefone normalizado; ids opcionais, mas sempre maiores que zero (`CHECK`) |
-| `handoffs` | Telefone normalizado com 10 ou 11 dígitos; `reason` restrito a `reclamacao`, `sem_resposta_segura` e `atendente_solicitado` (`CHECK`); resumo sem espaços nas pontas, não vazio (`CHECK`) e com no máximo 500 caracteres (cortado no código). Telefone inválido ou resumo vazio não gravam nada; o mesmo telefone, motivo e resumo não duplicam |
-| `product_interests` | Telefone normalizado com 10 ou 11 dígitos; produto existente, validado pelo código que grava, e id maior que zero (`CHECK`); `status` restrito a `pending` (`CHECK`); sem duplicidade por telefone e produto (`UNIQUE`). Telefone inválido ou produto inexistente não gravam nada |
+| `conversations` | Normalized phone number with 10 or 11 digits, unique; an invalid phone number writes nothing |
+| `messages` | Existing conversation; the content is a Pydantic AI message serialized by the library's own adapter. On read, a row that does not validate is discarded along with everything before it |
+| `conversation_state` | Normalized phone number; optional ids, always greater than zero (`CHECK`) |
+| `handoffs` | Normalized phone number with 10 or 11 digits; `reason` restricted to `reclamacao`, `sem_resposta_segura`, and `atendente_solicitado` (`CHECK`); summary without leading or trailing spaces, not empty (`CHECK`), and at most 500 characters (truncated in code). An invalid phone number or an empty summary writes nothing; the same phone number, reason, and summary are not duplicated |
+| `product_interests` | Normalized phone number with 10 or 11 digits; existing product, validated by the code that writes it, and id greater than zero (`CHECK`); `status` restricted to `pending` (`CHECK`); no duplicates per phone number and product (`UNIQUE`). An invalid phone number or a nonexistent product writes nothing |
 
-**Evolução do esquema.** `CREATE TABLE IF NOT EXISTS` não altera tabelas existentes. Se uma tabela operacional ganhar uma coluna que o código lê, a evolução precisa de um `ALTER TABLE` idempotente em `criar_tabelas`. As issues #6, #8 e #9 não alteraram tabelas existentes: `product_interests` e `handoffs` são novas e são criadas por `criar_tabelas`, então não há migração pendente. Ampliar os valores de `status` exigirá recriar a tabela, porque o SQLite não altera um `CHECK`.
+**Schema evolution.** `CREATE TABLE IF NOT EXISTS` does not alter existing tables. If an operational table gains a column the code reads, the change needs an idempotent `ALTER TABLE` in `criar_tabelas`. Issues #6, #8, and #9 did not alter existing tables: `product_interests` and `handoffs` are new and created by `criar_tabelas`, so there is no pending migration. Extending the `status` values will require recreating the table, because SQLite does not alter a `CHECK`.
 
-Reposição simulada: `scripts/simulate_restock.py` altera só `products.stock_quantity` no banco local, e `python -m src.load_data` o restaura a partir dos CSVs. As tabelas operacionais, como os interesses, sobrevivem à carga.
+Simulated restock: `scripts/simulate_restock.py` changes only `products.stock_quantity` in the local database, and `python -m src.load_data` restores it from the CSVs. The operational tables, such as interests, survive the load.
 
-### 8.2 Argumentos das ferramentas
+### 8.2 Tool arguments
 
-O modelo é uma fonte de entrada não confiável. Os argumentos são validados pelo Pydantic AI, e um valor inválido volta ao modelo como pedido de correção:
+The model is an untrusted input source. Arguments are validated by Pydantic AI, and an invalid value goes back to the model as a correction request:
 
-- `preco_maximo`, `valor`: maiores que zero.
-- `parcelas`, `numero_pedido`, `product_id`: inteiros a partir de 1.
-- `motivo` (arrependimento, defeito ou preferencia) e `canal` (online ou presencial) da devolução, e `motivo` do encaminhamento (reclamacao, atendente_solicitado ou sem_resposta_segura): enumerações validadas pelo Pydantic.
-- `secao`: uma das seções de `policies.SECOES`.
-- Parcelas acima de 12 não são recusadas: a resposta informa o limite de 12x.
-- Argumentos desconhecidos, como `customer_id`, são rejeitados.
+- `preco_maximo`, `valor`: greater than zero.
+- `parcelas`, `numero_pedido`, `product_id`: integers starting at 1.
+- The return's `motivo` (arrependimento, defeito, or preferencia) and `canal` (online or presencial), and the handoff's `motivo` (reclamacao, atendente_solicitado, or sem_resposta_segura): enumerations validated by Pydantic.
+- `secao`: one of the sections in `policies.SECOES`.
+- Installments above 12 are not rejected: the answer states the 12x limit.
+- Unknown arguments, such as `customer_id`, are rejected.
 
-O telefone da sessão não é argumento do modelo. Ele é normalizado por `src/phone.py`, e um telefone inválido ou sem cadastro não identifica ninguém.
+The session's phone number is not a model argument. It is normalized by `src/phone.py`, and an invalid or unregistered phone number identifies no one.
