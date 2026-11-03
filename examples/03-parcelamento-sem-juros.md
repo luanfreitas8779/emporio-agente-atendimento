@@ -1,5 +1,7 @@
 # Parcelamento calculado em código
 
+> **Scenario: installments** — the agent combines the catalog price and the payment policy to answer about 12 interest-free installments. The conversation is in Brazilian Portuguese, the language the agent speaks.
+
 **Cliente:** Ana (cadastrada) · **Casos relacionados:** TC-204 e TC-205, que cobrem a parcela mínima; esta conversa usa o limite de 12 parcelas · **Modelo:** `gemini-3.5-flash-lite`
 
 > **Cliente:** Dá pra parcelar o Takamine GD20 em 12x?

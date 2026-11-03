@@ -1,5 +1,7 @@
 # Busca por orçamento, fora de escopo e status do pedido
 
+> **Scenario: budget, scope, and order status** — colloquial search with a price limit, refusal of accessories, and order tracking. The conversation is in Brazilian Portuguese, the language the agent speaks.
+
 **Cliente:** Ana (cadastrada) · **Casos:** TC-001, TC-301, TC-501 · **Modelo:** `gemini-3.5-flash-lite`
 
 Cada trecho é uma conversa curta e independente.

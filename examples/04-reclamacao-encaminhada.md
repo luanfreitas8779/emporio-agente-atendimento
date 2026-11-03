@@ -1,5 +1,7 @@
 # Reclamação encaminhada para a equipe
 
+> **Scenario: complaint** — the agent acknowledges the customer and hands the case off to the team in the same turn. The conversation is in Brazilian Portuguese, the language the agent speaks.
+
 **Cliente:** Letícia (cadastrada) · **Casos:** TC-418 · **Modelo:** `gemini-3.5-flash-lite`
 
 > **Cliente:** Tô muito chateada, comprei um violão e veio com defeito e ninguém me responde

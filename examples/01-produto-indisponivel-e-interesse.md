@@ -1,5 +1,7 @@
 # Produto indisponível, erro de digitação e registro de interesse
 
+> **Scenario: unavailable product** — the search tolerates a typo, and the agent registers the customer's interest without promising a restock date. The conversation is in Brazilian Portuguese, the language the agent speaks.
+
 **Cliente:** Ana (cadastrada) · **Casos:** TC-101, TC-401 · **Modelo:** `gemini-3.5-flash-lite`
 
 > **Cliente:** gianini gf 3d tem aí?

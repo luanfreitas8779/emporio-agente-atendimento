@@ -1,5 +1,7 @@
 # Devolução por arrependimento fora do prazo
 
+> **Scenario: return after the deadline** — the agent asks for the purchase channel, applies the 7-day withdrawal rule calculated in code, and offers a human agent without registering anything first. The conversation is in Brazilian Portuguese, the language the agent speaks.
+
 **Cliente:** Letícia (cadastrada, pedido 7) · **Casos:** TC-004, TC-306, TC-309 · **Modelo:** `gemini-3.5-flash-lite`
 
 Conversa não trivial: exige perguntar o canal da compra, avaliar o prazo em código e oferecer o atendente sem registrar nada antes da aceitação.
