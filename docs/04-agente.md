@@ -46,7 +46,7 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 |---|---|
 | Entrada | `termo`, `categoria`, `preco_maximo`, `somente_disponiveis`, `quantidade` e `somente_promocao` (só produtos com promoção ativa), todos opcionais |
 | Saída | Id, nome, categoria, preço original, desconto da promoção ativa, preço final, preço com PIX e disponibilidade (`disponivel`, `indisponivel`, `fora_de_catalogo` ou `lancamento`) |
-| Regras | Aceita correspondência parcial, sem diferenciar maiúsculas e acentos. O preço máximo considera o preço final. O preço com PIX é nulo em produtos com promoção ativa. Disponibilidade e preços são calculados em código |
+| Regras | Aceita correspondência parcial, sem diferenciar maiúsculas e acentos. A categoria também aceita um erro de digitação em palavras de 5 letras ou mais, como o termo, mas só quando a busca exata não acha nada; os demais filtros não mudam. O preço máximo considera o preço final. O preço com PIX é nulo em produtos com promoção ativa. Disponibilidade e preços são calculados em código |
 
 ### 4.2 `consultar_politicas`
 
