@@ -57,7 +57,7 @@ Esse volume reduz o tempo disponível para atendimentos que exigem análise huma
 
 | ID | Requisito | Prioridade |
 |---|---|---|
-| RF-01 | O agente deve assumir a persona definida na [especificação do agente](04-agente.md) | Alta |
+| RF-01 | O agente deve assumir a persona definida na [especificação do agente](04-agent.md) | Alta |
 | RF-02 | O agente deve decidir entre responder, consultar dados, consultar políticas ou encaminhar | Alta |
 | RF-03 | O sistema deve buscar produtos por nome, categoria e preço máximo | Alta |
 | RF-04 | O sistema deve calcular preço final segundo as regras de promoção e PIX | Alta |
@@ -120,11 +120,11 @@ Esse volume reduz o tempo disponível para atendimentos que exigem análise huma
 | R-03 | Exposição de dados de clientes | Baixa | Alto | Cliente definido pela sessão e consultas parametrizadas |
 | R-04 | Manipulação por prompt injection | Média | Alto | Regras críticas aplicadas em código, não apenas no prompt |
 | R-05 | Dependências incompatíveis com Python 3.14 | Média | Médio | Validar versões na configuração do ambiente |
-| R-06 | Inconsistências nos dados de origem | Alta | Médio | Regras de tratamento descritas em [Dados](03-dados.md) |
+| R-06 | Inconsistências nos dados de origem | Alta | Médio | Regras de tratamento descritas em [Dados](03-data.md) |
 
 ## 10. Documentos relacionados
 
-- [Arquitetura](02-arquitetura.md)
-- [Dados](03-dados.md)
-- [Especificação do agente](04-agente.md)
-- [Plano de testes e cronograma](05-testes-e-roteiro.md)
+- [Arquitetura](02-architecture.md)
+- [Dados](03-data.md)
+- [Especificação do agente](04-agent.md)
+- [Plano de testes e cronograma](05-test-plan.md)

@@ -90,7 +90,7 @@ python -m pytest
 | Interface | Streamlit | Chat web simples, mantido em Python |
 | Histórico | Mensagens e interesses em SQLite | Continuidade entre conversas |
 
-As decisões completas estão em [Arquitetura](docs/02-arquitetura.md).
+As decisões completas estão em [Arquitetura](docs/02-architecture.md).
 
 ## Exemplos de conversa
 
@@ -112,7 +112,7 @@ As conversas de referência estão em [`examples/`](examples/) e foram geradas c
 - Os limites do plano gratuito do Gemini restringem o volume de uso: cada pergunta consome de 2 a 3 requisições.
 - A busca aproximada corrige apenas um erro de digitação por palavra e só vale para nomes com 5 letras ou mais e sem dígitos; códigos de modelo precisam estar corretos.
 - O campo de mensagem fica bloqueado enquanto o Tom responde, e recarregar a página nesse intervalo perde a pergunta pendente (ADR-020).
-- Os testes com o Gemini real cobrem poucos fluxos, e o comportamento do modelo depende do prompt. As pendências estão em [Testes](docs/05-testes-e-roteiro.md), seção 8.
+- Os testes com o Gemini real cobrem poucos fluxos, e o comportamento do modelo depende do prompt. As pendências estão em [Testes](docs/05-test-plan.md), seção 8.
 - O SQLite atende ao MVP, mas não a um uso concorrente de produção.
 
 ## Próximos passos
@@ -134,14 +134,14 @@ O Claude Code apoia a análise dos dados, a comparação de alternativas, a docu
 
 ## Dados
 
-Os arquivos em `data/` são fictícios e estão versionados para permitir a reprodução do projeto. O tratamento aplicado está descrito em [Dados](docs/03-dados.md).
+Os arquivos em `data/` são fictícios e estão versionados para permitir a reprodução do projeto. O tratamento aplicado está descrito em [Dados](docs/03-data.md).
 
 ## Documentação
 
 | Documento | Conteúdo |
 |---|---|
-| [Visão e escopo](docs/01-escopo.md) | Objetivos, requisitos, critérios de aceite e riscos |
-| [Arquitetura](docs/02-arquitetura.md) | Componentes, fluxos, modelo de dados e ADRs |
-| [Dados](docs/03-dados.md) | Fontes, qualidade dos dados e regras de negócio |
-| [Especificação do agente](docs/04-agente.md) | Persona, ferramentas e regras de resposta |
-| [Plano de testes e cronograma](docs/05-testes-e-roteiro.md) | Casos de teste, cota, etapas e release |
+| [Visão e escopo](docs/01-scope.md) | Objetivos, requisitos, critérios de aceite e riscos |
+| [Arquitetura](docs/02-architecture.md) | Componentes, fluxos, modelo de dados e ADRs |
+| [Dados](docs/03-data.md) | Fontes, qualidade dos dados e regras de negócio |
+| [Especificação do agente](docs/04-agent.md) | Persona, ferramentas e regras de resposta |
+| [Plano de testes e cronograma](docs/05-test-plan.md) | Casos de teste, cota, etapas e release |

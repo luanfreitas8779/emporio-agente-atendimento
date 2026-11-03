@@ -208,7 +208,7 @@ Se o prazo apertar, serão reduzidos primeiro o acabamento visual e as avaliaç�
 
 - [x] Confirmar a compatibilidade das dependências com Python 3.12 e 3.14.
 - [ ] Registrar o limite efetivo do modelo escolhido.
-- [x] Revisar os termos atuais do Gemini sobre uso de dados (resultado em `docs/03-dados.md`, seção 7).
+- [x] Revisar os termos atuais do Gemini sobre uso de dados (resultado em `docs/03-data.md`, seção 7).
 - [x] Executar a suíte automática.
 - [x] Executar a avaliação com o Gemini (duas rodadas; os fluxos estão em `examples/`).
 - [x] Gerar as conversas de referência.
@@ -241,7 +241,7 @@ Situação após as issues #3 (catálogo), #4 (políticas), #5 (identificação 
 | `parcelas` sem teto na ferramenta | A ferramenta aceita qualquer inteiro positivo e a política responde que passa de 12x; não há cálculo com o valor | Aceito |
 | Tentativa rejeitada no histórico | Quando a guarda pede uma correção e o modelo acerta, a resposta rejeitada e o pedido de correção ficam em `messages` e voltam ao modelo nas mensagens seguintes. A tela não os exibe | Descartar essas mensagens ao salvar, se a validação com o Gemini mostrar influência nas respostas |
 | Conversa sem telefone válido | Telefone vazio ou inválido não guarda histórico nem estado: a conversa vale só para a tela aberta. Ao informar um telefone válido, ela continua na tela e a última pergunta é refeita (issue #16); trocar para outro telefone válido a substitui | Aceito para o MVP; um canal autenticado (ADR-009) elimina o caso |
-| Retenção do histórico | O histórico cresce sem limite e a tela recupera a conversa inteira. Ele pode conter dados pessoais (`docs/03-dados.md`, seção 7) | Definir prazo de retenção e exclusão antes de qualquer uso com dados reais |
+| Retenção do histórico | O histórico cresce sem limite e a tela recupera a conversa inteira. Ele pode conter dados pessoais (`docs/03-data.md`, seção 7) | Definir prazo de retenção e exclusão antes de qualquer uso com dados reais |
 | Banco anterior à issue #7 | Um `emporio.db` criado antes das tabelas de conversa falha ao abrir o chat | Rodar `python -m src.load_data` para recriar o banco |
 | Preço do produto citado antes | Na validação real da issue #7, a continuidade funcionou (nome da cliente, produto em foco e retorno em nova sessão), mas a pergunta "E qual o preço dele?" caiu na resposta segura: a guarda exige que o valor venha de uma ferramenta chamada no turno, e o modelo não consultou o catálogo de novo. A primeira resposta ("Tem o Giannini GF-3D?") também não informou a disponibilidade do produto | Tratado na issue #8: o prompt manda consultar de novo o produto do histórico, do foco ou dos interesses. Na validação real, "chegou o violão?" consultou o catálogo e informou o preço correto; a pergunta "E qual o preço dele?" também foi revalidada em 2 mensagens (4 requisições) e informou R$ 799,90 e R$ 759,91 no PIX, com o aviso de que o produto está sem estoque |
 | Busca com tolerância limitada a erros de digitação | Resolvido na issue #11 (ADR-019): "gianini gf 3d" encontra o Giannini GF-3D e foi validado com o Gemini. A tolerância vale só para nomes com 5 letras ou mais e sem dígitos (a busca por categoria e ligação foi ampliada na issue #14, ADR-019); erros em códigos de modelo ("F320", "RV-176") continuam sem resultado, para não trazer outro produto | Aceito no MVP |

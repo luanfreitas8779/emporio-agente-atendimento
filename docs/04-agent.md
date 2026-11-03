@@ -70,7 +70,7 @@ Uma mensagem pode exigir mais de uma ferramenta. Um pedido de devolução, por e
 |---|---|
 | Entrada | `numero_pedido`, `motivo` (`arrependimento`, `defeito` ou `preferencia`) e `canal` (`online` ou `presencial`), opcional; o cliente vem da sessão |
 | Saída | Veredito: `resultado` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados` ou `pedido_nao_encontrado`), `regras` com o prazo final de cada uma, `faltando`, `avisos`, `data_aproximada`, `data_de_recebimento` e `data_de_referencia`, com as datas em `dd/mm/aaaa` |
-| Regras | Prazos calculados em código (`docs/03-dados.md`, 5.4). O modelo repassa o veredito sem recalcular. Arrependimento sem canal devolve `faltam_dados`, com o que perguntar em `faltando`. Nunca recebe `customer_id` |
+| Regras | Prazos calculados em código (`docs/03-data.md`, 5.4). O modelo repassa o veredito sem recalcular. Arrependimento sem canal devolve `faltam_dados`, com o que perguntar em `faltando`. Nunca recebe `customer_id` |
 
 ### 4.4 `registrar_interesse`
 

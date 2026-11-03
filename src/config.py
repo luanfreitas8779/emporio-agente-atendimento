@@ -16,7 +16,7 @@ DATA_DE_REFERENCIA_PADRAO = "2026-03-25"
 
 
 def data_de_referencia() -> date:
-    """Data usada como "hoje" nos prazos. Os pedidos vão até 2026-03-22 (docs/03-dados.md, 5.3)."""
+    """Data usada como "hoje" nos prazos. Os pedidos vão até 2026-03-22 (docs/03-data.md, 5.3)."""
     texto = os.getenv("DATA_DE_REFERENCIA", DATA_DE_REFERENCIA_PADRAO)
     try:
         return date.fromisoformat(texto)
