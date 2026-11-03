@@ -198,7 +198,7 @@ def buscar_produtos(
         palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, somente_promocao
     )
     produtos = _filtrar(linhas, filtros)
-    if not produtos and palavras:
+    if not produtos and (palavras or categoria_normalizada):
         produtos = _filtrar(linhas, filtros, aproximado=True)
     return produtos
 
@@ -220,7 +220,11 @@ def _filtrar(linhas, filtros: Filtros, aproximado: bool = False):
             for palavra in filtros.palavras
         ):
             continue
-        if filtros.categoria not in categoria_do_produto:
+        # Só a categoria tolera erro de digitação; a comparação exata continua valendo.
+        if filtros.categoria not in categoria_do_produto and not (
+            aproximado
+            and all(_palavra_aproximada(palavra, categoria_do_produto) for palavra in filtros.categoria.split())
+        ):
             continue
         if filtros.somente_promocao and not linha["discount_percent"]:
             continue

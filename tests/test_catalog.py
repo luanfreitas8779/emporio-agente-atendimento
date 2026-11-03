@@ -109,6 +109,35 @@ def test_somente_promocao_combina_com_a_categoria(conexao):
     assert produtos[1].preco_final == "R$ 439,20"
 
 
+def test_categoria_com_erro_de_digitacao_acha_o_ukulele_em_promocao_ate_400(conexao):
+    produtos = buscar_produtos(
+        conexao, categoria="Ukelele", preco_maximo=400, somente_promocao=True
+    )
+
+    assert [produto.nome for produto in produtos] == ["Kalani KAL-700T Tenor Natural"]
+    assert produtos[0].preco == "R$ 359,00"
+    assert produtos[0].desconto_percentual == 10
+    assert produtos[0].preco_final == "R$ 323,10"
+
+
+def test_categoria_no_plural_com_erro_de_digitacao_acha_o_mesmo_ukulele(conexao):
+    produtos = buscar_produtos(
+        conexao, categoria="Ukeleles", preco_maximo=400, somente_promocao=True
+    )
+
+    assert [produto.nome for produto in produtos] == ["Kalani KAL-700T Tenor Natural"]
+
+
+@pytest.mark.parametrize(
+    ("errada", "certa"), [("Ukelele", "Ukuleles"), ("Guitaras", "Guitarras")]
+)
+def test_categoria_com_erro_de_digitacao_devolve_os_produtos_da_categoria_certa(conexao, errada, certa):
+    esperados = buscar_produtos(conexao, categoria=certa)
+
+    assert esperados
+    assert buscar_produtos(conexao, categoria=errada) == esperados
+
+
 def test_pix_aplica_5_por_cento_sobre_o_preco_de_tabela(conexao):
     (produto,) = buscar_produtos(conexao, termo="Takamine GD20")
 
