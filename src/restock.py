@@ -4,17 +4,17 @@ import sys
 from pathlib import Path
 
 from src.config import CAMINHO_BANCO
-from src.database import conectar
+from src.database import connect
 
 
 class ErroDeReposicao(ValueError):
     """Restock rejected: the database was not changed."""
 
 
-def repor_estoque(conexao: sqlite3.Connection, product_id: int, quantidade: int) -> None:
+def repor_estoque(connection: sqlite3.Connection, product_id: int, quantidade: int) -> None:
     if quantidade < 1:
         raise ErroDeReposicao("The quantity must be greater than zero.")
-    produto = conexao.execute(
+    produto = connection.execute(
         "SELECT status FROM products WHERE product_id = ?", (product_id,)
     ).fetchone()
     if produto is None:
@@ -22,11 +22,11 @@ def repor_estoque(conexao: sqlite3.Connection, product_id: int, quantidade: int)
     # The status takes precedence over the stock: restocking another status does not change availability.
     if produto["status"] != "active":
         raise ErroDeReposicao(f"Product {product_id} is not active; restocking would have no effect.")
-    conexao.execute(
+    connection.execute(
         "UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_id = ?",
         (quantidade, product_id),
     )
-    conexao.commit()
+    connection.commit()
 
 
 def principal(argumentos: list[str] | None = None) -> int:
@@ -44,14 +44,14 @@ def principal(argumentos: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
-    conexao = conectar(escolhidos.banco)
+    connection = connect(escolhidos.banco)
     try:
-        repor_estoque(conexao, escolhidos.produto, escolhidos.quantidade)
+        repor_estoque(connection, escolhidos.produto, escolhidos.quantidade)
     except ErroDeReposicao as erro:
         print(f"Restock rejected: {erro}", file=sys.stderr)
         return 1
     finally:
-        conexao.close()
+        connection.close()
     print(
         f"Simulated restock: +{escolhidos.quantidade} units of product {escolhidos.produto}. "
         "To return to the original state, run: python -m src.load_data"

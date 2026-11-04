@@ -4,7 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from src.config import CAMINHO_BANCO, PASTA_DADOS
-from src.database import conectar
+from src.database import connect
 from src.orders import STATUS_DE_PEDIDO, pagamento_valido
 from src.phone import normalize_phone
 
@@ -94,8 +94,8 @@ def rejeitar_duplicado(rotulo: str, identificador: str, vistos: set[str]) -> Non
     vistos.add(identificador)
 
 
-def ler_csv(caminho: Path) -> list[dict[str, str]]:
-    with caminho.open(encoding="utf-8-sig", newline="") as arquivo:
+def ler_csv(path: Path) -> list[dict[str, str]]:
+    with path.open(encoding="utf-8-sig", newline="") as arquivo:
         return list(csv.DictReader(arquivo))
 
 
@@ -145,7 +145,7 @@ def preparar_promocao(
     return registro
 
 
-def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+def carregar_catalogo(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     categorias = ler_csv(pasta_dados / "categories.csv")
     ids_categorias = {categoria["category_id"] for categoria in categorias}
     # Validation comes before the schema so that a failure does not erase the current database.
@@ -159,12 +159,12 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         for promocao in ler_csv(pasta_dados / "promotions.csv")
     ]
 
-    conexao.executescript(ESQUEMA_CATALOGO)
-    conexao.executemany(
+    connection.executescript(ESQUEMA_CATALOGO)
+    connection.executemany(
         "INSERT INTO categories (category_id, name) VALUES (:category_id, :name)",
         categorias,
     )
-    conexao.executemany(
+    connection.executemany(
         """
         INSERT INTO products (
             product_id, name, category_id, price_cents, stock_quantity, status, specs
@@ -172,7 +172,7 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         """,
         produtos,
     )
-    conexao.executemany(
+    connection.executemany(
         """
         INSERT INTO promotions (
             promotion_id, product_id, discount_percent, description, is_active
@@ -180,7 +180,7 @@ def carregar_catalogo(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         """,
         promocoes,
     )
-    conexao.commit()
+    connection.commit()
 
 
 def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[str]) -> tuple:
@@ -200,16 +200,16 @@ def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[s
     return (numero, cliente["name"].strip(), phone)
 
 
-def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+def carregar_clientes(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     vistos: set[str] = set()
     telefones: set[str] = set()
     clientes = [
         preparar_cliente(cliente, vistos, telefones)
         for cliente in ler_csv(pasta_dados / "customers.csv")
     ]
-    conexao.executescript(ESQUEMA_CLIENTES)
-    conexao.executemany("INSERT INTO customers (customer_id, name, phone) VALUES (?, ?, ?)", clientes)
-    conexao.commit()
+    connection.executescript(ESQUEMA_CLIENTES)
+    connection.executemany("INSERT INTO customers (customer_id, name, phone) VALUES (?, ?, ?)", clientes)
+    connection.commit()
 
 
 def preparar_pedido(pedido: dict[str, str], clientes: set[int], vistos: set[str]) -> tuple:
@@ -256,9 +256,9 @@ def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -
     return (numero, produto, quantidade)
 
 
-def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
-    clientes = {linha[0] for linha in conexao.execute("SELECT customer_id FROM customers")}
-    produtos = {linha[0] for linha in conexao.execute("SELECT product_id FROM products")}
+def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
+    clientes = {linha[0] for linha in connection.execute("SELECT customer_id FROM customers")}
+    produtos = {linha[0] for linha in connection.execute("SELECT product_id FROM products")}
     # Validation comes before the schema so that a failure does not erase the current database.
     vistos: set[str] = set()
     pedidos = [
@@ -270,8 +270,8 @@ def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         preparar_item(item, ids_pedidos, produtos)
         for item in ler_csv(pasta_dados / "order_items.csv")
     ]
-    conexao.executescript(ESQUEMA_PEDIDOS)
-    conexao.executemany(
+    connection.executescript(ESQUEMA_PEDIDOS)
+    connection.executemany(
         """
         INSERT INTO orders (
             order_id, customer_id, order_date, status, total_cents,
@@ -280,36 +280,36 @@ def carregar_pedidos(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
         """,
         pedidos,
     )
-    conexao.executemany(
+    connection.executemany(
         "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)", itens
     )
-    conexao.commit()
+    connection.commit()
 
 
-def carregar_dados(conexao: sqlite3.Connection, pasta_dados: Path) -> None:
+def carregar_dados(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     # The order follows the foreign keys: orders depend on customers and products.
-    carregar_catalogo(conexao, pasta_dados)
-    carregar_clientes(conexao, pasta_dados)
-    carregar_pedidos(conexao, pasta_dados)
+    carregar_catalogo(connection, pasta_dados)
+    carregar_clientes(connection, pasta_dados)
+    carregar_pedidos(connection, pasta_dados)
 
 
 TABELAS_DA_CARGA = ("categories", "products", "promotions", "customers", "orders", "order_items")
 
 
-def banco_carregado(conexao: sqlite3.Connection) -> bool:
+def banco_carregado(connection: sqlite3.Connection) -> bool:
     """Says whether the data load has already created the catalog, customer, and order tables."""
     existentes = {
-        linha[0] for linha in conexao.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        linha[0] for linha in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
     }
     if not set(TABELAS_DA_CARGA) <= existentes:
         return False
     # A load from before the specifications lacks the column and requires a new load.
-    colunas = {linha[1] for linha in conexao.execute("PRAGMA table_info(products)")}
+    colunas = {linha[1] for linha in connection.execute("PRAGMA table_info(products)")}
     return "specs" in colunas
 
 
 if __name__ == "__main__":
-    conexao = conectar(CAMINHO_BANCO)
-    carregar_dados(conexao, PASTA_DADOS)
-    conexao.close()
+    connection = connect(CAMINHO_BANCO)
+    carregar_dados(connection, PASTA_DADOS)
+    connection.close()
     print(f"Database created at {CAMINHO_BANCO}")

@@ -13,26 +13,26 @@ class Resultado(StrEnum):
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
-def registrar(conexao: sqlite3.Connection, phone: str, product_id: int) -> Resultado:
+def registrar(connection: sqlite3.Connection, phone: str, product_id: int) -> Resultado:
     chave = normalize_phone(phone)
     if chave is None:
         return Resultado.TELEFONE_INVALIDO
-    if nome_do_produto(conexao, product_id) is None:
+    if nome_do_produto(connection, product_id) is None:
         return Resultado.PRODUTO_INEXISTENTE
-    cursor = conexao.execute(
+    cursor = connection.execute(
         "INSERT INTO product_interests (phone, product_id, created_at) VALUES (?, ?, ?) "
         "ON CONFLICT (phone, product_id) DO NOTHING",
         (chave, product_id, agora()),
     )
-    conexao.commit()
+    connection.commit()
     return Resultado.REGISTRADO if cursor.rowcount else Resultado.JA_REGISTRADO
 
 
-def listar_pendentes(conexao: sqlite3.Connection, phone: str) -> list[str]:
+def listar_pendentes(connection: sqlite3.Connection, phone: str) -> list[str]:
     chave = normalize_phone(phone)
     if chave is None:
         return []
-    linhas = conexao.execute(
+    linhas = connection.execute(
         """
         SELECT p.name FROM product_interests i
         JOIN products p ON p.product_id = i.product_id

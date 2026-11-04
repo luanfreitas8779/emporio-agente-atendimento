@@ -5,7 +5,7 @@ import streamlit as st
 
 from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
 from src.config import CAMINHO_BANCO
-from src.database import conectar
+from src.database import connect
 from src.load_data import banco_carregado
 from src.memory import exibir_conversa
 from src.phone import normalize_phone
@@ -54,7 +54,7 @@ st.caption("Sua música começa aqui.")
 
 # Without the data load there is no catalog or orders to look up.
 try:
-    _conexao = conectar(CAMINHO_BANCO)
+    _conexao = connect(CAMINHO_BANCO)
     try:
         _carregado = banco_carregado(_conexao)
     finally:
@@ -84,14 +84,14 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
     # Whoever chatted before entering the phone number keeps seeing what was said (QA-15).
     sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.mensagens
     st.session_state.conversa_de = telefone_da_conversa
-    conexao = conectar(CAMINHO_BANCO)
+    connection = connect(CAMINHO_BANCO)
     try:
         st.session_state.mensagens = [
             {"papel": papel, "texto": texto}
-            for papel, texto in exibir_conversa(conexao, st.session_state.phone)
+            for papel, texto in exibir_conversa(connection, st.session_state.phone)
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
-        conexao.close()
+        connection.close()
     # The last question asked without a phone number is answered again, now with the phone number,
     # unless the answer only used lookups that do not depend on the customer record.
     perguntas = [m["texto"] for m in sem_telefone if m["papel"] == "user"]
@@ -128,7 +128,7 @@ if pendente is not None:
     sessao = None
     try:
         try:
-            sessao = Sessao(conectar(CAMINHO_BANCO), pendente["phone"])
+            sessao = Sessao(connect(CAMINHO_BANCO), pendente["phone"])
             with st.spinner("O Tom está digitando..."):
                 resposta = responder(pendente["pergunta"], sessao)
         except Exception:
@@ -150,6 +150,6 @@ if pendente is not None:
             )
     finally:
         if sessao is not None:
-            sessao.conexao.close()
+            sessao.connection.close()
         st.session_state.pendente = None
     st.rerun()

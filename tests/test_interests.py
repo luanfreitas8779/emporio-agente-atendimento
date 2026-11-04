@@ -8,42 +8,42 @@ TELEFONE = "(67) 99654-7821"
 GIANNINI_GF_3D = 96
 
 
-def test_registra_interesse_no_giannini_gf_3d(conexao):
-    resultado = registrar(conexao, TELEFONE, GIANNINI_GF_3D)
+def test_registra_interesse_no_giannini_gf_3d(connection):
+    resultado = registrar(connection, TELEFONE, GIANNINI_GF_3D)
 
     assert resultado == Resultado.REGISTRADO
-    assert listar_pendentes(conexao, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
+    assert listar_pendentes(connection, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
 
 
-def test_produto_inexistente_nao_grava_interesse(conexao):
-    resultado = registrar(conexao, TELEFONE, 99999)
+def test_produto_inexistente_nao_grava_interesse(connection):
+    resultado = registrar(connection, TELEFONE, 99999)
 
     assert resultado == Resultado.PRODUTO_INEXISTENTE
-    assert listar_pendentes(conexao, TELEFONE) == []
-    assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
+    assert listar_pendentes(connection, TELEFONE) == []
+    assert connection.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
 
 
 @pytest.mark.parametrize("phone", ["", "12345", "abc"])
-def test_telefone_invalido_nao_grava_interesse(conexao, phone):
-    resultado = registrar(conexao, phone, GIANNINI_GF_3D)
+def test_telefone_invalido_nao_grava_interesse(connection, phone):
+    resultado = registrar(connection, phone, GIANNINI_GF_3D)
 
     assert resultado == Resultado.TELEFONE_INVALIDO
-    assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
+    assert connection.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
 
 
-def test_repetir_o_pedido_nao_duplica_o_interesse(conexao):
-    registrar(conexao, TELEFONE, GIANNINI_GF_3D)
+def test_repetir_o_pedido_nao_duplica_o_interesse(connection):
+    registrar(connection, TELEFONE, GIANNINI_GF_3D)
 
     # Another formatting of the same phone number is the same customer.
-    resultado = registrar(conexao, "67996547821", GIANNINI_GF_3D)
+    resultado = registrar(connection, "67996547821", GIANNINI_GF_3D)
 
     assert resultado == Resultado.JA_REGISTRADO
-    assert listar_pendentes(conexao, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
+    assert listar_pendentes(connection, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
 
 
-def test_nova_carga_dos_dados_preserva_os_interesses(conexao):
-    registrar(conexao, TELEFONE, GIANNINI_GF_3D)
+def test_nova_carga_dos_dados_preserva_os_interesses(connection):
+    registrar(connection, TELEFONE, GIANNINI_GF_3D)
 
-    carregar_dados(conexao, PASTA_DADOS)
+    carregar_dados(connection, PASTA_DADOS)
 
-    assert listar_pendentes(conexao, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
+    assert listar_pendentes(connection, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]

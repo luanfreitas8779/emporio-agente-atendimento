@@ -50,7 +50,7 @@ class Resultado(StrEnum):
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
-def registrar(conexao: sqlite3.Connection, phone: str, motivo: Motivo, resumo: str) -> Resultado:
+def registrar(connection: sqlite3.Connection, phone: str, motivo: Motivo, resumo: str) -> Resultado:
     chave = normalize_phone(phone)
     if chave is None:
         return Resultado.TELEFONE_INVALIDO
@@ -58,7 +58,7 @@ def registrar(conexao: sqlite3.Connection, phone: str, motivo: Motivo, resumo: s
     if not resumo:
         return Resultado.RESUMO_INVALIDO
     corte = datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO
-    anteriores = conexao.execute(
+    anteriores = connection.execute(
         "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (chave, motivo)
     ).fetchall()
     # The same summary is a repeat at any time; another summary only within the window and, for a
@@ -73,9 +73,9 @@ def registrar(conexao: sqlite3.Connection, phone: str, motivo: Motivo, resumo: s
     )
     if repetido:
         return Resultado.JA_REGISTRADO
-    conexao.execute(
+    connection.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
         (chave, motivo, resumo, agora()),
     )
-    conexao.commit()
+    connection.commit()
     return Resultado.REGISTRADO

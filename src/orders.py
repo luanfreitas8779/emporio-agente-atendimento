@@ -49,11 +49,11 @@ class Pedido:
     atraso: str | None = None
 
 
-def identificar_cliente(conexao: sqlite3.Connection, phone: str | None) -> Cliente | None:
+def identificar_cliente(connection: sqlite3.Connection, phone: str | None) -> Cliente | None:
     digits = normalize_phone(phone or "")
     if digits is None:
         return None
-    linha = conexao.execute(
+    linha = connection.execute(
         "SELECT customer_id, name FROM customers WHERE phone = ?", (digits,)
     ).fetchone()
     return Cliente(linha["customer_id"], linha["name"]) if linha else None
@@ -80,8 +80,8 @@ def descrever_pagamento(codigo: str) -> str:
     return FORMAS_DE_PAGAMENTO[codigo]
 
 
-def consultar_itens(conexao: sqlite3.Connection, numero: int) -> list[ItemPedido]:
-    linhas = conexao.execute(
+def consultar_itens(connection: sqlite3.Connection, numero: int) -> list[ItemPedido]:
+    linhas = connection.execute(
         """
         SELECT p.name, i.quantity
         FROM order_items i JOIN products p ON p.product_id = i.product_id
@@ -105,12 +105,12 @@ def descrever_atraso(linha: sqlite3.Row, hoje: date | None) -> str | None:
 
 
 def consultar_pedidos(
-    conexao: sqlite3.Connection,
+    connection: sqlite3.Connection,
     cliente_id: int,
     numero: int | None = None,
     hoje: date | None = None,
 ) -> list[Pedido]:
-    linhas = conexao.execute(
+    linhas = connection.execute(
         """
         SELECT *
         FROM orders
@@ -125,7 +125,7 @@ def consultar_pedidos(
             format_date(linha["order_date"]),
             linha["status"],
             STATUS_DE_PEDIDO[linha["status"]],
-            consultar_itens(conexao, linha["order_id"]),
+            consultar_itens(connection, linha["order_id"]),
             # The recorded total prevails over the sum of the items (DQ-11 and DQ-12).
             formatar_preco(linha["total_cents"]),
             descrever_pagamento(linha["payment_method"]),

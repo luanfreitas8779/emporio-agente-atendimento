@@ -77,14 +77,14 @@ class Veredito:
 
 
 def avaliar_devolucao(
-    conexao: sqlite3.Connection,
+    connection: sqlite3.Connection,
     cliente_id: int,
     numero: int,
     motivo: Motivo,
     canal: Canal | None,
     hoje: date,
 ) -> Veredito:
-    linha = conexao.execute(
+    linha = connection.execute(
         "SELECT order_date, status, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),
     ).fetchone()

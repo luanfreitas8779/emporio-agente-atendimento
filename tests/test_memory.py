@@ -2,8 +2,8 @@ import sqlite3
 
 import pytest
 
-from src.database import conectar
-from src.memory import Estado, carregar_estado, criar_tabelas, salvar_estado
+from src.database import connect
+from src.memory import Estado, carregar_estado, create_tables, salvar_estado
 
 TELEFONE = "67996547821"
 
@@ -37,12 +37,12 @@ def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
     anterior.executescript(esquema)
     anterior.close()
 
-    conexao = conectar(tmp_path / "antigo.db")
+    connection = connect(tmp_path / "antigo.db")
 
-    assert carregar_estado(conexao, TELEFONE) == Estado(8, 96)
-    salvar_estado(conexao, TELEFONE, Estado(7, None))
-    assert carregar_estado(conexao, TELEFONE) == Estado(7, None)
-    conexao.close()
+    assert carregar_estado(connection, TELEFONE) == Estado(8, 96)
+    salvar_estado(connection, TELEFONE, Estado(7, None))
+    assert carregar_estado(connection, TELEFONE) == Estado(7, None)
+    connection.close()
 
 
 @pytest.mark.parametrize(
@@ -50,37 +50,37 @@ def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
     [(0, "pending"), (-1, "pending"), (96, "notified")],
 )
 def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, produto, status):
-    conexao = conectar(tmp_path / "novo.db")
-    criar_tabelas(conexao)
+    connection = connect(tmp_path / "novo.db")
+    create_tables(connection)
 
     with pytest.raises(sqlite3.IntegrityError):
-        conexao.execute(
+        connection.execute(
             "INSERT INTO product_interests (phone, product_id, status, created_at) "
             "VALUES ('67996547821', ?, ?, '2026-03-25')",
             (produto, status),
         )
-    conexao.close()
+    connection.close()
 
 
 @pytest.mark.parametrize("motivo, resumo", [("outro", "Resumo."), ("reclamacao", "")])
 def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp_path, motivo, resumo):
-    conexao = conectar(tmp_path / "novo.db")
-    criar_tabelas(conexao)
+    connection = connect(tmp_path / "novo.db")
+    create_tables(connection)
 
     with pytest.raises(sqlite3.IntegrityError):
-        conexao.execute(
+        connection.execute(
             "INSERT INTO handoffs (phone, reason, summary, created_at) "
             "VALUES ('67996547821', ?, ?, '2026-03-25')",
             (motivo, resumo),
         )
-    conexao.close()
+    connection.close()
 
 
 @pytest.mark.regressao
 def test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo(tmp_path):
-    conexao = conectar(tmp_path / "novo.db")
+    connection = connect(tmp_path / "novo.db")
 
-    salvar_estado(conexao, TELEFONE, Estado(pedido_em_analise=8))
+    salvar_estado(connection, TELEFONE, Estado(pedido_em_analise=8))
 
-    assert carregar_estado(conexao, TELEFONE) == Estado(pedido_em_analise=8)
-    conexao.close()
+    assert carregar_estado(connection, TELEFONE) == Estado(pedido_em_analise=8)
+    connection.close()

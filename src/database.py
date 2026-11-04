@@ -1,14 +1,14 @@
 import sqlite3
 from pathlib import Path
 
-from src.memory import criar_tabelas
+from src.memory import create_tables
 
 
-def conectar(caminho: Path) -> sqlite3.Connection:
+def connect(path: Path) -> sqlite3.Connection:
     # Pydantic AI runs tools in another thread, one at a time per connection.
-    conexao = sqlite3.connect(caminho, check_same_thread=False)
-    conexao.row_factory = sqlite3.Row
-    conexao.execute("PRAGMA foreign_keys = ON")
+    connection = sqlite3.connect(path, check_same_thread=False)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     # The conversation memory does not depend on the data load: a new database already supports it.
-    criar_tabelas(conexao)
-    return conexao
+    create_tables(connection)
+    return connection

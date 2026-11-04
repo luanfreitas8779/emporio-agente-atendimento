@@ -66,7 +66,7 @@ AVISO_DA_DISPONIBILIDADE = {
 
 
 def calcular_compra(
-    conexao: sqlite3.Connection, itens: list[ItemDaCompra]
+    connection: sqlite3.Connection, itens: list[ItemDaCompra]
 ) -> CalculoDaCompra | str:
     # The same product cited twice becomes a single line, with the quantity summed.
     quantidades: dict[int, int] = {}
@@ -75,7 +75,7 @@ def calcular_compra(
 
     produtos = {}
     for product_id in quantidades:
-        produto = catalog.dados_para_conta(conexao, product_id)
+        produto = catalog.dados_para_conta(connection, product_id)
         if produto is None:
             return f"Produto {product_id} não encontrado: nenhuma conta foi feita."
         produtos[product_id] = produto

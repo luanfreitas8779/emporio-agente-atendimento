@@ -169,7 +169,7 @@ def montar_produto(linha: sqlite3.Row, quantidade: int | None = None) -> Produto
 
 
 def buscar_produtos(
-    conexao: sqlite3.Connection,
+    connection: sqlite3.Connection,
     termo: str | None = None,
     categoria: str | None = None,
     preco_maximo: float | None = None,
@@ -177,7 +177,7 @@ def buscar_produtos(
     quantidade: int | None = None,
     somente_promocao: bool = False,
 ) -> list[Produto]:
-    linhas = conexao.execute(
+    linhas = connection.execute(
         """
         SELECT p.product_id, p.name, c.name AS categoria, p.price_cents,
                p.stock_quantity, p.status, p.specs, pr.discount_percent
@@ -240,8 +240,8 @@ def _filtrar(linhas, filtros: Filtros, aproximado: bool = False):
     return produtos
 
 
-def _linha_de_preco(conexao: sqlite3.Connection, produto_id: int) -> sqlite3.Row | None:
-    return conexao.execute(
+def _linha_de_preco(connection: sqlite3.Connection, produto_id: int) -> sqlite3.Row | None:
+    return connection.execute(
         """
         SELECT p.name, p.price_cents, p.stock_quantity, p.status, pr.discount_percent
         FROM products p
@@ -252,8 +252,8 @@ def _linha_de_preco(conexao: sqlite3.Connection, produto_id: int) -> sqlite3.Row
     ).fetchone()
 
 
-def preco_final_em_centavos(conexao: sqlite3.Connection, produto_id: int) -> int | None:
-    linha = _linha_de_preco(conexao, produto_id)
+def preco_final_em_centavos(connection: sqlite3.Connection, produto_id: int) -> int | None:
+    linha = _linha_de_preco(connection, produto_id)
     return calcular_preco_final(linha) if linha else None
 
 
@@ -268,8 +268,8 @@ class DadosParaConta:
     estoque: int
 
 
-def dados_para_conta(conexao: sqlite3.Connection, produto_id: int) -> DadosParaConta | None:
-    linha = _linha_de_preco(conexao, produto_id)
+def dados_para_conta(connection: sqlite3.Connection, produto_id: int) -> DadosParaConta | None:
+    linha = _linha_de_preco(connection, produto_id)
     if linha is None:
         return None
     em_promocao = bool(linha["discount_percent"])
@@ -284,8 +284,8 @@ def dados_para_conta(conexao: sqlite3.Connection, produto_id: int) -> DadosParaC
     )
 
 
-def nome_do_produto(conexao: sqlite3.Connection, produto_id: int) -> str | None:
-    linha = conexao.execute(
+def nome_do_produto(connection: sqlite3.Connection, produto_id: int) -> str | None:
+    linha = connection.execute(
         "SELECT name FROM products WHERE product_id = ?", (produto_id,)
     ).fetchone()
     return linha["name"] if linha else None

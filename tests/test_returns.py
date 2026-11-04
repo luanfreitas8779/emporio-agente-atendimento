@@ -6,10 +6,10 @@ from src.config import data_de_referencia
 from src.returns import avaliar_devolucao
 
 
-def test_compra_online_tres_dias_apos_a_entrega_esta_dentro_do_prazo_de_arrependimento(conexao):
+def test_compra_online_tres_dias_apos_a_entrega_esta_dentro_do_prazo_de_arrependimento(connection):
     # Order 7 (customer 14): estimated delivery on 17/02/2026, 7-day deadline until 24/02/2026.
     veredito = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
+        connection, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
         hoje=date(2026, 2, 20),
     )
 
@@ -19,11 +19,11 @@ def test_compra_online_tres_dias_apos_a_entrega_esta_dentro_do_prazo_de_arrepend
     ]
 
 
-def test_pedido_7_com_a_data_padrao_esta_fora_do_prazo_de_arrependimento(conexao, monkeypatch):
+def test_pedido_7_com_a_data_padrao_esta_fora_do_prazo_de_arrependimento(connection, monkeypatch):
     monkeypatch.delenv("DATA_DE_REFERENCIA", raising=False)
 
     veredito = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
+        connection, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
         hoje=data_de_referencia(),
     )
 
@@ -31,10 +31,10 @@ def test_pedido_7_com_a_data_padrao_esta_fora_do_prazo_de_arrependimento(conexao
     assert veredito.regras[0].prazo_ate == "24/02/2026"
 
 
-def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(conexao):
+def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(connection):
     # Within 7 days of delivery, but the purchase was made in the store (DQ-24).
     veredito = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="presencial",
+        connection, cliente_id=14, numero=7, motivo="arrependimento", canal="presencial",
         hoje=date(2026, 2, 20),
     )
 
@@ -43,9 +43,9 @@ def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(conexao):
     assert any("compras online" in aviso for aviso in veredito.avisos)
 
 
-def test_arrependimento_sem_canal_pede_o_canal_de_compra(conexao):
+def test_arrependimento_sem_canal_pede_o_canal_de_compra(connection):
     veredito = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal=None,
+        connection, cliente_id=14, numero=7, motivo="arrependimento", canal=None,
         hoje=date(2026, 2, 20),
     )
 
@@ -54,10 +54,10 @@ def test_arrependimento_sem_canal_pede_o_canal_de_compra(conexao):
     assert veredito.regras == []
 
 
-def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(conexao):
+def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(connection):
     # Purchase on 03/02/2026 (30 days until 05/03) and estimated delivery on 17/02/2026 (90 days until 18/05).
     veredito = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="defeito", canal=None,
+        connection, cliente_id=14, numero=7, motivo="defeito", canal=None,
         hoje=date(2026, 3, 25),
     )
 
@@ -68,10 +68,10 @@ def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(c
     ]
 
 
-def test_pedido_de_outro_cliente_nao_e_avaliado(conexao):
+def test_pedido_de_outro_cliente_nao_e_avaliado(connection):
     # Order 7 belongs to customer 14.
     veredito = avaliar_devolucao(
-        conexao, cliente_id=2, numero=7, motivo="defeito", canal=None, hoje=date(2026, 3, 25),
+        connection, cliente_id=2, numero=7, motivo="defeito", canal=None, hoje=date(2026, 3, 25),
     )
 
     assert veredito.resultado == "pedido_nao_encontrado"
@@ -86,9 +86,9 @@ def test_pedido_de_outro_cliente_nao_e_avaliado(conexao):
         (15, 17, "foi cancelado"),
     ],
 )
-def test_pedido_sem_entrega_nao_tem_o_que_devolver(conexao, cliente, numero, aviso):
+def test_pedido_sem_entrega_nao_tem_o_que_devolver(connection, cliente, numero, aviso):
     veredito = avaliar_devolucao(
-        conexao, cliente_id=cliente, numero=numero, motivo="defeito", canal=None,
+        connection, cliente_id=cliente, numero=numero, motivo="defeito", canal=None,
         hoje=date(2026, 3, 25),
     )
 
@@ -97,21 +97,21 @@ def test_pedido_sem_entrega_nao_tem_o_que_devolver(conexao, cliente, numero, avi
     assert any(aviso in a for a in veredito.avisos)
 
 
-def test_troca_por_preferencia_vale_7_dias_a_partir_do_recebimento(conexao):
+def test_troca_por_preferencia_vale_7_dias_a_partir_do_recebimento(connection):
     dentro = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 24),
+        connection, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 24),
     )
     fora = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 25),
+        connection, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 25),
     )
 
     assert [(r.nome, r.prazo_ate) for r in dentro.regras] == [("troca_por_preferencia", "24/02/2026")]
     assert (dentro.resultado, fora.resultado) == ("dentro_do_prazo", "fora_do_prazo")
 
 
-def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do_produto(conexao):
+def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do_produto(connection):
     veredito = avaliar_devolucao(
-        conexao, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
+        connection, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
         hoje=date(2026, 2, 20),
     )
 
@@ -125,12 +125,12 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
 @pytest.mark.parametrize("canal", [None, "presencial", "online"])
 @pytest.mark.regressao
 def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com_qualquer_canal(
-    conexao, canal
+    connection, canal
 ):
     # Order 7 belongs to customer 14, and order 999 does not exist.
     for numero in (7, 999):
         veredito = avaliar_devolucao(
-            conexao, cliente_id=2, numero=numero, motivo="arrependimento", canal=canal,
+            connection, cliente_id=2, numero=numero, motivo="arrependimento", canal=canal,
             hoje=date(2026, 2, 20),
         )
 
@@ -138,10 +138,10 @@ def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com
         assert veredito.faltando == []
 
 
-def test_pedido_enviado_com_entrega_estimada_futura_avisa_que_o_prazo_conta_do_recebimento(conexao):
+def test_pedido_enviado_com_entrega_estimada_futura_avisa_que_o_prazo_conta_do_recebimento(connection):
     # Order 8 (customer 2): shipped, estimated delivery on 28/02/2026.
     veredito = avaliar_devolucao(
-        conexao, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
+        connection, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
         hoje=date(2026, 2, 20),
     )
 
@@ -149,9 +149,9 @@ def test_pedido_enviado_com_entrega_estimada_futura_avisa_que_o_prazo_conta_do_r
     assert any("ainda não chegou" in aviso for aviso in veredito.avisos)
 
 
-def test_pedido_cuja_entrega_estimada_ja_passou_nao_recebe_o_aviso_de_pedido_a_caminho(conexao):
+def test_pedido_cuja_entrega_estimada_ja_passou_nao_recebe_o_aviso_de_pedido_a_caminho(connection):
     veredito = avaliar_devolucao(
-        conexao, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
+        connection, cliente_id=2, numero=8, motivo="arrependimento", canal="online",
         hoje=date(2026, 3, 25),
     )
 

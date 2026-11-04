@@ -21,9 +21,9 @@ def _violacao(corpo: object) -> dict:
     return next(iter(_violacoes(corpo)), {})
 
 
-def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
+def registrar_limite(erro: ModelAPIError, path: Path | None = None) -> None:
     """Appends a JSON line with the limit the provider reported; missing fields are null."""
-    caminho = caminho or config.CAMINHO_LOG_DE_LIMITES
+    path = path or config.CAMINHO_LOG_DE_LIMITES
     violacao = _violacao(erro.body)
     evento = {
         "data": datetime.now(timezone.utc).isoformat(),
@@ -34,7 +34,7 @@ def registrar_limite(erro: ModelAPIError, caminho: Path | None = None) -> None:
         "cota": violacao.get("quotaId"),
         "limite": violacao.get("quotaValue"),
     }
-    with caminho.open("a", encoding="utf-8") as arquivo:
+    with path.open("a", encoding="utf-8") as arquivo:
         arquivo.write(json.dumps(evento, ensure_ascii=False) + "\n")
 
 

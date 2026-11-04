@@ -1,7 +1,7 @@
 import pytest
 
 from src.catalog import buscar_produtos
-from src.database import conectar
+from src.database import connect
 from src.load_data import (
     ErroDeCarga,
     banco_carregado,
@@ -25,32 +25,32 @@ def escrever_catalogo(pasta, produto):
     )
 
 
-def test_recarregar_recria_o_catalogo_sem_duplicar_produtos(conexao):
-    carregar_catalogo(conexao, PASTA_DADOS)
+def test_recarregar_recria_o_catalogo_sem_duplicar_produtos(connection):
+    carregar_catalogo(connection, PASTA_DADOS)
 
-    assert len(buscar_produtos(conexao, termo="Takamine GD20")) == 1
+    assert len(buscar_produtos(connection, termo="Takamine GD20")) == 1
 
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_produto_aponta_para_categoria_inexistente(tmp_path):
     escrever_catalogo(tmp_path, '10,100,Guitarra Teste,99,Descricao,1,active,{},2024-01-01')
-    conexao = conectar(tmp_path / "teste.db")
+    connection = connect(tmp_path / "teste.db")
 
     with pytest.raises(ErroDeCarga, match="product 10"):
-        carregar_catalogo(conexao, tmp_path)
+        carregar_catalogo(connection, tmp_path)
 
-    conexao.close()
+    connection.close()
 
 
 @pytest.mark.regressao
 def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
     escrever_catalogo(tmp_path, '10,abc,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
-    conexao = conectar(tmp_path / "teste.db")
+    connection = connect(tmp_path / "teste.db")
 
     with pytest.raises(ErroDeCarga, match="product 10"):
-        carregar_catalogo(conexao, tmp_path)
+        carregar_catalogo(connection, tmp_path)
 
-    conexao.close()
+    connection.close()
 
 
 @pytest.mark.regressao
@@ -61,18 +61,18 @@ def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tm
         "1,99,10,Oferta,1\n",
         encoding="utf-8",
     )
-    conexao = conectar(tmp_path / "teste.db")
+    connection = connect(tmp_path / "teste.db")
 
     with pytest.raises(ErroDeCarga, match="promotion 1"):
-        carregar_catalogo(conexao, tmp_path)
+        carregar_catalogo(connection, tmp_path)
 
-    conexao.close()
+    connection.close()
 
 
-def test_recarregar_todos_os_dados_nao_duplica_pedidos(conexao):
-    carregar_dados(conexao, PASTA_DADOS)
+def test_recarregar_todos_os_dados_nao_duplica_pedidos(connection):
+    carregar_dados(connection, PASTA_DADOS)
 
-    assert len(consultar_pedidos(conexao, cliente_id=3)) == 2
+    assert len(consultar_pedidos(connection, cliente_id=3)) == 2
 
 
 def escrever_pedidos(pasta, cliente, pedido, item):
@@ -91,13 +91,13 @@ def escrever_pedidos(pasta, cliente, pedido, item):
 
 def carregar_pedidos_de(pasta, cliente, pedido, item):
     escrever_pedidos(pasta, cliente, pedido, item)
-    conexao = conectar(pasta / "teste.db")
-    carregar_catalogo(conexao, PASTA_DADOS)
-    carregar_clientes(conexao, pasta)
+    connection = connect(pasta / "teste.db")
+    carregar_catalogo(connection, PASTA_DADOS)
+    carregar_clientes(connection, pasta)
     try:
-        carregar_pedidos(conexao, pasta)
+        carregar_pedidos(connection, pasta)
     finally:
-        conexao.close()
+        connection.close()
 
 
 CLIENTE = "1,Cliente Teste,(67) 90000-0001,teste@exemplo.com,Campo Grande"
@@ -140,11 +140,11 @@ def carregar_produtos_de(pasta, produtos):
     (pasta / "promotions.csv").write_text(
         "promotion_id,product_id,discount_percent,description,is_active\n", encoding="utf-8"
     )
-    conexao = conectar(pasta / "teste.db")
+    connection = connect(pasta / "teste.db")
     try:
-        carregar_catalogo(conexao, pasta)
+        carregar_catalogo(connection, pasta)
     finally:
-        conexao.close()
+        connection.close()
 
 
 @pytest.mark.regressao
@@ -180,7 +180,7 @@ def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
 
 
 @pytest.mark.regressao
-def test_falha_na_carga_preserva_o_banco_anterior(conexao, tmp_path):
+def test_falha_na_carga_preserva_o_banco_anterior(connection, tmp_path):
     linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
     escrever_catalogo(tmp_path, f"{linha}\n{linha}")
     (tmp_path / "promotions.csv").write_text(
@@ -188,21 +188,21 @@ def test_falha_na_carga_preserva_o_banco_anterior(conexao, tmp_path):
     )
 
     with pytest.raises(ErroDeCarga):
-        carregar_catalogo(conexao, tmp_path)
+        carregar_catalogo(connection, tmp_path)
 
-    assert len(buscar_produtos(conexao, termo="Takamine GD20")) == 1
+    assert len(buscar_produtos(connection, termo="Takamine GD20")) == 1
 
 
 def carregar_clientes_de(pasta, *clientes):
     (pasta / "customers.csv").write_text(
         "customer_id,name,phone,email,city\n" + "\n".join(clientes) + "\n", encoding="utf-8"
     )
-    conexao = conectar(pasta / "teste.db")
+    connection = connect(pasta / "teste.db")
     try:
-        carregar_clientes(conexao, pasta)
-        return identificar_cliente(conexao, "(67) 90000-0001")
+        carregar_clientes(connection, pasta)
+        return identificar_cliente(connection, "(67) 90000-0001")
     finally:
-        conexao.close()
+        connection.close()
 
 
 @pytest.mark.regressao
@@ -286,27 +286,27 @@ def test_interrompe_a_carga_quando_a_promocao_tem_dado_invalido(tmp_path, promoc
         "promotion_id,product_id,discount_percent,description,is_active\n" + promocao + "\n",
         encoding="utf-8",
     )
-    conexao = conectar(tmp_path / "teste.db")
+    connection = connect(tmp_path / "teste.db")
 
     with pytest.raises(ErroDeCarga, match="promotion 1"):
-        carregar_catalogo(conexao, tmp_path)
+        carregar_catalogo(connection, tmp_path)
 
-    conexao.close()
+    connection.close()
 
 
 def test_banco_so_com_a_memoria_nao_esta_carregado(tmp_path):
-    vazio = conectar(tmp_path / "vazio.db")
+    vazio = connect(tmp_path / "vazio.db")
 
     assert not banco_carregado(vazio)
     vazio.close()
 
 
-def test_banco_com_os_dados_carregados_esta_pronto(conexao):
-    assert banco_carregado(conexao)
+def test_banco_com_os_dados_carregados_esta_pronto(connection):
+    assert banco_carregado(connection)
 
 
 @pytest.mark.regressao
-def test_banco_carregado_antes_das_especificacoes_pede_nova_carga(conexao):
-    conexao.executescript("ALTER TABLE products DROP COLUMN specs;")
+def test_banco_carregado_antes_das_especificacoes_pede_nova_carga(connection):
+    connection.executescript("ALTER TABLE products DROP COLUMN specs;")
 
-    assert not banco_carregado(conexao)
+    assert not banco_carregado(connection)

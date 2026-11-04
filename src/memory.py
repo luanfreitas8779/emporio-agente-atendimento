@@ -68,8 +68,8 @@ class Estado:
     produto_em_foco: int | None = None
 
 
-def criar_tabelas(conexao: sqlite3.Connection) -> None:
-    conexao.executescript(ESQUEMA)
+def create_tables(connection: sqlite3.Connection) -> None:
+    connection.executescript(ESQUEMA)
 
 
 def agora() -> str:
@@ -98,11 +98,11 @@ def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
     return []
 
 
-def _ler_mensagens(conexao: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
+def _ler_mensagens(connection: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
     chave = normalize_phone(phone or "")
     if chave is None:
         return []
-    linhas = conexao.execute(
+    linhas = connection.execute(
         """
         SELECT m.content FROM messages m
         JOIN conversations c ON c.id = m.conversation_id
@@ -121,15 +121,15 @@ def _ler_mensagens(conexao: sqlite3.Connection, phone: str | None) -> list[Model
     return mensagens
 
 
-def carregar_historico(conexao: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
-    return limitar_historico(_ler_mensagens(conexao, phone))
+def carregar_historico(connection: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
+    return limitar_historico(_ler_mensagens(connection, phone))
 
 
-def exibir_conversa(conexao: sqlite3.Connection, phone: str | None) -> list[tuple[str, str]]:
+def exibir_conversa(connection: sqlite3.Connection, phone: str | None) -> list[tuple[str, str]]:
     """The customer's message and the final answer of each turn, as the customer saw them."""
     conversa: list[tuple[str, str]] = []
     resposta: str | None = None
-    for mensagem in _ler_mensagens(conexao, phone):
+    for mensagem in _ler_mensagens(connection, phone):
         if _inicia_um_turno(mensagem):
             if resposta is not None:
                 conversa.append(("assistant", resposta))
@@ -149,42 +149,42 @@ def exibir_conversa(conexao: sqlite3.Connection, phone: str | None) -> list[tupl
 
 
 def salvar_mensagens(
-    conexao: sqlite3.Connection, phone: str | None, mensagens: list[ModelMessage]
+    connection: sqlite3.Connection, phone: str | None, mensagens: list[ModelMessage]
 ) -> None:
     chave = normalize_phone(phone or "")
     if chave is None:
         return
     momento = agora()
-    conexao.execute(
+    connection.execute(
         "INSERT INTO conversations (phone, created_at, updated_at) VALUES (?, ?, ?) "
         "ON CONFLICT (phone) DO UPDATE SET updated_at = excluded.updated_at",
         (chave, momento, momento),
     )
-    conversa = conexao.execute("SELECT id FROM conversations WHERE phone = ?", (chave,)).fetchone()
-    conexao.executemany(
+    conversa = connection.execute("SELECT id FROM conversations WHERE phone = ?", (chave,)).fetchone()
+    connection.executemany(
         "INSERT INTO messages (conversation_id, content, created_at) VALUES (?, ?, ?)",
         [
             (conversa["id"], ModelMessagesTypeAdapter.dump_json([m]).decode(), momento)
             for m in mensagens
         ],
     )
-    conexao.commit()
+    connection.commit()
 
 
-def carregar_estado(conexao: sqlite3.Connection, phone: str | None) -> Estado:
+def carregar_estado(connection: sqlite3.Connection, phone: str | None) -> Estado:
     chave = normalize_phone(phone or "")
-    linha = conexao.execute(
+    linha = connection.execute(
         "SELECT pedido_em_analise, produto_em_foco FROM conversation_state WHERE phone = ?",
         (chave,),
     ).fetchone()
     return Estado(linha["pedido_em_analise"], linha["produto_em_foco"]) if linha else Estado()
 
 
-def salvar_estado(conexao: sqlite3.Connection, phone: str | None, estado: Estado) -> None:
+def salvar_estado(connection: sqlite3.Connection, phone: str | None, estado: Estado) -> None:
     chave = normalize_phone(phone or "")
     if chave is None:
         return
-    conexao.execute(
+    connection.execute(
         """
         INSERT INTO conversation_state (phone, pedido_em_analise, produto_em_foco, updated_at)
         VALUES (?, ?, ?, ?)
@@ -195,4 +195,4 @@ def salvar_estado(conexao: sqlite3.Connection, phone: str | None, estado: Estado
         """,
         (chave, estado.pedido_em_analise, estado.produto_em_foco, agora()),
     )
-    conexao.commit()
+    connection.commit()

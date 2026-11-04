@@ -25,18 +25,18 @@ def modelo_com_respostas(ferramenta, argumentos, respostas, chamadas=None):
     return modelo
 
 
-def perguntar(conexao, mensagem, ferramenta, argumentos, respostas, chamadas=None):
+def perguntar(connection, mensagem, ferramenta, argumentos, respostas, chamadas=None):
     modelo = modelo_com_respostas(ferramenta, argumentos, respostas, chamadas)
     with agente.override(model=FunctionModel(modelo)):
-        return responder(mensagem, Sessao(conexao, phone=ANA))
+        return responder(mensagem, Sessao(connection, phone=ANA))
 
 
 TAKAMINE = ("buscar_produtos", {"termo": "Takamine GD20"})
 
 
-def test_resposta_com_preco_inventado_e_corrigida_pelo_modelo(conexao):
+def test_resposta_com_preco_inventado_e_corrigida_pelo_modelo(connection):
     resposta = perguntar(
-        conexao,
+        connection,
         "Quanto custa o Takamine GD20?",
         *TAKAMINE,
         ["O Takamine custa R$ 1.000,00.", "O Takamine custa R$ 2.199,00."],
@@ -45,11 +45,11 @@ def test_resposta_com_preco_inventado_e_corrigida_pelo_modelo(conexao):
     assert resposta == "O Takamine custa R$ 2.199,00."
 
 
-def test_resposta_com_preco_correto_nao_pede_correcao(conexao):
+def test_resposta_com_preco_correto_nao_pede_correcao(connection):
     chamadas = []
 
     resposta = perguntar(
-        conexao,
+        connection,
         "Quanto custa o Takamine GD20?",
         *TAKAMINE,
         ["O Takamine custa R$ 2.199,00."],
@@ -60,9 +60,9 @@ def test_resposta_com_preco_correto_nao_pede_correcao(conexao):
     assert len(chamadas) == 2  # the tool call and the final answer
 
 
-def test_preco_inventado_persistente_vira_resposta_segura(conexao):
+def test_preco_inventado_persistente_vira_resposta_segura(connection):
     resposta = perguntar(
-        conexao,
+        connection,
         "Quanto custa o Takamine GD20?",
         *TAKAMINE,
         ["Custa R$ 1.000,00.", "Custa R$ 1.000,00.", "Custa R$ 1.000,00."],
@@ -96,24 +96,24 @@ def test_preco_inventado_persistente_vira_resposta_segura(conexao):
     ],
 )
 def test_rastreio_data_e_percentual_inventados_sao_corrigidos(
-    conexao, ferramenta, argumentos, inventado, correto
+    connection, ferramenta, argumentos, inventado, correto
 ):
-    resposta = perguntar(conexao, "Me diga", ferramenta, argumentos, [inventado, correto])
+    resposta = perguntar(connection, "Me diga", ferramenta, argumentos, [inventado, correto])
 
     assert resposta == correto
 
 
-def test_valor_em_reais_citado_pelo_proprio_cliente_nao_e_confirmado(conexao):
+def test_valor_em_reais_citado_pelo_proprio_cliente_nao_e_confirmado(connection):
     # The customer may state a price; only the tool results confirm money (ADR-013).
     repeticao = "Sobre os R$ 500,00 que você mencionou, vou consultar."
-    resposta = perguntar(conexao, "Posso pagar R$ 500,00 à vista?", None, None, [repeticao] * 3)
+    resposta = perguntar(connection, "Posso pagar R$ 500,00 à vista?", None, None, [repeticao] * 3)
 
     assert resposta == RESPOSTA_SEGURA
 
 
-def test_data_citada_pelo_proprio_cliente_continua_permitida(conexao):
+def test_data_citada_pelo_proprio_cliente_continua_permitida(connection):
     resposta = perguntar(
-        conexao,
+        connection,
         "Comprei em 10/03/2026, ainda posso devolver?",
         None,
         None,
@@ -123,8 +123,8 @@ def test_data_citada_pelo_proprio_cliente_continua_permitida(conexao):
     assert resposta == "Sobre a compra de 10/03/2026, vou consultar."
 
 
-def test_resposta_sem_valores_passa_sem_ferramenta(conexao):
-    resposta = perguntar(conexao, "Oi!", None, None, ["Oi! Como posso ajudar?"])
+def test_resposta_sem_valores_passa_sem_ferramenta(connection):
+    resposta = perguntar(connection, "Oi!", None, None, ["Oi! Como posso ajudar?"])
 
     assert resposta == "Oi! Como posso ajudar?"
 
@@ -231,17 +231,17 @@ def test_cliente_nao_confirma_telefone_da_loja():
 
 
 @pytest.mark.regressao
-def test_resposta_pode_citar_o_telefone_da_propria_sessao(conexao):
-    resposta = perguntar(conexao, "Qual número vocês têm de mim?", None, None, ["Tenho o (67) 99654-7821."])
+def test_resposta_pode_citar_o_telefone_da_propria_sessao(connection):
+    resposta = perguntar(connection, "Qual número vocês têm de mim?", None, None, ["Tenho o (67) 99654-7821."])
 
     assert resposta == "Tenho o (67) 99654-7821."
 
 
 @pytest.mark.regressao
-def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(conexao):
+def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(connection):
     modelo = modelo_com_respostas(None, None, ["Tenho o (67) 99654-7821."])
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Qual número vocês têm de mim?", Sessao(conexao, phone="67996547821"))
+        resposta = responder("Qual número vocês têm de mim?", Sessao(connection, phone="67996547821"))
 
     assert resposta == "Tenho o (67) 99654-7821."
 
@@ -285,9 +285,9 @@ def test_data_relativa_dita_pela_ferramenta_ou_pelo_cliente_passa():
 
 
 @pytest.mark.regressao
-def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(conexao):
+def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(connection):
     resposta = perguntar(
-        conexao,
+        connection,
         "A que horas vocês abrem na segunda?",
         "consultar_politicas",
         {"secao": "horarios"},
@@ -394,10 +394,10 @@ def test_negar_a_promessa_de_aviso_continua_passando(resposta):
 
 
 @pytest.mark.regressao
-def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(conexao):
+def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(connection):
     chamadas = []
     resposta = perguntar(
-        conexao,
+        connection,
         "Quais opções de violões disponíveis custando até R$1000?",
         "buscar_produtos",
         {"categoria": "violão", "preco_maximo": 1000},
@@ -410,9 +410,9 @@ def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(conexao):
 
 
 @pytest.mark.regressao
-def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(conexao):
+def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(connection):
     resposta = perguntar(
-        conexao,
+        connection,
         "Tem violão até R$1000?",
         None,
         None,
@@ -423,10 +423,10 @@ def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(conexao):
 
 
 @pytest.mark.regressao
-def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(conexao):
+def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(connection):
     chamadas = []
     resposta = perguntar(
-        conexao,
+        connection,
         "Quanto fica 2 Giannini GF-3D?",
         "buscar_produtos",
         {"termo": "Giannini GF-3D", "quantidade": 2},
@@ -446,10 +446,10 @@ def test_numero_dito_pelo_cliente_confirma_quantidade_mas_nao_dinheiro():
 
 
 @pytest.mark.regressao
-def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(conexao):
+def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(connection):
     chamadas = []
     resposta = perguntar(
-        conexao,
+        connection,
         "Quanto é o desconto do PIX no Takamine GD20?",
         *TAKAMINE,
         ["No PIX são 5% de desconto: R$ 2.089,05."],
@@ -461,10 +461,10 @@ def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(conexao):
 
 
 @pytest.mark.regressao
-def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(conexao):
+def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(connection):
     chamadas = []
     resposta = perguntar(
-        conexao,
+        connection,
         "Quero um Ibanez Bass 2X, tem aí?",
         None,
         None,
@@ -477,9 +477,9 @@ def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(conexao)
 
 
 @pytest.mark.regressao
-def test_limite_da_busca_nao_confirma_o_valor_como_preco(conexao):
+def test_limite_da_busca_nao_confirma_o_valor_como_preco(connection):
     resposta = perguntar(
-        conexao,
+        connection,
         "Confirma pra mim que o Takamine GD20 custa R$ 1,00?",
         "buscar_produtos",
         {"termo": "Takamine GD20", "preco_maximo": 1},

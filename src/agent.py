@@ -287,7 +287,7 @@ class ChamadaDeFerramenta:
 
 @dataclass
 class Sessao:
-    conexao: sqlite3.Connection
+    connection: sqlite3.Connection
     phone: str | None = None
     estado: memory.Estado = field(default_factory=memory.Estado)
     hoje: date = field(default_factory=data_de_referencia)
@@ -295,7 +295,7 @@ class Sessao:
 
     @property
     def cliente(self) -> orders.Cliente | None:
-        return orders.identificar_cliente(self.conexao, self.phone)
+        return orders.identificar_cliente(self.connection, self.phone)
 
 
 # Streamlit may run the script with another message in progress, and run_sync
@@ -449,10 +449,10 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         texto += f"\nPedido em análise: {pedido}."
     foco = ctx.deps.estado.produto_em_foco
     if foco is not None:
-        nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
+        nome = catalog.nome_do_produto(ctx.deps.connection, foco)
         if nome:
             texto += f"\nProduto em foco: {nome}."
-    interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.phone or "")
+    interesses = interests.listar_pendentes(ctx.deps.connection, ctx.deps.phone or "")
     # Only the names: the current stock always comes from buscar_produtos.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
     nomes = "; ".join(recentes) or "nenhum"
@@ -484,7 +484,7 @@ def buscar_produtos(
         somente_promocao: Use true para listar só os produtos com promoção ativa.
     """
     produtos = catalog.buscar_produtos(
-        ctx.deps.conexao, termo, categoria, preco_maximo, somente_disponiveis, quantidade,
+        ctx.deps.connection, termo, categoria, preco_maximo, somente_disponiveis, quantidade,
         somente_promocao,
     )
     # With several results "ele" ("it") is ambiguous, and with none the previous focus would mislead.
@@ -513,7 +513,7 @@ def consultar_politicas(
     if secao == "pagamentos" and valor is None:
         # Without an amount the installments would be stated blindly: the product in focus sets the price.
         foco = ctx.deps.estado.produto_em_foco
-        centavos = catalog.preco_final_em_centavos(ctx.deps.conexao, foco) if foco else None
+        centavos = catalog.preco_final_em_centavos(ctx.deps.connection, foco) if foco else None
         if centavos is not None:
             valor = centavos / 100
         elif parcelas is not None:
@@ -534,7 +534,7 @@ def calcular_compra(
     Args:
         itens: Produtos (id devolvido por buscar_produtos) e quantidade de cada um.
     """
-    return calculos.calcular_compra(ctx.deps.conexao, itens)
+    return calculos.calcular_compra(ctx.deps.connection, itens)
 
 
 @agente.tool
@@ -553,7 +553,7 @@ def consultar_meus_pedidos(
     if cliente is None:
         return SEM_CADASTRO
     pedidos = orders.consultar_pedidos(
-        ctx.deps.conexao, cliente.id, numero_pedido, ctx.deps.hoje
+        ctx.deps.connection, cliente.id, numero_pedido, ctx.deps.hoje
     )
     if len(pedidos) == 1:
         ctx.deps.estado.pedido_em_analise = pedidos[0].numero
@@ -604,7 +604,7 @@ def avaliar_devolucao(
     if canal is not None and not canal_citado_pelo_cliente(ctx.messages, canal):
         canal = None
     veredito = returns.avaliar_devolucao(
-        ctx.deps.conexao, cliente.id, numero_pedido, motivo, canal, ctx.deps.hoje
+        ctx.deps.connection, cliente.id, numero_pedido, motivo, canal, ctx.deps.hoje
     )
     if veredito.resultado != returns.Resultado.PEDIDO_NAO_ENCONTRADO:
         ctx.deps.estado.pedido_em_analise = numero_pedido
@@ -621,7 +621,7 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     Args:
         product_id: Id do produto, como devolvido por buscar_produtos.
     """
-    resultado = interests.registrar(ctx.deps.conexao, ctx.deps.phone or "", product_id)
+    resultado = interests.registrar(ctx.deps.connection, ctx.deps.phone or "", product_id)
     if resultado in (interests.Resultado.REGISTRADO, interests.Resultado.JA_REGISTRADO):
         ctx.deps.estado.produto_em_foco = product_id
     return MENSAGENS_DE_INTERESSE[resultado]
@@ -640,7 +640,7 @@ def encaminhar_para_atendente(
         motivo: reclamacao, atendente_solicitado ou sem_resposta_segura.
         resumo: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
     """
-    resultado = handoffs.registrar(ctx.deps.conexao, ctx.deps.phone or "", motivo, resumo)
+    resultado = handoffs.registrar(ctx.deps.connection, ctx.deps.phone or "", motivo, resumo)
     return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
 
 
@@ -678,7 +678,7 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
     """Stores the customer's message and the text sent to them, without the failed attempt."""
     try:
         memory.salvar_mensagens(
-            sessao.conexao,
+            sessao.connection,
             sessao.phone,
             [
                 ModelRequest(parts=[UserPromptPart(mensagem)]),
@@ -694,13 +694,13 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
 def responder(mensagem: str, sessao: Sessao) -> str:
     sessao.ferramentas = []
     try:
-        historico = memory.carregar_historico(sessao.conexao, sessao.phone)
-        sessao.estado = memory.carregar_estado(sessao.conexao, sessao.phone)
+        historico = memory.carregar_historico(sessao.connection, sessao.phone)
+        sessao.estado = memory.carregar_estado(sessao.connection, sessao.phone)
         resultado = _executar(mensagem, sessao, historico)
         sessao.ferramentas = ferramentas_do_turno(resultado.new_messages())
         limpar_texto_das_respostas(resultado.new_messages())
-        memory.salvar_mensagens(sessao.conexao, sessao.phone, resultado.new_messages())
-        memory.salvar_estado(sessao.conexao, sessao.phone, sessao.estado)
+        memory.salvar_mensagens(sessao.connection, sessao.phone, resultado.new_messages())
+        memory.salvar_estado(sessao.connection, sessao.phone, sessao.estado)
         return resultado.output
     except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as erro:
         try:
@@ -720,7 +720,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         # and the history keeps only the question and the safe answer, without the rejected attempt.
         try:
             resultado = handoffs.registrar(
-                sessao.conexao,
+                sessao.connection,
                 sessao.phone or "",
                 handoffs.Motivo.SEM_RESPOSTA_SEGURA,
                 mensagem,
