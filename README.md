@@ -110,7 +110,7 @@ The full decisions are in [Architecture](docs/02-architecture.md).
 
 ## Example conversations
 
-The reference conversations are in [`examples/`](examples/) and were generated with the real Gemini model. They are in Portuguese, as the agent serves Brazilian customers:
+The reference conversations are in [`examples/`](examples/) and were generated with the real Gemini model on November 3, 2026, with the current code. They are in Portuguese, as the agent serves Brazilian customers:
 
 | Conversation | Shows |
 |---|---|
@@ -118,7 +118,7 @@ The reference conversations are in [`examples/`](examples/) and were generated w
 | [Return after the deadline](examples/02-devolucao-fora-do-prazo.md) | Question about the purchase channel, deadline calculated in code, and offer of a human agent |
 | [Installments](examples/03-parcelamento-sem-juros.md) | Two tools in the same question |
 | [Complaint handed off](examples/04-reclamacao-encaminhada.md) | Empathy and registration in the same turn |
-| [Budget, scope, and order](examples/05-busca-por-orcamento-e-fora-de-escopo.md) | Colloquial language, refusal of accessories, and order status |
+| [Budget, scope, order, and address](examples/05-busca-por-orcamento-e-fora-de-escopo.md) | Colloquial language, refusal of accessories, order status with the delay calculated in code, and the store address |
 
 ## Known limitations
 

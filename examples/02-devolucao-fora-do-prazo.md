@@ -2,20 +2,19 @@
 
 > **Scenario: return after the deadline** — the agent asks for the purchase channel, applies the 7-day withdrawal rule calculated in code, and offers a human agent without registering anything first. The conversation is in Brazilian Portuguese, the language the agent speaks.
 
-**Cliente:** Letícia (cadastrada, pedido 7) · **Casos:** TC-004, TC-306, TC-309 · **Modelo:** `gemini-3.5-flash-lite`
+**Cliente:** Letícia (cadastrada, pedido 7) · **Casos:** TC-004, TC-306, TC-309 · **Modelo:** `gemini-3.5-flash-lite` · **Gerada em:** 03/11/2026
 
 Conversa não trivial: exige perguntar o canal da compra, avaliar o prazo em código e oferecer o atendente sem registrar nada antes da aceitação.
 
 > **Cliente:** Quero devolver o pedido 7, me arrependi da compra
 >
-> **Tom:** Letícia, para eu avaliar a devolução por arrependimento do pedido 7, você comprou online ou na loja física? 🎸
+> **Tom:** Oi, Letícia! Para eu avaliar a devolução por arrependimento do pedido 7, você comprou online ou na loja física?
 
 Ferramenta usada: `assess_return(order_number=7, reason="arrependimento")`, que devolve `faltam_dados` com o canal em falta.
 
 > **Cliente:** foi online
 >
-> **Tom:** Letícia, vi aqui que o prazo para arrependimento do pedido 7 expirou no dia 24/02/2026 (considerando a previsão de entrega de 17/02/2026). Como passou do prazo, não consigo seguir com a devolução por aqui.
-> Quer que eu encaminhe o seu caso para a nossa equipe avaliar? Eles retornam em até 24 horas úteis! 😊
+> **Tom:** O prazo para devolução por arrependimento desse pedido expirou em 24/02/2026, considerando a entrega estimada (17/02/2026). A troca ou a devolução depende da análise do produto pela equipe, e não há aprovação garantida. Como o prazo expirou, você gostaria que eu encaminhasse o seu caso para a equipe da loja?
 
 Ferramenta usada: `assess_return(order_number=7, reason="arrependimento", channel="online")`, com resultado `fora_do_prazo`.
 

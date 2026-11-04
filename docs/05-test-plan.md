@@ -172,7 +172,7 @@ The inputs and expected answers are in Portuguese, the language the agent speaks
 | Return | Order analysis, deadline, and warranty |
 | Memory | Interest in the GF-3D, return in a new session, and simulated restock |
 
-The conversations are in `examples/`, generated from real runs with Gemini.
+The conversations are in `examples/`, generated from real runs with Gemini and regenerated on November 3, 2026, after the English rename (25 requests).
 
 ## 5. Schedule
 
