@@ -8,74 +8,74 @@ from src.memory import now_iso
 from src.phone import normalize_phone
 
 
-MAX_RESUMO = 500
+MAX_SUMMARY = 500
 # The model rewrites the summary on each attempt; without the window the same case would become several records.
-JANELA_DE_REPETICAO = timedelta(hours=1)
+REPEAT_WINDOW = timedelta(hours=1)
 
 
 # Words that appear in almost every summary and do not say what the subject is.
-PALAVRAS_SEM_ASSUNTO = {
+NON_SUBJECT_WORDS = {
     "cliente", "pedido", "reclama", "reclamou", "reclamacao", "reclamando", "relata", "informa",
     "afirma", "insatisfeito", "insatisfeita", "outro", "outra",
 }
 
 
-def _assunto(resumo: str) -> set[str]:
+def _subject(summary: str) -> set[str]:
     """Words that identify the case: those with 5 letters or more, without the common ones, and the numbers."""
-    words = re.findall(r"\w+", normalize(resumo))
-    return {p for p in words if (len(p) >= 5 or p.isdigit()) and p not in PALAVRAS_SEM_ASSUNTO}
+    words = re.findall(r"\w+", normalize(summary))
+    return {p for p in words if (len(p) >= 5 or p.isdigit()) and p not in NON_SUBJECT_WORDS}
 
 
-def _mesmo_assunto(anterior: str, resumo: str) -> bool:
+def _same_subject(previous: str, summary: str) -> bool:
     """Two complaint summaries deal with the same case when they cite the same order or, without
     orders cited in both, share a subject word."""
-    assunto_anterior, assunto = _assunto(anterior), _assunto(resumo)
-    pedidos_anterior = {p for p in assunto_anterior if p.isdigit()}
-    order_list = {p for p in assunto if p.isdigit()}
-    if pedidos_anterior and order_list:
-        return bool(pedidos_anterior & order_list)
-    return bool(assunto_anterior & assunto)
+    previous_subject, subject = _subject(previous), _subject(summary)
+    previous_orders = {p for p in previous_subject if p.isdigit()}
+    order_list = {p for p in subject if p.isdigit()}
+    if previous_orders and order_list:
+        return bool(previous_orders & order_list)
+    return bool(previous_subject & subject)
 
 
 class Reason(StrEnum):
-    RECLAMACAO = "reclamacao"
-    SEM_RESPOSTA_SEGURA = "sem_resposta_segura"
-    ATENDENTE_SOLICITADO = "atendente_solicitado"
+    COMPLAINT = "reclamacao"
+    NO_SAFE_ANSWER = "sem_resposta_segura"
+    AGENT_REQUESTED = "atendente_solicitado"
 
 
 class Result(StrEnum):
     REGISTERED = "registrado"
-    RESUMO_INVALIDO = "resumo_invalido"
+    INVALID_SUMMARY = "resumo_invalido"
     ALREADY_REGISTERED = "ja_registrado"
     INVALID_PHONE = "telefone_invalido"
 
 
-def register(connection: sqlite3.Connection, phone: str, reason: Reason, resumo: str) -> Result:
+def register(connection: sqlite3.Connection, phone: str, reason: Reason, summary: str) -> Result:
     key = normalize_phone(phone)
     if key is None:
         return Result.INVALID_PHONE
-    resumo = resumo.strip()[:MAX_RESUMO].strip()
-    if not resumo:
-        return Result.RESUMO_INVALIDO
-    corte = datetime.fromisoformat(now_iso()) - JANELA_DE_REPETICAO
-    anteriores = connection.execute(
+    summary = summary.strip()[:MAX_SUMMARY].strip()
+    if not summary:
+        return Result.INVALID_SUMMARY
+    cut = datetime.fromisoformat(now_iso()) - REPEAT_WINDOW
+    previous_ones = connection.execute(
         "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (key, reason)
     ).fetchall()
     # The same summary is a repeat at any time; another summary only within the window and, for a
     # complaint, only if it is about the same subject.
-    repetido = any(
-        anterior == resumo
+    repeated = any(
+        previous == summary
         or (
-            datetime.fromisoformat(criado_em) >= corte
-            and (reason != Reason.RECLAMACAO or _mesmo_assunto(anterior, resumo))
+            datetime.fromisoformat(created_at) >= cut
+            and (reason != Reason.COMPLAINT or _same_subject(previous, summary))
         )
-        for anterior, criado_em in anteriores
+        for previous, created_at in previous_ones
     )
-    if repetido:
+    if repeated:
         return Result.ALREADY_REGISTERED
     connection.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
-        (key, reason, resumo, now_iso()),
+        (key, reason, summary, now_iso()),
     )
     connection.commit()
     return Result.REGISTERED

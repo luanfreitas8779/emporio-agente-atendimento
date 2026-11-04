@@ -33,9 +33,9 @@ INSERT INTO conversation_state VALUES ('67996547821', 8, 96, '2026-03-01T00:00:0
 @pytest.mark.parametrize("esquema", [ESQUEMA_COM_COLUNA_ANTIGA, ESQUEMA_SEM_COLUNA])
 @pytest.mark.regression
 def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
-    anterior = sqlite3.connect(tmp_path / "antigo.db")
-    anterior.executescript(esquema)
-    anterior.close()
+    previous = sqlite3.connect(tmp_path / "antigo.db")
+    previous.executescript(esquema)
+    previous.close()
 
     connection = connect(tmp_path / "antigo.db")
 
@@ -62,8 +62,8 @@ def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, product, status
     connection.close()
 
 
-@pytest.mark.parametrize("reason, resumo", [("outro", "Resumo."), ("reclamacao", "")])
-def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp_path, reason, resumo):
+@pytest.mark.parametrize("reason, summary", [("outro", "Resumo."), ("reclamacao", "")])
+def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp_path, reason, summary):
     connection = connect(tmp_path / "novo.db")
     create_tables(connection)
 
@@ -71,7 +71,7 @@ def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp
         connection.execute(
             "INSERT INTO handoffs (phone, reason, summary, created_at) "
             "VALUES ('67996547821', ?, ?, '2026-03-25')",
-            (reason, resumo),
+            (reason, summary),
         )
     connection.close()
 

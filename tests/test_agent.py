@@ -834,7 +834,7 @@ def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(connection):
         connection,
         ANA,
         "encaminhar_para_atendente",
-        {"reason": "reclamacao", "resumo": "Violão chegou com defeito no braço."},
+        {"reason": "reclamacao", "summary": "Violão chegou com defeito no braço."},
     )
 
     rows = [tuple(l) for l in connection.execute("SELECT phone, reason, summary FROM handoffs")]
@@ -844,7 +844,7 @@ def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(connection):
 
 def test_encaminhamento_sem_telefone_valido_explica_e_nao_grava(connection):
     retorno = chamar_ferramenta(
-        connection, None, "encaminhar_para_atendente", {"reason": "reclamacao", "resumo": "Defeito."}
+        connection, None, "encaminhar_para_atendente", {"reason": "reclamacao", "summary": "Defeito."}
     )
 
     assert "não foi possível identificar o telefone" in retorno.content.lower()
@@ -858,7 +858,7 @@ def test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone(connection):
         connection,
         ANA,
         "encaminhar_para_atendente",
-        {"reason": "reclamacao", "resumo": "Defeito.", "phone": "67911112222"},
+        {"reason": "reclamacao", "summary": "Defeito.", "phone": "67911112222"},
     )
 
     assert retorno.outcome == "retried"
@@ -867,7 +867,7 @@ def test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone(connection):
 
 def test_motivo_desconhecido_e_recusado_pela_ferramenta(connection):
     retorno = chamar_ferramenta(
-        connection, ANA, "encaminhar_para_atendente", {"reason": "fofoca", "resumo": "Defeito."}
+        connection, ANA, "encaminhar_para_atendente", {"reason": "fofoca", "summary": "Defeito."}
     )
 
     assert retorno.outcome == "retried"

@@ -84,7 +84,7 @@ A message may require more than one tool. A return request, for example, require
 
 | Item | Definition |
 |---|---|
-| Input | `reason` (`reclamacao`, `atendente_solicitado`, or `sem_resposta_segura`) and `resumo`; the phone number comes from the session |
+| Input | `reason` (`reclamacao`, `atendente_solicitado`, or `sem_resposta_segura`) and `summary`; the phone number comes from the session |
 | Output | Fixed text: handoff registered, already registered, empty summary, or phone number not identified. The first two state that the team replies within 24 business hours |
 | Rules | Writes to the `handoffs` table (ADR-017); writes nothing without a valid phone number or a summary; the summary is truncated at 500 characters; the model does not choose the phone number (`phone` is rejected). When the output guardrail gives up, the code itself registers a `sem_resposta_segura` handoff |
 

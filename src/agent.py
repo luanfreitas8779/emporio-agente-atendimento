@@ -238,7 +238,7 @@ PRAZO_DE_RETORNO = "A equipe retorna em até 24 horas úteis."
 MENSAGENS_DE_ENCAMINHAMENTO = {
     handoffs.Result.REGISTERED: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
     handoffs.Result.ALREADY_REGISTERED: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
-    handoffs.Result.RESUMO_INVALIDO: "O resumo está vazio: descreva o caso antes de encaminhar.",
+    handoffs.Result.INVALID_SUMMARY: "O resumo está vazio: descreva o caso antes de encaminhar.",
     handoffs.Result.INVALID_PHONE: (
         "Não foi possível identificar o telefone do cliente nesta conversa, então o caso não foi "
         "encaminhado. Explique isso ao cliente e passe os contatos da loja "
@@ -629,7 +629,7 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
 
 @agente.tool
 def encaminhar_para_atendente(
-    ctx: RunContext[Sessao], reason: handoffs.Reason, resumo: str
+    ctx: RunContext[Sessao], reason: handoffs.Reason, summary: str
 ) -> str:
     """Registra o caso para a equipe da loja, que retorna ao cliente em até 24 horas úteis.
 
@@ -638,9 +638,9 @@ def encaminhar_para_atendente(
 
     Args:
         reason: reclamacao, atendente_solicitado ou sem_resposta_segura.
-        resumo: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
+        summary: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
     """
-    result = handoffs.register(ctx.deps.connection, ctx.deps.phone or "", reason, resumo)
+    result = handoffs.register(ctx.deps.connection, ctx.deps.phone or "", reason, summary)
     return MENSAGENS_DE_ENCAMINHAMENTO[result]
 
 
@@ -722,7 +722,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
             result = handoffs.register(
                 sessao.connection,
                 sessao.phone or "",
-                handoffs.Reason.SEM_RESPOSTA_SEGURA,
+                handoffs.Reason.NO_SAFE_ANSWER,
                 mensagem,
             )
         except sqlite3.Error:
@@ -733,7 +733,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
             handoffs.Result.REGISTERED: RESPOSTA_SEGURA,
             handoffs.Result.ALREADY_REGISTERED: RESPOSTA_SEGURA,
             handoffs.Result.INVALID_PHONE: RESPOSTA_SEGURA_SEM_TELEFONE,
-            handoffs.Result.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
+            handoffs.Result.INVALID_SUMMARY: RESPOSTA_SEGURA_SEM_REGISTRO,
             None: RESPOSTA_SEGURA_SEM_REGISTRO,
         }[result]
         return _responder_sem_modelo(mensagem, sessao, resposta)
