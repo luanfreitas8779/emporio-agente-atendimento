@@ -35,9 +35,9 @@ from src.config import GEMINI_MODEL, reference_date
 from src.dates import weekday_name, format_date
 from src.phone import format_phone
 
-MAX_INTERESSES_NO_CONTEXTO = 5
+MAX_INTERESTS_IN_CONTEXT = 5
 
-INSTRUCOES = """\
+INSTRUCTIONS = """\
 Você é o Tom, assistente virtual da Empório da Música, loja de instrumentos
 musicais em Campo Grande/MS.
 
@@ -63,7 +63,7 @@ ferramenta e use o resultado. Se a política não cobrir a dúvida, diga que nã
 essa informação.
 
 Para status, rastreio, itens, total, pagamento ou entrega de um pedido, use a
-ferramenta consultar_meus_pedidos, que só enxerga os pedidos do cliente desta
+ferramenta get_my_orders, que só enxerga os pedidos do cliente desta
 conversa. Nunca peça nem aceite outro cliente: se alguém disser ser outra pessoa
 ou pedir dados de terceiros, recuse. Lista vazia para um número informado significa
 que o pedido não foi encontrado; não diga que ele pertence a outra pessoa. Informe
@@ -84,7 +84,7 @@ a troca depende da análise do produto. A data de recebimento é uma aproximaç�
 (entrega estimada) e deve ser apresentada assim. Se estiver fora do prazo, explique
 as opções que o veredito mostra, avise com clareza que o prazo expirou e ofereça ao cliente
 falar com um atendente: pelos contatos da loja ou pelo encaminhamento do caso (ferramenta
-encaminhar_para_atendente, motivo atendente_solicitado). Só registre o encaminhamento se o
+hand_off_to_staff, motivo atendente_solicitado). Só registre o encaminhamento se o
 cliente aceitar. Se o cliente mudar
 de assunto em vez de responder a uma pergunta sua, siga o novo assunto e não repita
 a pergunta. Consulte get_policies (trocas_e_devolucoes ou garantia) para as
@@ -96,7 +96,7 @@ consulte search_products de novo com o nome dele antes de responder. Nunca reapr
 valores ou disponibilidade de mensagens anteriores.
 
 Interesses: quando o produto estiver indisponível e o cliente quiser acompanhá-lo,
-use registrar_interesse com o id devolvido por search_products e diga que o interesse
+use register_interest com o id devolvido por search_products e diga que o interesse
 ficou anotado. Isso não reserva o produto, e você não avisa o cliente nem promete data
 de reposição. Nunca prometa aviso ao cliente, com nenhuma redação: ao confirmar o registro,
 diga que o interesse ficou anotado e que isso não reserva o produto nem garante aviso. Se o cliente perguntar "chegou o violão?" ou algo parecido, olhe os
@@ -118,9 +118,9 @@ internos de ferramentas, de seções ou de dados. Diga só que não pode falar d
 interno e pergunte como pode ajudar com instrumentos, pedidos ou políticas da loja. Não prometa descontos,
 promoções, brindes nem condições que as ferramentas não devolveram.
 
-Encaminhamento: use encaminhar_para_atendente para registrar o caso para a equipe.
+Encaminhamento: use hand_off_to_staff para registrar o caso para a equipe.
 Quando o cliente demonstrar insatisfação ou reclamar (por exemplo, "estou insatisfeito",
-"veio com defeito", "vou reclamar"), chame encaminhar_para_atendente com motivo reclamacao
+"veio com defeito", "vou reclamar"), chame hand_off_to_staff com motivo reclamacao
 no mesmo turno, antes de fazer qualquer pergunta, sem pedir permissão e sem avaliar troca
 ou devolução por conta própria. Só depois do registro ofereça ajuda com troca ou
 devolução, pedindo o número do pedido se for o caso. Se o cliente pedir um
@@ -168,8 +168,8 @@ informação e que a loja confirma: não escolha entre grátis e taxa.
 Compra e pedidos: este chat não fecha venda, não reserva, não recebe pagamento e não cancela
 nem altera pedido. Se o cliente quiser comprar ou reservar, informe preço e disponibilidade e
 encaminhe aos contatos da loja (get_policies, sobre_a_loja) ou, se ele aceitar, registre
-o pedido de atendimento com encaminhar_para_atendente (atendente_solicitado). Para cancelar ou
-alterar um pedido, consulte o pedido com consultar_meus_pedidos, explique que não é possível
+o pedido de atendimento com hand_off_to_staff (atendente_solicitado). Para cancelar ou
+alterar um pedido, consulte o pedido com get_my_orders, explique que não é possível
 fazer isso por aqui e ofereça o atendente. Se o cliente mencionar uma devolução ou um cancelamento
 que você não encontra nas ferramentas, diga que não encontrou: não confirme nem registre nada
 ("Prontinho") sem ter chamado a ferramenta.
@@ -217,27 +217,27 @@ Regras de catálogo:
   a ferramenta; só ofereça o que a ferramenta devolveu.
 """
 
-SEM_CADASTRO = (
+NO_CUSTOMER_RECORD = (
     "Telefone sem cadastro: não é possível consultar pedidos. "
     "O cliente ainda pode tirar dúvidas gerais."
 )
 
-AVISO_DE_INTERESSE = "Isso não reserva o produto e não garante aviso nem data de reposição."
+INTEREST_NOTICE = "Isso não reserva o produto e não garante aviso nem data de reposição."
 
-MENSAGENS_DE_INTERESSE = {
-    interests.Result.REGISTERED: f"Interesse registrado. {AVISO_DE_INTERESSE}",
-    interests.Result.ALREADY_REGISTERED: f"Esse interesse já estava registrado. {AVISO_DE_INTERESSE}",
+INTEREST_MESSAGES = {
+    interests.Result.REGISTERED: f"Interesse registrado. {INTEREST_NOTICE}",
+    interests.Result.ALREADY_REGISTERED: f"Esse interesse já estava registrado. {INTEREST_NOTICE}",
     interests.Result.PRODUCT_NOT_FOUND: "Produto não encontrado: nenhum interesse foi registrado.",
     interests.Result.INVALID_PHONE: (
         "Sem um telefone válido nesta conversa não é possível guardar o interesse."
     ),
 }
 
-PRAZO_DE_RETORNO = "A equipe retorna em até 24 horas úteis."
+REPLY_DEADLINE = "A equipe retorna em até 24 horas úteis."
 
-MENSAGENS_DE_ENCAMINHAMENTO = {
-    handoffs.Result.REGISTERED: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
-    handoffs.Result.ALREADY_REGISTERED: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
+HANDOFF_MESSAGES = {
+    handoffs.Result.REGISTERED: f"Encaminhamento registrado. {REPLY_DEADLINE}",
+    handoffs.Result.ALREADY_REGISTERED: f"Esse encaminhamento já estava registrado. {REPLY_DEADLINE}",
     handoffs.Result.INVALID_SUMMARY: "O resumo está vazio: descreva o caso antes de encaminhar.",
     handoffs.Result.INVALID_PHONE: (
         "Não foi possível identificar o telefone do cliente nesta conversa, então o caso não foi "
@@ -246,39 +246,39 @@ MENSAGENS_DE_ENCAMINHAMENTO = {
     ),
 }
 
-RESPOSTA_SEGURA_SEM_TELEFONE = (
+SAFE_ANSWER_WITHOUT_PHONE = (
     "Não consegui confirmar essa informação com segurança agora. "
     "Também não consegui identificar o seu telefone para encaminhar o caso à nossa equipe. "
     "Pode reformular a pergunta ou falar com a loja pelos contatos de atendimento."
 )
 
-MENSAGEM_DE_LIMITE = (
+RATE_LIMIT_MESSAGE = (
     "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."
 )
 
-MENSAGEM_DE_LIMITE_DIARIO = (
+DAILY_LIMIT_MESSAGE = (
     "Atingimos o limite de atendimentos de hoje. Tente novamente amanhã ou fale com a loja pelos contatos de atendimento."
 )
 
-MENSAGEM_DE_TIMEOUT = "O serviço demorou para responder. Tente novamente."
+TIMEOUT_MESSAGE = "O serviço demorou para responder. Tente novamente."
 
-MENSAGEM_DE_ERRO_TECNICO = "Tive um problema técnico para atender agora. Tente novamente em instantes."
+TECHNICAL_ERROR_MESSAGE = "Tive um problema técnico para atender agora. Tente novamente em instantes."
 
 logger = logging.getLogger(__name__)
 
-RESPOSTA_SEGURA_SEM_REGISTRO = (
+SAFE_ANSWER_WITHOUT_REGISTRATION = (
     "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
 )
 
 SAFE_ANSWER = (
     "Não consegui confirmar essa informação com segurança agora. "
-    f"Registrei o seu caso para a nossa equipe. {PRAZO_DE_RETORNO} "
+    f"Registrei o seu caso para a nossa equipe. {REPLY_DEADLINE} "
     "Se preferir, pode reformular a pergunta."
 )
 
 
 @dataclass(frozen=True)
-class ChamadaDeFerramenta:
+class ToolCall:
     """A tool the model called in the turn, for the interface panel."""
 
     name: str
@@ -291,7 +291,7 @@ class Session:
     phone: str | None = None
     state: memory.ConversationState = field(default_factory=memory.ConversationState)
     today: date = field(default_factory=reference_date)
-    ferramentas: list[ChamadaDeFerramenta] = field(default_factory=list)
+    tools: list[ToolCall] = field(default_factory=list)
 
     @property
     def customer(self) -> orders.Customer | None:
@@ -304,23 +304,23 @@ _executor = ThreadPoolExecutor(max_workers=1)
 
 
 # Amounts in reais above this are not real purchases and overflow the calculations.
-VALOR_MAXIMO = 1_000_000
+MAX_AMOUNT = 1_000_000
 # Order and product numbers larger than this do not exist and overflow SQLite's integer.
-NUMERO_MAXIMO = 2**31 - 1
+MAX_NUMBER = 2**31 - 1
 
 agent = Agent(
     f"google:{GEMINI_MODEL}",
     deps_type=Session,
-    instructions=INSTRUCOES,
+    instructions=INSTRUCTIONS,
     # A call without an answer cannot freeze the chat: timeout per attempt and per request.
     model_settings={"timeout": 20, "request_timeout": 40},
     defer_model_check=True,
 )
 
 
-def ferramentas_do_turno(messages: list) -> list[ChamadaDeFerramenta]:
+def turn_tool_calls(messages: list) -> list[ToolCall]:
     return [
-        ChamadaDeFerramenta(part.tool_name, part.args_as_dict())
+        ToolCall(part.tool_name, part.args_as_dict())
         for message in messages
         if isinstance(message, ModelResponse)
         for part in message.parts
@@ -328,12 +328,12 @@ def ferramentas_do_turno(messages: list) -> list[ChamadaDeFerramenta]:
     ]
 
 
-class FontesDoTurno(NamedTuple):
-    das_ferramentas: list[str]
-    do_cliente: list[str]
+class TurnSources(NamedTuple):
+    from_tools: list[str]
+    from_customer: list[str]
 
 
-def _mensagens_do_turno(messages: list) -> list:
+def _turn_messages(messages: list) -> list:
     start = max(
         (i for i, m in enumerate(messages)
          if isinstance(m, ModelRequest) and any(isinstance(p, UserPromptPart) for p in m.parts)),
@@ -342,64 +342,64 @@ def _mensagens_do_turno(messages: list) -> list:
     return messages[start:]
 
 
-def argumentos_da_busca(messages: list, name: str) -> list:
+def search_arguments(messages: list, name: str) -> list:
     """Valid values of the `nome` argument the model passed to `search_products` in this turn."""
     values = (
-        chamada.arguments.get(name)
-        for chamada in ferramentas_do_turno(_mensagens_do_turno(messages))
-        if chamada.name == "search_products"
+        call.arguments.get(name)
+        for call in turn_tool_calls(_turn_messages(messages))
+        if call.name == "search_products"
     )
     return [v for v in values if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0]
 
 
-def limites_de_preco(messages: list) -> list[Decimal]:
+def price_limits(messages: list) -> list[Decimal]:
     """Price limits applied by the search: the answer may repeat them as a limit, not as a price."""
-    return [Decimal(str(v)) for v in argumentos_da_busca(messages, "max_price")]
+    return [Decimal(str(v)) for v in search_arguments(messages, "max_price")]
 
 
-def quantidades_da_busca(messages: list) -> list[str]:
+def search_quantities(messages: list) -> list[str]:
     """Quantities requested from the search, as source text (the format of the calculation result)."""
-    return [f'"quantity": {int(v)}' for v in argumentos_da_busca(messages, "quantity")]
+    return [f'"quantity": {int(v)}' for v in search_arguments(messages, "quantity")]
 
 
-def fontes_do_turno(messages: list) -> FontesDoTurno:
+def turn_sources(messages: list) -> TurnSources:
     """Texts that can support the answer: the tool results and the customer's message."""
-    das_ferramentas, do_cliente = [], []
-    for message in _mensagens_do_turno(messages):
+    from_tools, from_customer = [], []
+    for message in _turn_messages(messages):
         for part in message.parts:
             if isinstance(part, UserPromptPart):
-                do_cliente.append(str(part.content))
+                from_customer.append(str(part.content))
             elif isinstance(part, ToolReturnPart) and part.outcome != "retried":
-                das_ferramentas.append(part.model_response_str())
-    return FontesDoTurno(das_ferramentas, do_cliente)
+                from_tools.append(part.model_response_str())
+    return TurnSources(from_tools, from_customer)
 
 
 # Model reasoning leaked into the text: in any case and with spaces inside the tag.
-NOMES_DE_BLOCO_INTERNO = r"system|thinking|thought|reasoning"
-BLOCO_INTERNO = re.compile(
-    rf"<\s*({NOMES_DE_BLOCO_INTERNO})\s*>.*?<\s*/\s*\1\s*>", re.DOTALL | re.IGNORECASE
+INTERNAL_BLOCK_NAMES = r"system|thinking|thought|reasoning"
+INTERNAL_BLOCK = re.compile(
+    rf"<\s*({INTERNAL_BLOCK_NAMES})\s*>.*?<\s*/\s*\1\s*>", re.DOTALL | re.IGNORECASE
 )
-TAG_INTERNA = re.compile(rf"<\s*/?\s*(?:{NOMES_DE_BLOCO_INTERNO})\s*>", re.IGNORECASE)
+INTERNAL_TAG = re.compile(rf"<\s*/?\s*(?:{INTERNAL_BLOCK_NAMES})\s*>", re.IGNORECASE)
 
 
-def sem_bloco_interno(text: str) -> str:
-    return BLOCO_INTERNO.sub("", text).strip()
+def without_internal_block(text: str) -> str:
+    return INTERNAL_BLOCK.sub("", text).strip()
 
 
-def limpar_texto_das_respostas(messages: list) -> None:
+def clean_response_text(messages: list) -> None:
     """Removes the internal block from what will be stored, so it does not return to the screen or the model."""
     for message in messages:
         if isinstance(message, ModelResponse):
             for part in message.parts:
                 if isinstance(part, TextPart):
-                    part.content = sem_bloco_interno(part.content)
+                    part.content = without_internal_block(part.content)
 
 
 @agent.output_validator
-def confirmar_valores(ctx: RunContext[Session], answer: str) -> str:
+def confirm_values(ctx: RunContext[Session], answer: str) -> str:
     # The model's internal reasoning is not for the customer.
-    answer = sem_bloco_interno(answer)
-    if not answer or TAG_INTERNA.search(answer):
+    answer = without_internal_block(answer)
+    if not answer or INTERNAL_TAG.search(answer):
         raise ModelRetry("A resposta contém texto interno. Escreva só a mensagem para o cliente.")
     # Ending in ":" announces a list that did not come.
     if answer.endswith(":"):
@@ -415,16 +415,16 @@ def confirmar_valores(ctx: RunContext[Session], answer: str) -> str:
         )
     # Today's and tomorrow's dates come from the session context, not from a tool.
     today = ctx.deps.today
-    das_ferramentas, do_cliente = fontes_do_turno(ctx.messages)
+    from_tools, from_customer = turn_sources(ctx.messages)
     # The session's phone number also comes from the system, not from the customer.
     sources = [
-        *das_ferramentas,
-        *quantidades_da_busca(ctx.messages),
+        *from_tools,
+        *search_quantities(ctx.messages),
         format_date(today),
         format_date(today + timedelta(days=1)),
         format_phone(ctx.deps.phone or ""),
     ]
-    inventados = guardrail.unconfirmed_values(answer, sources, do_cliente, limites_de_preco(ctx.messages))
+    inventados = guardrail.unconfirmed_values(answer, sources, from_customer, price_limits(ctx.messages))
     if inventados:
         raise ModelRetry(
             "A resposta cita valores que não vieram das ferramentas: "
@@ -435,7 +435,7 @@ def confirmar_valores(ctx: RunContext[Session], answer: str) -> str:
 
 
 @agent.instructions
-def contexto_do_cliente(ctx: RunContext[Session]) -> str:
+def customer_context(ctx: RunContext[Session]) -> str:
     customer = ctx.deps.customer
     if customer is None:
         text = "O cliente desta conversa está sem cadastro: não consulte pedidos."
@@ -447,17 +447,17 @@ def contexto_do_cliente(ctx: RunContext[Session]) -> str:
     order = ctx.deps.state.order_under_review
     if order is not None:
         text += f"\nPedido em análise: {order}."
-    foco = ctx.deps.state.product_in_focus
-    if foco is not None:
-        name = catalog.product_name(ctx.deps.connection, foco)
+    focus = ctx.deps.state.product_in_focus
+    if focus is not None:
+        name = catalog.product_name(ctx.deps.connection, focus)
         if name:
             text += f"\nProduto em foco: {name}."
-    interesses = interests.list_pending(ctx.deps.connection, ctx.deps.phone or "")
+    pending_interests = interests.list_pending(ctx.deps.connection, ctx.deps.phone or "")
     # Only the names: the current stock always comes from search_products.
-    recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
-    names = "; ".join(recentes) or "nenhum"
-    if len(interesses) > len(recentes):
-        names += f" (e mais {len(interesses) - len(recentes)} mais antigos)"
+    recent = pending_interests[-MAX_INTERESTS_IN_CONTEXT:]
+    names = "; ".join(recent) or "nenhum"
+    if len(pending_interests) > len(recent):
+        names += f" (e mais {len(pending_interests) - len(recent)} mais antigos)"
     text += f"\nInteresses pendentes: {names}."
     return text
 
@@ -467,9 +467,9 @@ def search_products(
     ctx: RunContext[Session],
     search_term: str | None = None,
     category: str | None = None,
-    max_price: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
+    max_price: Annotated[float | None, Field(gt=0, le=MAX_AMOUNT)] = None,
     only_available: bool = False,
-    quantity: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None,
+    quantity: Annotated[int | None, Field(ge=1, le=MAX_NUMBER)] = None,
     only_on_sale: bool = False,
 ) -> list[catalog.Product]:
     """Busca produtos do catálogo da loja, com preços e disponibilidade.
@@ -496,7 +496,7 @@ def search_products(
 def get_policies(
     ctx: RunContext[Session],
     section: Literal[*policies.SECTIONS],
-    amount: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
+    amount: Annotated[float | None, Field(gt=0, le=MAX_AMOUNT)] = None,
     installments: Annotated[int | None, Field(ge=1)] = None,
 ) -> str:
     """Consulta uma seção das políticas da loja.
@@ -512,8 +512,8 @@ def get_policies(
     """
     if section == "pagamentos" and amount is None:
         # Without an amount the installments would be stated blindly: the product in focus sets the price.
-        foco = ctx.deps.state.product_in_focus
-        cents = catalog.final_price_cents(ctx.deps.connection, foco) if foco else None
+        focus = ctx.deps.state.product_in_focus
+        cents = catalog.final_price_cents(ctx.deps.connection, focus) if focus else None
         if cents is not None:
             amount = cents / 100
         elif installments is not None:
@@ -538,8 +538,8 @@ def calculate_purchase(
 
 
 @agent.tool
-def consultar_meus_pedidos(
-    ctx: RunContext[Session], numero_pedido: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None
+def get_my_orders(
+    ctx: RunContext[Session], order_number: Annotated[int | None, Field(ge=1, le=MAX_NUMBER)] = None
 ) -> list[orders.Order] | str:
     """Consulta os pedidos do cliente desta conversa.
 
@@ -547,13 +547,13 @@ def consultar_meus_pedidos(
     estimada. Uma lista vazia para um número informado significa pedido não encontrado.
 
     Args:
-        numero_pedido: Número do pedido. Sem ele, devolve todos os pedidos do cliente.
+        order_number: Número do pedido. Sem ele, devolve todos os pedidos do cliente.
     """
     customer = ctx.deps.customer
     if customer is None:
-        return SEM_CADASTRO
+        return NO_CUSTOMER_RECORD
     order_list = orders.get_orders(
-        ctx.deps.connection, customer.id, numero_pedido, ctx.deps.today
+        ctx.deps.connection, customer.id, order_number, ctx.deps.today
     )
     if len(order_list) == 1:
         ctx.deps.state.order_under_review = order_list[0].number
@@ -561,7 +561,7 @@ def consultar_meus_pedidos(
 
 
 # Whole words and phrases that state the purchase channel; "site" alone does not, it may be a lookup.
-PADRAO_DO_CANAL = {
+CHANNEL_PATTERNS = {
     returns.Channel.ONLINE: re.compile(r"\bonline\b|\bpel[oa] (?:site|internet|app|aplicativo)\b"),
     returns.Channel.IN_PERSON: re.compile(
         r"\bpresencial(?:mente)?\b|\bpessoalmente\b|\bna loja\b|\bno balcao\b"
@@ -569,21 +569,21 @@ PADRAO_DO_CANAL = {
 }
 
 
-def canal_citado_pelo_cliente(messages: list, channel: returns.Channel) -> bool:
+def channel_mentioned_by_customer(messages: list, channel: returns.Channel) -> bool:
     """The order does not record the channel: only what a customer message in the conversation said counts."""
-    falas = (
+    utterances = (
         catalog.normalize(str(part.content))
         for message in messages
         for part in message.parts
         if isinstance(part, UserPromptPart)
     )
-    return any(PADRAO_DO_CANAL[channel].search(fala) for fala in falas)
+    return any(CHANNEL_PATTERNS[channel].search(utterance) for utterance in utterances)
 
 
 @agent.tool
 def assess_return(
     ctx: RunContext[Session],
-    numero_pedido: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)],
+    order_number: Annotated[int, Field(ge=1, le=MAX_NUMBER)],
     reason: returns.Reason,
     channel: returns.Channel | None = None,
 ) -> returns.Verdict | str:
@@ -593,26 +593,26 @@ def assess_return(
     resultado sem recalcular. Se faltarem dados, o veredito diz o que perguntar.
 
     Args:
-        numero_pedido: Número do pedido.
+        order_number: Número do pedido.
         reason: arrependimento, defeito ou preferencia.
         channel: online ou presencial, somente se o cliente informou. Nunca suponha:
             para arrependimento, omita e pergunte, porque o pedido não registra o canal.
     """
     customer = ctx.deps.customer
     if customer is None:
-        return SEM_CADASTRO
-    if channel is not None and not canal_citado_pelo_cliente(ctx.messages, channel):
+        return NO_CUSTOMER_RECORD
+    if channel is not None and not channel_mentioned_by_customer(ctx.messages, channel):
         channel = None
     verdict = returns.assess_return(
-        ctx.deps.connection, customer.id, numero_pedido, reason, channel, ctx.deps.today
+        ctx.deps.connection, customer.id, order_number, reason, channel, ctx.deps.today
     )
     if verdict.result != returns.Result.ORDER_NOT_FOUND:
-        ctx.deps.state.order_under_review = numero_pedido
+        ctx.deps.state.order_under_review = order_number
     return verdict
 
 
 @agent.tool
-def registrar_interesse(ctx: RunContext[Session], product_id: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)]) -> str:
+def register_interest(ctx: RunContext[Session], product_id: Annotated[int, Field(ge=1, le=MAX_NUMBER)]) -> str:
     """Registra o interesse do cliente em um produto, para retomar o assunto depois.
 
     Use quando o cliente quiser acompanhar um produto indisponível. Não reserva o
@@ -624,11 +624,11 @@ def registrar_interesse(ctx: RunContext[Session], product_id: Annotated[int, Fie
     result = interests.register(ctx.deps.connection, ctx.deps.phone or "", product_id)
     if result in (interests.Result.REGISTERED, interests.Result.ALREADY_REGISTERED):
         ctx.deps.state.product_in_focus = product_id
-    return MENSAGENS_DE_INTERESSE[result]
+    return INTEREST_MESSAGES[result]
 
 
 @agent.tool
-def encaminhar_para_atendente(
+def hand_off_to_staff(
     ctx: RunContext[Session], reason: handoffs.Reason, summary: str
 ) -> str:
     """Registra o caso para a equipe da loja, que retorna ao cliente em até 24 horas úteis.
@@ -641,45 +641,45 @@ def encaminhar_para_atendente(
         summary: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
     """
     result = handoffs.register(ctx.deps.connection, ctx.deps.phone or "", reason, summary)
-    return MENSAGENS_DE_ENCAMINHAMENTO[result]
+    return HANDOFF_MESSAGES[result]
 
 
 # Rate limit and temporary unavailability: waiting may solve it.
-ERROS_TEMPORARIOS = (ModelRateLimitError, ModelUnavailableError, ModelOverloadedError)
+TEMPORARY_ERRORS = (ModelRateLimitError, ModelUnavailableError, ModelOverloadedError)
 # Provider server failure (500, 502, 504): it usually passes on the next attempt.
-ERROS_DE_SERVIDOR = (ModelServerError,)
-ESPERAS_ENTRE_TENTATIVAS = (2, 5)
-ESPERA_MAXIMA = 15
-_aguardar = time.sleep
+SERVER_ERRORS = (ModelServerError,)
+WAITS_BETWEEN_ATTEMPTS = (2, 5)
+MAX_WAIT = 15
+_wait = time.sleep
 
 
-def _executar(message: str, sessao: Session, historico: list):
+def _run(message: str, session: Session, history: list):
     """Runs the agent and retries when the provider refuses due to the rate limit."""
-    estado_inicial = replace(sessao.state)
-    for espera in (*ESPERAS_ENTRE_TENTATIVAS, None):
+    initial_state = replace(session.state)
+    for wait in (*WAITS_BETWEEN_ATTEMPTS, None):
         # The tools of the failed attempt may have changed the conversation state.
-        sessao.state = replace(estado_inicial)
+        session.state = replace(initial_state)
         # The copied context keeps the tests' simulated model in the other thread.
-        contexto = contextvars.copy_context()
-        execucao = _executor.submit(
-            contexto.run, agent.run_sync, message, deps=sessao, message_history=historico
+        context = contextvars.copy_context()
+        execution = _executor.submit(
+            context.run, agent.run_sync, message, deps=session, message_history=history
         )
         try:
-            return execucao.result()
-        except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as error:
-            if espera is None or limits.is_daily_limit(error):
+            return execution.result()
+        except (*TEMPORARY_ERRORS, *SERVER_ERRORS) as error:
+            if wait is None or limits.is_daily_limit(error):
                 raise
             # The provider may say when to try again; a cap avoids freezing the chat.
-            indicada = error.retry_after or limits.indicated_wait(error)
-            _aguardar(min(indicada, ESPERA_MAXIMA) if indicada else espera)
+            indicated = error.retry_after or limits.indicated_wait(error)
+            _wait(min(indicated, MAX_WAIT) if indicated else wait)
 
 
-def _responder_sem_modelo(message: str, sessao: Session, text: str) -> str:
+def _answer_without_model(message: str, session: Session, text: str) -> str:
     """Stores the customer's message and the text sent to them, without the failed attempt."""
     try:
         memory.save_messages(
-            sessao.connection,
-            sessao.phone,
+            session.connection,
+            session.phone,
             [
                 ModelRequest(parts=[UserPromptPart(message)]),
                 ModelResponse(parts=[TextPart(text)]),
@@ -691,37 +691,37 @@ def _responder_sem_modelo(message: str, sessao: Session, text: str) -> str:
     return text
 
 
-def respond(message: str, sessao: Session) -> str:
-    sessao.ferramentas = []
+def respond(message: str, session: Session) -> str:
+    session.tools = []
     try:
-        historico = memory.load_history(sessao.connection, sessao.phone)
-        sessao.state = memory.load_state(sessao.connection, sessao.phone)
-        result = _executar(message, sessao, historico)
-        sessao.ferramentas = ferramentas_do_turno(result.new_messages())
-        limpar_texto_das_respostas(result.new_messages())
-        memory.save_messages(sessao.connection, sessao.phone, result.new_messages())
-        memory.save_state(sessao.connection, sessao.phone, sessao.state)
+        history = memory.load_history(session.connection, session.phone)
+        session.state = memory.load_state(session.connection, session.phone)
+        result = _run(message, session, history)
+        session.tools = turn_tool_calls(result.new_messages())
+        clean_response_text(result.new_messages())
+        memory.save_messages(session.connection, session.phone, result.new_messages())
+        memory.save_state(session.connection, session.phone, session.state)
         return result.output
-    except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as error:
+    except (*TEMPORARY_ERRORS, ModelQuotaExceededError) as error:
         try:
             limits.log_limit(error)
         except OSError:
             logger.exception("Could not log the provider limit")
         # Exhausted quota is not solved by waiting: there is no retry, only the same message.
         # Exhausted quota also only comes back the next day.
-        diario = isinstance(error, ModelQuotaExceededError) or limits.is_daily_limit(error)
-        return _responder_sem_modelo(
-            message, sessao, MENSAGEM_DE_LIMITE_DIARIO if diario else MENSAGEM_DE_LIMITE
+        daily = isinstance(error, ModelQuotaExceededError) or limits.is_daily_limit(error)
+        return _answer_without_model(
+            message, session, DAILY_LIMIT_MESSAGE if daily else RATE_LIMIT_MESSAGE
         )
     except (ModelTimeoutError, ModelRequestTimeout):
-        return _responder_sem_modelo(message, sessao, MENSAGEM_DE_TIMEOUT)
+        return _answer_without_model(message, session, TIMEOUT_MESSAGE)
     except UnexpectedModelBehavior:
         # The model insisted on unconfirmed values: the customer does not get its text,
         # and the history keeps only the question and the safe answer, without the rejected attempt.
         try:
             result = handoffs.register(
-                sessao.connection,
-                sessao.phone or "",
+                session.connection,
+                session.phone or "",
                 handoffs.Reason.NO_SAFE_ANSWER,
                 message,
             )
@@ -732,13 +732,13 @@ def respond(message: str, sessao: Session) -> str:
         answer = {
             handoffs.Result.REGISTERED: SAFE_ANSWER,
             handoffs.Result.ALREADY_REGISTERED: SAFE_ANSWER,
-            handoffs.Result.INVALID_PHONE: RESPOSTA_SEGURA_SEM_TELEFONE,
-            handoffs.Result.INVALID_SUMMARY: RESPOSTA_SEGURA_SEM_REGISTRO,
-            None: RESPOSTA_SEGURA_SEM_REGISTRO,
+            handoffs.Result.INVALID_PHONE: SAFE_ANSWER_WITHOUT_PHONE,
+            handoffs.Result.INVALID_SUMMARY: SAFE_ANSWER_WITHOUT_REGISTRATION,
+            None: SAFE_ANSWER_WITHOUT_REGISTRATION,
         }[result]
-        return _responder_sem_modelo(message, sessao, answer)
+        return _answer_without_model(message, session, answer)
     except Exception:
         # Network, key, provider, database, or unexpected error: the details go to the log,
         # and the customer gets the technical message so that the message field is enabled again.
         logger.exception("Technical failure while answering")
-        return _responder_sem_modelo(message, sessao, MENSAGEM_DE_ERRO_TECNICO)
+        return _answer_without_model(message, session, TECHNICAL_ERROR_MESSAGE)

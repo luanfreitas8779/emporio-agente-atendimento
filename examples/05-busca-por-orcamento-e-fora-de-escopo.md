@@ -38,4 +38,4 @@ Nenhuma ferramenta foi usada.
 > **Tom:** O seu pedido número 8 (com o Kala KA-C Concert Mogno) está com a situação **enviado**.
 > O código de rastreio é `BRJL5544332BR` e a entrega estimada é para 28/02/2026. 📦
 
-Ferramenta usada: `consultar_meus_pedidos()`; o cliente vem do telefone da sessão.
+Ferramenta usada: `get_my_orders()`; o cliente vem do telefone da sessão.

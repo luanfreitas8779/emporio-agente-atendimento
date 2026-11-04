@@ -8,7 +8,7 @@ from pydantic_ai.models.function import FunctionModel
 from streamlit.testing.v1 import AppTest
 
 import src.database
-from src.agent import MENSAGEM_DE_ERRO_TECNICO, ChamadaDeFerramenta, agent
+from src.agent import TECHNICAL_ERROR_MESSAGE, ToolCall, agent
 
 APP = str(Path(__file__).parent.parent / "app.py")
 
@@ -26,8 +26,8 @@ def test_pergunta_fica_pendente_enquanto_o_tom_responde(tela, monkeypatch):
     # observe `disabled` during the run; this is checked in the browser (docs/05, section 8).
     durante: list = []
 
-    def responder_observando(message, sessao):
-        durante.append(st.session_state.get("pendente")["pergunta"])
+    def responder_observando(message, session):
+        durante.append(st.session_state.get("pendente")["question"])
         return "Olá!"
 
     monkeypatch.setattr("src.agent.respond", responder_observando)
@@ -51,22 +51,22 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
     # Changing the phone number during the answer cannot hand the question to another customer (ADR-009).
     phones: list = []
 
-    def responder_observando(message, sessao):
-        phones.append(sessao.phone)
+    def responder_observando(message, session):
+        phones.append(session.phone)
         return "Olá!"
 
     monkeypatch.setattr("src.agent.respond", responder_observando)
 
-    tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
+    tela.session_state["pendente"] = {"question": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
     assert phones == ["(67) 99654-7821"]
 
 
 def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypatch):
-    monkeypatch.setattr("src.agent.respond", lambda message, sessao: "Resposta da Ana")
+    monkeypatch.setattr("src.agent.respond", lambda message, session: "Resposta da Ana")
 
-    tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
+    tela.session_state["pendente"] = {"question": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
     assert all(m["text"] != "Resposta da Ana" for m in tela.session_state["messages"])
@@ -74,7 +74,7 @@ def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypa
 
 @pytest.mark.regression
 def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceback(tela, monkeypatch):
-    def responder_com_falha(message, sessao):
+    def responder_com_falha(message, session):
         raise RuntimeError("falha em /caminho/interno")
 
     monkeypatch.setattr("src.agent.respond", responder_com_falha)
@@ -82,7 +82,7 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
     tela.chat_input[0].set_value("Oi").run()
 
     assert not tela.exception
-    assert tela.session_state["messages"][-1]["text"] == MENSAGEM_DE_ERRO_TECNICO
+    assert tela.session_state["messages"][-1]["text"] == TECHNICAL_ERROR_MESSAGE
     assert tela.session_state["pendente"] is None
     assert not tela.chat_input[0].disabled
 
@@ -90,16 +90,16 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
 @pytest.mark.regression
 def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
     # Opening the database for the session is the part that fails; the screen's initial check already passed.
-    def sessao_com_falha(*arguments, **nomeados):
+    def sessao_com_falha(*arguments, **named):
         raise OSError("disco indisponível")
 
     monkeypatch.setattr("src.agent.Session", sessao_com_falha)
-    tela.session_state["pendente"] = {"pergunta": "Oi", "phone": ""}
+    tela.session_state["pendente"] = {"question": "Oi", "phone": ""}
 
     tela.run()
 
     assert not tela.exception
-    assert tela.session_state["messages"][-1]["text"] == MENSAGEM_DE_ERRO_TECNICO
+    assert tela.session_state["messages"][-1]["text"] == TECHNICAL_ERROR_MESSAGE
     assert not tela.chat_input[0].disabled
 
 
@@ -146,8 +146,8 @@ def test_informar_o_telefone_depois_da_primeira_pergunta_preserva_a_conversa(tel
 def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone_novo(tela, monkeypatch):
     calls: list = []
 
-    def responder_observando(message, sessao):
-        calls.append((message, sessao.phone))
+    def responder_observando(message, session):
+        calls.append((message, session.phone))
         return "Olá!"
 
     monkeypatch.setattr("src.agent.respond", responder_observando)
@@ -203,21 +203,21 @@ def test_com_telefone_valido_a_indicacao_do_menu_lateral_some(tela):
 
 @pytest.mark.regression
 def test_texto_do_cliente_e_exibido_literal_sem_interpretar_markdown(tela):
-    pergunta = "# TITULO ![x](http://exemplo.com/a.png) :red[colorido] $10"
+    question = "# TITULO ![x](http://exemplo.com/a.png) :red[colorido] $10"
 
-    tela.chat_input[0].set_value(pergunta).run()
+    tela.chat_input[0].set_value(question).run()
 
-    do_cliente = [c for c in tela.chat_message if c.name == "user"][0]
-    assert [t.value for t in do_cliente.text] == [pergunta]
-    assert len(do_cliente.markdown) == 0
+    from_customer = [c for c in tela.chat_message if c.name == "user"][0]
+    assert [t.value for t in from_customer.text] == [question]
+    assert len(from_customer.markdown) == 0
 
 
 @pytest.mark.regression
 def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(tela, monkeypatch):
-    def responder_com_ferramentas(message, sessao):
-        sessao.ferramentas = [
-            ChamadaDeFerramenta("search_products", {"search_term": "violão"}),
-            ChamadaDeFerramenta("consultar_meus_pedidos", {"customer_id": 1}),
+    def responder_com_ferramentas(message, session):
+        session.tools = [
+            ToolCall("search_products", {"search_term": "violão"}),
+            ToolCall("get_my_orders", {"customer_id": 1}),
         ]
         return "Olá!"
 
@@ -250,9 +250,9 @@ def test_com_telefone_invalido_so_o_aviso_aparece_sem_a_dica_do_menu_lateral(tel
 def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, monkeypatch):
     calls: list = []
 
-    def responder_com_catalogo(message, sessao):
-        calls.append(sessao.phone)
-        sessao.ferramentas = [ChamadaDeFerramenta("search_products", {"search_term": "violão"})]
+    def responder_com_catalogo(message, session):
+        calls.append(session.phone)
+        session.tools = [ToolCall("search_products", {"search_term": "violão"})]
         return "Custa R$ 100,00."
 
     monkeypatch.setattr("src.agent.respond", responder_com_catalogo)
@@ -268,9 +268,9 @@ def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, mon
 def test_pergunta_que_dependia_do_cadastro_e_refeita_com_o_telefone(tela, monkeypatch):
     calls: list = []
 
-    def responder_com_pedidos(message, sessao):
-        calls.append(sessao.phone)
-        sessao.ferramentas = [ChamadaDeFerramenta("consultar_meus_pedidos", {})]
+    def responder_com_pedidos(message, session):
+        calls.append(session.phone)
+        session.tools = [ToolCall("get_my_orders", {})]
         return "Telefone sem cadastro."
 
     monkeypatch.setattr("src.agent.respond", responder_com_pedidos)

@@ -195,7 +195,7 @@ Simulated restock: `scripts/simulate_restock.py` changes only `products.stock_qu
 The model is an untrusted input source. Arguments are validated by Pydantic AI, and an invalid value goes back to the model as a correction request:
 
 - `max_price`, `amount`: greater than zero.
-- `installments`, `numero_pedido`, `product_id`: integers starting at 1.
+- `installments`, `order_number`, `product_id`: integers starting at 1.
 - The return's `reason` (arrependimento, defeito, or preferencia) and `channel` (online or presencial), and the handoff's `reason` (reclamacao, atendente_solicitado, or sem_resposta_segura): enumerations validated by Pydantic.
 - `section`: one of the sections in `policies.SECTIONS`.
 - Installments above 12 are not rejected: the answer states the 12x limit.

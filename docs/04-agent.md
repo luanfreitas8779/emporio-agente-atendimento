@@ -30,10 +30,10 @@ The agent introduces itself as a virtual assistant, does not pretend to be a per
 | Product, price, stock, or promotion | `search_products` |
 | Total, sum, price difference, PIX savings, or shipping for a purchase in Campo Grande | `calculate_purchase` |
 | Opening hours, address, payment, exchange, shipping, warranty, or privacy | `get_policies` |
-| Order status, tracking, or details | `consultar_meus_pedidos` |
+| Order status, tracking, or details | `get_my_orders` |
 | Exchange, return, or defect of an order | `assess_return` |
-| Follow an unavailable product | `registrar_interesse` |
-| Complaint or question without a safe answer | `encaminhar_para_atendente` |
+| Follow an unavailable product | `register_interest` |
+| Complaint or question without a safe answer | `hand_off_to_staff` |
 | Greeting or small talk | Answer without a tool |
 
 A message may require more than one tool. A return request, for example, requires assessing the order and looking up the policy.
@@ -56,11 +56,11 @@ A message may require more than one tool. A return request, for example, require
 | Output | Text of the reviewed section. With `amount`, the `pagamentos` section includes the maximum interest-free installments and whether the requested `installments` meet the minimum installment, calculated in code |
 | Rules | Does not create missing rules and hands off ambiguous cases. Sections outside the list are rejected |
 
-### 4.3 `consultar_meus_pedidos`
+### 4.3 `get_my_orders`
 
 | Item | Definition |
 |---|---|
-| Input | `numero_pedido`, optional; the customer comes from the session |
+| Input | `order_number`, optional; the customer comes from the session |
 | Output | Date and estimated delivery in `dd/mm/yyyy`, status description (translated in code, ADR-012), items, recorded total, payment, tracking, and estimated delivery. The original status is not given to the model |
 | Rules | Never receives `customer_id` from the model; another customer's order is treated as not found |
 
@@ -68,11 +68,11 @@ A message may require more than one tool. A return request, for example, require
 
 | Item | Definition |
 |---|---|
-| Input | `numero_pedido`, `reason` (`arrependimento`, `defeito`, or `preferencia`), and `channel` (`online` or `presencial`), optional; the customer comes from the session |
+| Input | `order_number`, `reason` (`arrependimento`, `defeito`, or `preferencia`), and `channel` (`online` or `presencial`), optional; the customer comes from the session |
 | Output | Verdict: `result` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados`, or `pedido_nao_encontrado`), `rules` with the final deadline of each one, `missing`, `notices`, `approximate_date`, `receipt_date`, and `reference_date`, with dates in `dd/mm/yyyy` |
 | Rules | Deadlines calculated in code (`docs/03-data.md`, 5.4). The model passes the verdict on without recalculating. Withdrawal without a channel returns `faltam_dados`, with what to ask in `missing`. Never receives `customer_id` |
 
-### 4.4 `registrar_interesse`
+### 4.4 `register_interest`
 
 | Item | Definition |
 |---|---|
@@ -80,7 +80,7 @@ A message may require more than one tool. A return request, for example, require
 | Output | Fixed text, built in code: interest registered, already registered, product not found, or invalid phone number. The first two state that the registration does not reserve the product or guarantee a notice or a date |
 | Rules | Avoids duplicates per phone number and product (TC-402); validates the product and the phone number in code; any valid phone number can register, with or without a customer record; the model does not choose the phone number (arguments such as `phone` are rejected); sets the product in focus (ADR-016) |
 
-### 4.5 `encaminhar_para_atendente`
+### 4.5 `hand_off_to_staff`
 
 | Item | Definition |
 |---|---|
@@ -116,7 +116,7 @@ A message may require more than one tool. A return request, for example, require
 | New-release product | Do not confirm availability |
 | Ended promotion | Be transparent and show the current price |
 | Customer without a record | Answer general questions and explain that orders require a registered phone number |
-| Complaint | Acknowledge it, register it with `encaminhar_para_atendente`, and state the reply deadline returned by the tool |
+| Complaint | Acknowledge it, register it with `hand_off_to_staff`, and state the reply deadline returned by the tool |
 | Answer the guardrail cannot confirm | The code registers the handoff and answers with the reply deadline; without a valid phone number, it explains that the number could not be identified |
 | Outside opening hours | Answer what is possible and state when the team will reply |
 

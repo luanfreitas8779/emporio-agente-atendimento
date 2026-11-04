@@ -6,7 +6,7 @@ from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src import calculations, catalog
-from src.agent import SAFE_ANSWER, SEM_CADASTRO, Session, agent, respond
+from src.agent import SAFE_ANSWER, NO_CUSTOMER_RECORD, Session, agent, respond
 from src.database import connect
 from src.interests import list_pending, register
 from src.load_data import read_csv
@@ -15,7 +15,7 @@ from src.restock import restock
 from tests.conftest import DATA_DIR
 
 
-def modelo_que_consulta_o_preco(
+def model_that_looks_up_the_price(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
@@ -26,25 +26,25 @@ def modelo_que_consulta_o_preco(
     return ModelResponse(parts=[TextPart(f"Encontrei: {result}")])
 
 
-def test_responde_com_o_preco_vindo_do_catalogo(connection):
-    with agent.override(model=FunctionModel(modelo_que_consulta_o_preco)):
+def test_answers_with_the_price_from_the_catalog(connection):
+    with agent.override(model=FunctionModel(model_that_looks_up_the_price)):
         answer = respond("Quanto custa o Takamine GD20?", Session(connection))
 
     assert "R$ 2.199,00" in answer
 
 
 @pytest.mark.regression
-def test_responde_com_um_loop_assincrono_em_execucao(connection):
-    async def responder_dentro_do_loop():
+def test_answers_with_an_async_loop_running(connection):
+    async def respond_inside_the_loop():
         return respond("Quanto custa o Takamine GD20?", Session(connection))
 
-    with agent.override(model=FunctionModel(modelo_que_consulta_o_preco)):
-        answer = asyncio.run(responder_dentro_do_loop())
+    with agent.override(model=FunctionModel(model_that_looks_up_the_price)):
+        answer = asyncio.run(respond_inside_the_loop())
 
     assert "R$ 2.199,00" in answer
 
 
-def modelo_que_busca_violoes_disponiveis_ate_1000(
+def model_that_searches_available_guitars_up_to_1000(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
@@ -58,16 +58,16 @@ def modelo_que_busca_violoes_disponiveis_ate_1000(
     return ModelResponse(parts=[TextPart(str(len(products)))])
 
 
-def test_agente_lista_os_12_violoes_disponiveis_ate_1000_reais(connection):
+def test_agent_lists_the_12_available_guitars_up_to_1000_reais(connection):
     with agent.override(
-        model=FunctionModel(modelo_que_busca_violoes_disponiveis_ate_1000)
+        model=FunctionModel(model_that_searches_available_guitars_up_to_1000)
     ):
         answer = respond("Violões disponíveis até R$ 1000?", Session(connection))
 
     assert answer == "12"
 
 
-def modelo_que_lista_as_promocoes_ativas(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+def model_that_lists_the_active_promotions(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     if len(messages) == 1:
         return ModelResponse(parts=[ToolCallPart("search_products", {"only_on_sale": True})])
     products = messages[-1].parts[0].content
@@ -75,39 +75,39 @@ def modelo_que_lista_as_promocoes_ativas(messages: list[ModelMessage], info: Age
     return ModelResponse(parts=[TextPart("\n".join(rows))])
 
 
-def test_agente_lista_os_4_produtos_em_promocao_com_preco_original_percentual_e_preco_final(connection):
-    with agent.override(model=FunctionModel(modelo_que_lista_as_promocoes_ativas)):
+def test_agent_lists_the_4_products_on_sale_with_original_price_percent_and_final_price(connection):
+    with agent.override(model=FunctionModel(model_that_lists_the_active_promotions)):
         answer = respond("Quais produtos estão em promoção agora?", Session(connection))
 
     assert len(answer.splitlines()) == 4
     assert "Crafter HT-100 Folk Aço Natural: R$ 2.399,00, 18%, R$ 1.967,18" in answer
 
 
-def modelo_que_sugere_alternativas_ao_produto_indisponivel(
+def model_that_suggests_alternatives_to_the_unavailable_product(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    resultados = [
+    results = [
         part.content
         for message in messages
         for part in message.parts
         if part.part_kind == "tool-return"
     ]
-    if not resultados:
+    if not results:
         return ModelResponse(
             parts=[ToolCallPart("search_products", {"search_term": "Giannini GF-3D"})]
         )
-    if len(resultados) == 1:
-        (giannini,) = resultados[0]
+    if len(results) == 1:
+        (giannini,) = results[0]
         assert giannini.availability == "indisponivel"
         arguments = {"category": giannini.category, "only_available": True}
         return ModelResponse(parts=[ToolCallPart("search_products", arguments)])
-    names = [product.name for product in resultados[1]]
+    names = [product.name for product in results[1]]
     return ModelResponse(parts=[TextPart("; ".join(names))])
 
 
-def test_agente_encontra_alternativas_disponiveis_para_produto_sem_estoque(connection):
+def test_agent_finds_available_alternatives_for_an_out_of_stock_product(connection):
     with agent.override(
-        model=FunctionModel(modelo_que_sugere_alternativas_ao_produto_indisponivel)
+        model=FunctionModel(model_that_suggests_alternatives_to_the_unavailable_product)
     ):
         answer = respond("Tem o Giannini GF-3D?", Session(connection))
 
@@ -115,7 +115,7 @@ def test_agente_encontra_alternativas_disponiveis_para_produto_sem_estoque(conne
     assert "Giannini GF-3D" not in answer
 
 
-def modelo_que_consulta_os_horarios(
+def model_that_checks_the_opening_hours(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
@@ -125,14 +125,14 @@ def modelo_que_consulta_os_horarios(
     return ModelResponse(parts=[TextPart(messages[-1].parts[0].content)])
 
 
-def test_agente_responde_o_horario_de_sabado_a_partir_da_politica(connection):
-    with agent.override(model=FunctionModel(modelo_que_consulta_os_horarios)):
+def test_agent_answers_saturday_hours_from_the_policy(connection):
+    with agent.override(model=FunctionModel(model_that_checks_the_opening_hours)):
         answer = respond("Abre sábado?", Session(connection))
 
     assert "Sábado: 09:00 às 13:00" in answer
 
 
-def modelo_que_calcula_o_parcelamento(
+def model_that_calculates_the_installments(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
@@ -141,14 +141,14 @@ def modelo_que_calcula_o_parcelamento(
     return ModelResponse(parts=[TextPart(messages[-1].parts[0].content)])
 
 
-def test_agente_informa_que_349_90_em_6x_nao_atende_a_parcela_minima(connection):
-    with agent.override(model=FunctionModel(modelo_que_calcula_o_parcelamento)):
+def test_agent_states_that_349_90_in_6x_does_not_meet_the_minimum_installment(connection):
+    with agent.override(model=FunctionModel(model_that_calculates_the_installments)):
         answer = respond("Dá pra pagar R$ 349,90 em 6x?", Session(connection))
 
     assert "6x não atende" in answer
 
 
-def modelo_que_pede_secao_inexistente(
+def model_that_asks_for_a_nonexistent_section(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
@@ -158,131 +158,131 @@ def modelo_que_pede_secao_inexistente(
     return ModelResponse(parts=[TextPart("tentou de novo")])
 
 
-def test_agente_recusa_secao_fora_da_lista_e_o_modelo_tenta_de_novo(connection):
-    with agent.override(model=FunctionModel(modelo_que_pede_secao_inexistente)):
+def test_agent_rejects_a_section_outside_the_list_and_the_model_tries_again(connection):
+    with agent.override(model=FunctionModel(model_that_asks_for_a_nonexistent_section)):
         answer = respond("Me conta uma fofoca", Session(connection))
 
     assert answer == "tentou de novo"
 
 
-def modelo_que_chama(tool: str, arguments: dict, capturados: list):
+def model_that_calls(tool: str, arguments: dict, captured: list):
     """Calls the tool once and stores the result, without depending on its text."""
 
     def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         if len(messages) == 1:
             return ModelResponse(parts=[ToolCallPart(tool, arguments)])
-        capturados.append(messages[-1].parts[0])
+        captured.append(messages[-1].parts[0])
         return ModelResponse(parts=[TextPart("ok")])
 
     return model
 
 
-def chamar_ferramenta(connection, phone, tool, arguments):
-    capturados: list = []
-    with agent.override(model=FunctionModel(modelo_que_chama(tool, arguments, capturados))):
+def call_tool(connection, phone, tool, arguments):
+    captured: list = []
+    with agent.override(model=FunctionModel(model_that_calls(tool, arguments, captured))):
         respond("Teste", Session(connection, phone=phone))
-    return capturados[0]
+    return captured[0]
 
 
 ANA = "(67) 99654-7821"
 
 
-def test_cliente_identificado_consulta_o_status_e_o_rastreio_do_pedido_8(connection):
-    retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {"numero_pedido": 8})
+def test_identified_customer_looks_up_the_status_and_tracking_of_order_8(connection):
+    returned = call_tool(connection, ANA, "get_my_orders", {"order_number": 8})
 
-    (order,) = retorno.content
+    (order,) = returned.content
     assert order.status == "shipped"
     assert order.rastreio == "BRJL5544332BR"
 
 
-def test_telefone_sem_cadastro_recebe_a_explicacao_de_que_nao_ha_pedidos(connection):
-    retorno = chamar_ferramenta(
-        connection, "(67) 90000-0000", "consultar_meus_pedidos", {"numero_pedido": 8}
+def test_unregistered_phone_gets_the_explanation_that_there_are_no_orders(connection):
+    returned = call_tool(
+        connection, "(67) 90000-0000", "get_my_orders", {"order_number": 8}
     )
 
-    assert retorno.content == SEM_CADASTRO
+    assert returned.content == NO_CUSTOMER_RECORD
 
 
-def test_sessao_sem_telefone_tambem_nao_consulta_pedidos(connection):
-    retorno = chamar_ferramenta(connection, None, "consultar_meus_pedidos", {"numero_pedido": 8})
+def test_session_without_phone_also_does_not_look_up_orders(connection):
+    returned = call_tool(connection, None, "get_my_orders", {"order_number": 8})
 
-    assert retorno.content == SEM_CADASTRO
+    assert returned.content == NO_CUSTOMER_RECORD
 
 
-def test_pedido_de_outro_cliente_volta_vazio_para_o_agente(connection):
+def test_another_customers_order_comes_back_empty_to_the_agent(connection):
     # Order 5 belongs to customer 5.
-    retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {"numero_pedido": 5})
+    returned = call_tool(connection, ANA, "get_my_orders", {"order_number": 5})
 
-    assert retorno.content == []
+    assert returned.content == []
 
 
 @pytest.mark.regression
-def test_mensagem_nao_consegue_trocar_o_cliente_consultado(connection):
+def test_message_cannot_change_the_customer_looked_up(connection):
     # Order 4 belongs to customer 1; the session belongs to customer 2.
-    retorno = chamar_ferramenta(
-        connection, ANA, "consultar_meus_pedidos", {"numero_pedido": 4, "customer_id": 1}
+    returned = call_tool(
+        connection, ANA, "get_my_orders", {"order_number": 4, "customer_id": 1}
     )
 
     # The extra argument is rejected and no order is looked up.
-    assert retorno.outcome == "retried"
-    assert retorno.content[0]["type"] == "extra_forbidden"
+    assert returned.outcome == "retried"
+    assert returned.content[0]["type"] == "extra_forbidden"
 
 
-def modelo_que_devolve_as_instrucoes(
+def model_that_returns_the_instructions(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     return ModelResponse(parts=[TextPart(info.instructions or "")])
 
 
-def test_cliente_cadastrado_e_chamado_pelo_nome(connection):
-    sessao = Session(connection, phone="(67) 99654-7821")
+def test_registered_customer_is_called_by_name(connection):
+    session = Session(connection, phone="(67) 99654-7821")
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = respond("Oi!", sessao)
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        instructions = respond("Oi!", session)
 
-    assert "Ana" in instrucoes
-    assert "Carolina" not in instrucoes
-    assert "Ferreira" not in instrucoes
+    assert "Ana" in instructions
+    assert "Carolina" not in instructions
+    assert "Ferreira" not in instructions
 
 
-def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(connection):
-    sessao = Session(connection, phone=ANA)
+def test_instructions_do_not_expose_personal_data_beyond_the_name(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = respond("Oi!", sessao)
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        instructions = respond("Oi!", session)
 
     # The source of the values is the CSV, not the code under test.
     for customer in read_csv(DATA_DIR / "customers.csv"):
-        assert customer["email"] not in instrucoes
-        assert customer["phone"] not in instrucoes
+        assert customer["email"] not in instructions
+        assert customer["phone"] not in instructions
 
 
-def test_retorno_dos_pedidos_nao_expoe_email_nem_cidade(connection):
-    retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {})
+def test_orders_result_does_not_expose_email_or_city(connection):
+    returned = call_tool(connection, ANA, "get_my_orders", {})
 
-    text = repr(retorno.content)
+    text = repr(returned.content)
     for customer in read_csv(DATA_DIR / "customers.csv"):
         assert customer["email"] not in text
     assert "Campo Grande" not in text
 
 
-def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(connection):
-    sessao = Session(connection, phone="(67) 90000-0000")
+def test_unregistered_phone_gets_no_name_in_the_instructions(connection):
+    session = Session(connection, phone="(67) 90000-0000")
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = respond("Oi!", sessao)
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        instructions = respond("Oi!", session)
 
-    assert "sem cadastro" in instrucoes
+    assert "sem cadastro" in instructions
 
 
-def modelo_que_envia_argumentos(tool: str, arguments: dict):
+def model_that_sends_arguments(tool: str, arguments: dict):
     def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        pediu_correcao = any(
+        asked_for_correction = any(
             getattr(part, "outcome", None) == "retried" or part.part_kind == "retry-prompt"
             for message in messages
             for part in message.parts
         )
-        if pediu_correcao:
+        if asked_for_correction:
             return ModelResponse(parts=[TextPart("argumento recusado")])
         if len(messages) == 1:
             return ModelResponse(parts=[ToolCallPart(tool, arguments)])
@@ -297,268 +297,268 @@ def modelo_que_envia_argumentos(tool: str, arguments: dict):
         ("get_policies", {"section": "pagamentos", "amount": -5}),
         ("get_policies", {"section": "pagamentos", "amount": 100, "installments": 0}),
         ("search_products", {"max_price": -1}),
-        ("consultar_meus_pedidos", {"numero_pedido": 0}),
+        ("get_my_orders", {"order_number": 0}),
     ],
 )
 @pytest.mark.regression
-def test_ferramentas_recusam_argumentos_fora_da_faixa(connection, tool, arguments):
-    sessao = Session(connection, phone="(67) 99654-7821")
+def test_tools_reject_out_of_range_arguments(connection, tool, arguments):
+    session = Session(connection, phone="(67) 99654-7821")
 
-    with agent.override(model=FunctionModel(modelo_que_envia_argumentos(tool, arguments))):
-        answer = respond("Teste", sessao)
+    with agent.override(model=FunctionModel(model_that_sends_arguments(tool, arguments))):
+        answer = respond("Teste", session)
 
     assert answer == "argumento recusado"
 
 
 @pytest.mark.regression
-def test_modelo_recebe_a_situacao_traduzida_e_nao_o_status_cru(connection):
-    retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {"numero_pedido": 8})
+def test_model_receives_the_translated_status_description_not_the_raw_status(connection):
+    returned = call_tool(connection, ANA, "get_my_orders", {"order_number": 8})
 
-    visto_pelo_modelo = retorno.model_response_str()
-    assert "enviado" in visto_pelo_modelo
-    assert "shipped" not in visto_pelo_modelo
+    seen_by_model = returned.model_response_str()
+    assert "enviado" in seen_by_model
+    assert "shipped" not in seen_by_model
 
 
-def modelo_que_lista_as_perguntas_vistas(
+def model_that_lists_the_questions_seen(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    perguntas = [
+    questions = [
         part.content
         for message in messages
         for part in message.parts
         if part.part_kind == "user-prompt"
     ]
-    return ModelResponse(parts=[TextPart(" | ".join(perguntas))])
+    return ModelResponse(parts=[TextPart(" | ".join(questions))])
 
 
-def test_segunda_mensagem_chega_ao_modelo_junto_com_a_primeira(connection):
-    sessao = Session(connection, phone=ANA)
+def test_second_message_reaches_the_model_together_with_the_first(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        respond("Quero um violão", sessao)
-        answer = respond("E o mais barato?", sessao)
+    with agent.override(model=FunctionModel(model_that_lists_the_questions_seen)):
+        respond("Quero um violão", session)
+        answer = respond("E o mais barato?", session)
 
     assert answer == "Quero um violão | E o mais barato?"
 
 
-def test_nova_sessao_com_o_mesmo_telefone_recupera_a_conversa(connection, tmp_path):
-    with agent.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+def test_new_session_with_the_same_phone_recovers_the_conversation(connection, tmp_path):
+    with agent.override(model=FunctionModel(model_that_lists_the_questions_seen)):
         respond("Quero um violão", Session(connection, phone=ANA))
 
         # Another connection to the same file is equivalent to restarting the application.
-        nova = connect(tmp_path / "teste.db")
+        new_one = connect(tmp_path / "teste.db")
         try:
-            answer = respond("Chegou?", Session(nova, phone="67996547821"))
+            answer = respond("Chegou?", Session(new_one, phone="67996547821"))
         finally:
-            nova.close()
+            new_one.close()
 
     assert answer == "Quero um violão | Chegou?"
 
 
-def test_telefone_diferente_nao_recebe_o_historico_de_outra_pessoa(connection):
-    with agent.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+def test_different_phone_does_not_receive_another_persons_history(connection):
+    with agent.override(model=FunctionModel(model_that_lists_the_questions_seen)):
         respond("Quero um violão", Session(connection, phone=ANA))
         answer = respond("Oi", Session(connection, phone="(67) 90000-0000"))
 
     assert answer == "Oi"
 
 
-def test_sessao_sem_telefone_valido_nao_guarda_conversa(connection):
-    with agent.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+def test_session_without_valid_phone_does_not_store_the_conversation(connection):
+    with agent.override(model=FunctionModel(model_that_lists_the_questions_seen)):
         respond("Quero um violão", Session(connection, phone="123"))
         answer = respond("Oi", Session(connection, phone="123"))
 
     assert answer == "Oi"
 
 
-def modelo_que_consulta_o_horario_e_lista_as_perguntas(
+def model_that_checks_the_hours_and_lists_the_questions(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if messages[-1].parts[0].part_kind == "user-prompt":
         return ModelResponse(
             parts=[ToolCallPart("get_policies", {"section": "horarios"})]
         )
-    return modelo_que_lista_as_perguntas_vistas(messages, info)
+    return model_that_lists_the_questions_seen(messages, info)
 
 
 @pytest.mark.regression
-def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(connection, monkeypatch):
+def test_history_sent_to_the_model_does_not_separate_tool_call_from_result(connection, monkeypatch):
     # A small limit forces the cut in the middle of a turn with a tool.
     monkeypatch.setattr("src.memory.MAX_HISTORY_MESSAGES", 7)
-    sessao = Session(connection, phone=ANA)
+    session = Session(connection, phone=ANA)
 
     with agent.override(
-        model=FunctionModel(modelo_que_consulta_o_horario_e_lista_as_perguntas)
+        model=FunctionModel(model_that_checks_the_hours_and_lists_the_questions)
     ):
-        for pergunta in ("P1", "P2", "P3"):
-            respond(pergunta, sessao)
-        answer = respond("P4", sessao)
+        for question in ("P1", "P2", "P3"):
+            respond(question, session)
+        answer = respond("P4", session)
 
     # Each turn with a tool has 4 messages: only one whole turn would fit in 7.
     assert answer == "P3 | P4"
 
 
-def modelo_que_repete_um_preco_de_turno_anterior(
+def model_that_repeats_a_price_from_a_previous_turn(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    ultima = messages[-1].parts[0]
-    if ultima.part_kind == "user-prompt" and ultima.content == "Quanto custa?":
+    last = messages[-1].parts[0]
+    if last.part_kind == "user-prompt" and last.content == "Quanto custa?":
         return ModelResponse(
             parts=[ToolCallPart("search_products", {"search_term": "Takamine GD20"})]
         )
-    if ultima.part_kind == "tool-return":
+    if last.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("Custa R$ 2.199,00")])
     return ModelResponse(parts=[TextPart("Continua R$ 2.199,00")])
 
 
 @pytest.mark.regression
-def test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior(connection):
-    sessao = Session(connection, phone=ANA)
+def test_guardrail_does_not_accept_a_value_cited_only_in_a_previous_turn(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_repete_um_preco_de_turno_anterior)):
-        primeira = respond("Quanto custa?", sessao)
-        segunda = respond("E agora?", sessao)
+    with agent.override(model=FunctionModel(model_that_repeats_a_price_from_a_previous_turn)):
+        first = respond("Quanto custa?", session)
+        second = respond("E agora?", session)
 
-    assert primeira == "Custa R$ 2.199,00"
-    assert segunda == SAFE_ANSWER
+    assert first == "Custa R$ 2.199,00"
+    assert second == SAFE_ANSWER
 
 
-def modelo_que_inventa_um_preco_ate_a_pergunta_seguinte(
+def model_that_invents_a_price_until_the_next_question(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     # The correction requested by the guardrail also arrives as a customer message, so
     # the model insists while the next question has not appeared yet.
-    perguntas = [
+    questions = [
         part.content
         for message in messages
         for part in message.parts
         if part.part_kind == "user-prompt"
     ]
-    if "Preço do violão?" in perguntas and "Oi" not in perguntas:
+    if "Preço do violão?" in questions and "Oi" not in questions:
         return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
-    return modelo_que_lista_as_perguntas_vistas(messages, info)
+    return model_that_lists_the_questions_seen(messages, info)
 
 
-def test_resposta_segura_tambem_entra_no_historico(connection):
-    sessao = Session(connection, phone=ANA)
+def test_safe_answer_also_enters_the_history(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_inventa_um_preco_ate_a_pergunta_seguinte)):
-        segura = respond("Preço do violão?", sessao)
-        answer = respond("Oi", sessao)
+    with agent.override(model=FunctionModel(model_that_invents_a_price_until_the_next_question)):
+        safe = respond("Preço do violão?", session)
+        answer = respond("Oi", session)
 
-    assert segura == SAFE_ANSWER
+    assert safe == SAFE_ANSWER
     assert answer == "Preço do violão? | Oi"
 
 
 @pytest.mark.regression
-def test_historico_corrompido_e_ignorado_e_o_atendimento_continua(connection):
-    sessao = Session(connection, phone=ANA)
+def test_corrupted_history_is_ignored_and_the_service_continues(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        respond("Quero um violão", sessao)
+    with agent.override(model=FunctionModel(model_that_lists_the_questions_seen)):
+        respond("Quero um violão", session)
         connection.execute("UPDATE messages SET content = 'não é json'")
-        answer = respond("Oi", sessao)
+        answer = respond("Oi", session)
 
     assert answer == "Oi"
 
 
-def modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes(
+def model_that_searches_one_product_and_then_shows_the_instructions(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    ultima = messages[-1].parts[0]
-    if ultima.part_kind == "user-prompt" and ultima.content == "Tem o Giannini?":
+    last = messages[-1].parts[0]
+    if last.part_kind == "user-prompt" and last.content == "Tem o Giannini?":
         return ModelResponse(
             parts=[ToolCallPart("search_products", {"search_term": "Giannini GF-3D"})]
         )
-    if ultima.part_kind == "tool-return":
+    if last.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("ok")])
     return ModelResponse(parts=[TextPart(info.instructions or "")])
 
 
-def test_produto_unico_encontrado_fica_em_foco_nas_mensagens_seguintes(connection):
-    sessao = Session(connection, phone=ANA)
+def test_single_product_found_stays_in_focus_in_the_following_messages(connection):
+    session = Session(connection, phone=ANA)
 
     with agent.override(
-        model=FunctionModel(modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes)
+        model=FunctionModel(model_that_searches_one_product_and_then_shows_the_instructions)
     ):
-        respond("Tem o Giannini?", sessao)
-        instrucoes = respond("E o preço?", sessao)
+        respond("Tem o Giannini?", session)
+        instructions = respond("E o preço?", session)
 
-    assert "Produto em foco: Giannini GF-3D" in instrucoes
+    assert "Produto em foco: Giannini GF-3D" in instructions
 
 
-def modelo_que_consulta_o_pedido_8_e_depois_mostra_as_instrucoes(
+def model_that_looks_up_order_8_and_then_shows_the_instructions(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    ultima = messages[-1].parts[0]
-    if ultima.part_kind == "user-prompt" and ultima.content == "Cadê meu pedido?":
+    last = messages[-1].parts[0]
+    if last.part_kind == "user-prompt" and last.content == "Cadê meu pedido?":
         return ModelResponse(
-            parts=[ToolCallPart("consultar_meus_pedidos", {"numero_pedido": 8})]
+            parts=[ToolCallPart("get_my_orders", {"order_number": 8})]
         )
-    if ultima.part_kind == "tool-return":
+    if last.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("ok")])
     return ModelResponse(parts=[TextPart(info.instructions or "")])
 
 
-def test_pedido_consultado_fica_em_analise_nas_mensagens_seguintes(connection):
-    sessao = Session(connection, phone=ANA)
+def test_looked_up_order_stays_under_review_in_the_following_messages(connection):
+    session = Session(connection, phone=ANA)
 
     with agent.override(
-        model=FunctionModel(modelo_que_consulta_o_pedido_8_e_depois_mostra_as_instrucoes)
+        model=FunctionModel(model_that_looks_up_order_8_and_then_shows_the_instructions)
     ):
-        respond("Cadê meu pedido?", sessao)
-        instrucoes = respond("E o rastreio?", sessao)
+        respond("Cadê meu pedido?", session)
+        instructions = respond("E o rastreio?", session)
 
-    assert "Pedido em análise: 8" in instrucoes
+    assert "Pedido em análise: 8" in instructions
 
 
-def test_estado_sobrevive_ao_reinicio_e_nao_vaza_para_outro_telefone(connection, tmp_path):
-    model = FunctionModel(modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes)
+def test_state_survives_restart_and_does_not_leak_to_another_phone(connection, tmp_path):
+    model = FunctionModel(model_that_searches_one_product_and_then_shows_the_instructions)
     with agent.override(model=model):
         respond("Tem o Giannini?", Session(connection, phone=ANA))
 
-        nova = connect(tmp_path / "teste.db")
+        new_one = connect(tmp_path / "teste.db")
         try:
-            da_ana = respond("E o preço?", Session(nova, phone="67996547821"))
-            de_outra_pessoa = respond("E o preço?", Session(nova, phone="(67) 90000-0000"))
+            anas = respond("E o preço?", Session(new_one, phone="67996547821"))
+            from_someone_else = respond("E o preço?", Session(new_one, phone="(67) 90000-0000"))
         finally:
-            nova.close()
+            new_one.close()
 
-    assert "Produto em foco: Giannini GF-3D" in da_ana
-    assert "Produto em foco" not in de_outra_pessoa
+    assert "Produto em foco: Giannini GF-3D" in anas
+    assert "Produto em foco" not in from_someone_else
 
 
-def modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes(
+def model_that_searches_several_products_and_then_shows_the_instructions(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    ultima = messages[-1].parts[0]
-    if ultima.part_kind == "user-prompt" and ultima.content == "Quais violões?":
+    last = messages[-1].parts[0]
+    if last.part_kind == "user-prompt" and last.content == "Quais violões?":
         return ModelResponse(parts=[ToolCallPart("search_products", {"category": "Violões"})])
-    if ultima.part_kind == "tool-return":
+    if last.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("ok")])
     return ModelResponse(parts=[TextPart(info.instructions or "")])
 
 
-def test_busca_com_varios_resultados_nao_define_produto_em_foco(connection):
-    sessao = Session(connection, phone=ANA)
+def test_search_with_several_results_does_not_set_a_product_in_focus(connection):
+    session = Session(connection, phone=ANA)
 
     with agent.override(
-        model=FunctionModel(modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes)
+        model=FunctionModel(model_that_searches_several_products_and_then_shows_the_instructions)
     ):
-        respond("Quais violões?", sessao)
-        instrucoes = respond("E agora?", sessao)
+        respond("Quais violões?", session)
+        instructions = respond("E agora?", session)
 
-    assert "Produto em foco" not in instrucoes
+    assert "Produto em foco" not in instructions
 
 
-def test_conversa_antiga_e_exibida_so_com_o_que_o_cliente_viu(connection):
-    sessao = Session(connection, phone=ANA)
+def test_old_conversation_is_shown_with_only_what_the_customer_saw(connection):
+    session = Session(connection, phone=ANA)
 
     with agent.override(
-        model=FunctionModel(modelo_que_consulta_o_horario_e_lista_as_perguntas)
+        model=FunctionModel(model_that_checks_the_hours_and_lists_the_questions)
     ):
-        respond("P1", sessao)
-        respond("P2", sessao)
+        respond("P1", session)
+        respond("P2", session)
 
     assert conversation_for_display(connection, "67996547821") == [
         ("user", "P1"),
@@ -568,7 +568,7 @@ def test_conversa_antiga_e_exibida_so_com_o_que_o_cliente_viu(connection):
     ]
 
 
-def modelo_que_inventa_um_preco_e_depois_se_corrige(
+def model_that_invents_a_price_and_then_corrects_itself(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
@@ -577,8 +577,8 @@ def modelo_que_inventa_um_preco_e_depois_se_corrige(
 
 
 @pytest.mark.regression
-def test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda(connection):
-    with agent.override(model=FunctionModel(modelo_que_inventa_um_preco_e_depois_se_corrige)):
+def test_old_conversation_does_not_show_the_answer_rejected_by_the_guardrail(connection):
+    with agent.override(model=FunctionModel(model_that_invents_a_price_and_then_corrects_itself)):
         respond("Preço?", Session(connection, phone=ANA))
 
     assert conversation_for_display(connection, ANA) == [
@@ -587,91 +587,91 @@ def test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda(connection):
     ]
 
 
-def test_telefone_sem_conversa_exibe_lista_vazia(connection):
+def test_phone_without_conversation_shows_an_empty_list(connection):
     assert conversation_for_display(connection, "(67) 90000-0000") == []
 
 
 LETICIA = "(67) 99789-0123"
 
 
-def chamar_ferramenta_na_data(connection, phone, today, tool, arguments, message="Teste"):
-    capturados: list = []
-    model = FunctionModel(modelo_que_chama(tool, arguments, capturados))
+def call_tool_on_date(connection, phone, today, tool, arguments, message="Teste"):
+    captured: list = []
+    model = FunctionModel(model_that_calls(tool, arguments, captured))
     with agent.override(model=model):
         respond(message, Session(connection, phone=phone, today=today))
-    return capturados[0]
+    return captured[0]
 
 
-def test_ferramenta_de_devolucao_usa_o_pedido_do_cliente_e_a_data_da_sessao(connection):
-    retorno = chamar_ferramenta_na_data(
+def test_return_tool_uses_the_customers_order_and_the_session_date(connection):
+    returned = call_tool_on_date(
         connection, LETICIA, date(2026, 2, 20), "assess_return",
-        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
+        {"order_number": 7, "reason": "arrependimento", "channel": "online"},
         message="Comprei online e quero devolver o pedido 7 por arrependimento",
     )
 
-    assert retorno.content.result == "dentro_do_prazo"
-    assert retorno.content.rules[0].deadline == "24/02/2026"
+    assert returned.content.result == "dentro_do_prazo"
+    assert returned.content.rules[0].deadline == "24/02/2026"
 
 
 @pytest.mark.regression
-def test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal(connection):
+def test_channel_the_customer_did_not_mention_is_ignored_and_the_verdict_asks_for_it(connection):
     # The model assumed "online"; the customer only gave the reason.
-    retorno = chamar_ferramenta_na_data(
+    returned = call_tool_on_date(
         connection, LETICIA, date(2026, 2, 20), "assess_return",
-        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
+        {"order_number": 7, "reason": "arrependimento", "channel": "online"},
         message="Quero devolver o pedido 7 por arrependimento",
     )
 
-    assert retorno.content.result == "faltam_dados"
+    assert returned.content.result == "faltam_dados"
 
 
 @pytest.mark.regression
-def test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado(connection):
-    retorno = chamar_ferramenta_na_data(
+def test_channel_different_from_the_one_the_customer_mentioned_is_also_ignored(connection):
+    returned = call_tool_on_date(
         connection, LETICIA, date(2026, 2, 20), "assess_return",
-        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
+        {"order_number": 7, "reason": "arrependimento", "channel": "online"},
         message="Comprei presencialmente e quero devolver o pedido 7 por arrependimento",
     )
 
-    assert retorno.content.result == "faltam_dados"
+    assert returned.content.result == "faltam_dados"
 
 
-def test_devolucao_de_pedido_de_outro_cliente_volta_como_nao_encontrado(connection):
+def test_return_of_another_customers_order_comes_back_as_not_found(connection):
     # Order 7 belongs to customer 14; the session belongs to customer 2.
-    retorno = chamar_ferramenta(
-        connection, ANA, "assess_return", {"numero_pedido": 7, "reason": "defeito"}
+    returned = call_tool(
+        connection, ANA, "assess_return", {"order_number": 7, "reason": "defeito"}
     )
 
-    assert retorno.content.result == "pedido_nao_encontrado"
+    assert returned.content.result == "pedido_nao_encontrado"
 
 
-def test_devolucao_sem_cadastro_explica_que_pedidos_exigem_telefone_cadastrado(connection):
-    retorno = chamar_ferramenta(
-        connection, "(67) 90000-0000", "assess_return", {"numero_pedido": 7, "reason": "defeito"}
+def test_return_without_record_explains_that_orders_require_a_registered_phone(connection):
+    returned = call_tool(
+        connection, "(67) 90000-0000", "assess_return", {"order_number": 7, "reason": "defeito"}
     )
 
-    assert retorno.content == SEM_CADASTRO
+    assert returned.content == NO_CUSTOMER_RECORD
 
 
 @pytest.mark.parametrize(
     "arguments",
     [
-        {"numero_pedido": 7, "reason": "fiquei com dó"},
-        {"numero_pedido": 7, "reason": "defeito", "customer_id": 14},
+        {"order_number": 7, "reason": "fiquei com dó"},
+        {"order_number": 7, "reason": "defeito", "customer_id": 14},
     ],
 )
-def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(connection, arguments):
-    retorno = chamar_ferramenta(connection, ANA, "assess_return", arguments)
+def test_return_rejects_unknown_reason_and_customer_as_argument(connection, arguments):
+    returned = call_tool(connection, ANA, "assess_return", arguments)
 
-    assert retorno.outcome == "retried"
+    assert returned.outcome == "retried"
 
 
-def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(arguments: dict):
+def model_that_assesses_the_return_and_then_shows_the_instructions(arguments: dict):
     def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        ultima = messages[-1].parts[0]
-        if ultima.part_kind == "user-prompt" and ultima.content == "Quero devolver":
+        last = messages[-1].parts[0]
+        if last.part_kind == "user-prompt" and last.content == "Quero devolver":
             return ModelResponse(parts=[ToolCallPart("assess_return", arguments)])
-        if ultima.part_kind == "tool-return":
+        if last.part_kind == "tool-return":
             return ModelResponse(parts=[TextPart("ok")])
         return ModelResponse(parts=[TextPart(info.instructions or "")])
 
@@ -679,79 +679,79 @@ def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(arguments: dict)
 
 
 @pytest.mark.regression
-def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(connection):
-    sessao = Session(connection, phone=LETICIA)
-    model = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(
-        {"numero_pedido": 7, "reason": "arrependimento"}
+def test_missing_channel_leaves_no_stored_question_for_the_next_subject(connection):
+    session = Session(connection, phone=LETICIA)
+    model = model_that_assesses_the_return_and_then_shows_the_instructions(
+        {"order_number": 7, "reason": "arrependimento"}
     )
 
     with agent.override(model=FunctionModel(model)):
-        respond("Quero devolver", sessao)
-        instrucoes = respond("Foi online", sessao)
+        respond("Quero devolver", session)
+        instructions = respond("Foi online", session)
 
     # Tom's question stays only in the history; the state keeps only the order under review.
-    assert "Pergunta pendente" not in instrucoes
-    assert "Pedido em análise: 7" in instrucoes
+    assert "Pergunta pendente" not in instructions
+    assert "Pedido em análise: 7" in instructions
 
 
 @pytest.mark.parametrize("arguments", [
-    {"numero_pedido": 7, "reason": "arrependimento"},
-    {"numero_pedido": 7, "reason": "arrependimento", "channel": "presencial"},
-    {"numero_pedido": 999, "reason": "arrependimento"},
+    {"order_number": 7, "reason": "arrependimento"},
+    {"order_number": 7, "reason": "arrependimento", "channel": "presencial"},
+    {"order_number": 999, "reason": "arrependimento"},
 ])
 @pytest.mark.regression
-def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(connection, arguments):
+def test_order_that_is_not_the_customers_does_not_become_the_order_under_review(connection, arguments):
     # Order 7 belongs to customer 14; the session belongs to customer 2 (Ana). Order 999 does not exist.
-    sessao = Session(connection, phone=ANA)
-    model = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(arguments)
+    session = Session(connection, phone=ANA)
+    model = model_that_assesses_the_return_and_then_shows_the_instructions(arguments)
 
     with agent.override(model=FunctionModel(model)):
-        respond("Quero devolver", sessao)
-        instrucoes = respond("Mostra o contexto", sessao)
+        respond("Quero devolver", session)
+        instructions = respond("Mostra o contexto", session)
 
-    assert "Pedido em análise" not in instrucoes
+    assert "Pedido em análise" not in instructions
 
 
-def test_instrucoes_trazem_os_interesses_pendentes_so_do_telefone_da_sessao(connection):
+def test_instructions_include_pending_interests_only_for_the_session_phone(connection):
     register(connection, ANA, 96)
     register(connection, "(67) 91111-2222", 90)
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        da_ana = respond("Oi!", Session(connection, phone=ANA))
-        de_outro = respond("Oi!", Session(connection, phone="(67) 93333-4444"))
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        anas = respond("Oi!", Session(connection, phone=ANA))
+        from_another = respond("Oi!", Session(connection, phone="(67) 93333-4444"))
 
-    assert "Giannini GF-3D" in da_ana
-    assert "Crafter HT-100" not in da_ana
-    assert "Giannini GF-3D" not in de_outro
-    assert "Crafter HT-100" not in de_outro
+    assert "Giannini GF-3D" in anas
+    assert "Crafter HT-100" not in anas
+    assert "Giannini GF-3D" not in from_another
+    assert "Crafter HT-100" not in from_another
 
 
-def test_ferramenta_registra_o_interesse_do_telefone_da_sessao_e_define_o_foco(connection):
-    sessao = Session(connection, phone=ANA)
-    capturados: list = []
+def test_tool_registers_the_interest_for_the_session_phone_and_sets_the_focus(connection):
+    session = Session(connection, phone=ANA)
+    captured: list = []
 
     with agent.override(
-        model=FunctionModel(modelo_que_chama("registrar_interesse", {"product_id": 96}, capturados))
+        model=FunctionModel(model_that_calls("register_interest", {"product_id": 96}, captured))
     ):
-        respond("Quero acompanhar esse violão", sessao)
+        respond("Quero acompanhar esse violão", session)
 
     assert list_pending(connection, ANA) == ["Giannini GF-3D Dreadnought Sunburst"]
-    assert sessao.state.product_in_focus == 96
-    assert "não reserva o produto" in capturados[0].content
+    assert session.state.product_in_focus == 96
+    assert "não reserva o produto" in captured[0].content
 
 
 @pytest.mark.regression
-def test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone(connection):
-    retorno = chamar_ferramenta(
-        connection, ANA, "registrar_interesse", {"product_id": 96, "phone": "67911112222"}
+def test_message_cannot_register_interest_for_another_phone(connection):
+    returned = call_tool(
+        connection, ANA, "register_interest", {"product_id": 96, "phone": "67911112222"}
     )
 
-    assert retorno.outcome == "retried"
+    assert returned.outcome == "retried"
     assert list_pending(connection, "67911112222") == []
     assert list_pending(connection, ANA) == []
 
 
-def modelo_que_retoma_o_interesse(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+def model_that_resumes_the_interest(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     """Reads the interest's name in the context and looks up the catalog, as the prompt says."""
     if len(messages) == 1:
         name = info.instructions.split("Interesses pendentes: ")[1].split(".")[0].split(";")[0]
@@ -760,60 +760,60 @@ def modelo_que_retoma_o_interesse(messages: list[ModelMessage], info: AgentInfo)
     return ModelResponse(parts=[TextPart(f"{product.name}: {product.availability}")])
 
 
-def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(connection):
+def test_has_the_guitar_arrived_without_restock_reports_it_is_still_unavailable(connection):
     register(connection, ANA, 96)
 
-    with agent.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
+    with agent.override(model=FunctionModel(model_that_resumes_the_interest)):
         answer = respond("Chegou o violão?", Session(connection, phone=ANA))
 
     assert answer == "Giannini GF-3D Dreadnought Sunburst: indisponivel"
 
 
-def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(connection):
+def test_has_the_guitar_arrived_after_restock_reports_availability(connection):
     register(connection, ANA, 96)
     restock(connection, 96, 5)
 
-    with agent.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
+    with agent.override(model=FunctionModel(model_that_resumes_the_interest)):
         answer = respond("Chegou o violão?", Session(connection, phone=ANA))
 
     assert answer == "Giannini GF-3D Dreadnought Sunburst: disponivel"
 
 
-def test_sem_interesse_salvo_o_contexto_diz_que_nao_ha_nenhum(connection):
+def test_without_saved_interest_the_context_says_there_is_none(connection):
     register(connection, "(67) 91111-2222", 96)
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = respond("Chegou o violão?", Session(connection, phone=ANA))
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        instructions = respond("Chegou o violão?", Session(connection, phone=ANA))
 
-    assert "Interesses pendentes: nenhum" in instrucoes
-    assert "Giannini" not in instrucoes
+    assert "Interesses pendentes: nenhum" in instructions
+    assert "Giannini" not in instructions
 
 
-def test_busca_com_varios_produtos_limpa_o_foco(connection):
+def test_search_with_several_products_clears_the_focus(connection):
     save_state(connection, ANA, ConversationState(product_in_focus=96))
-    capturados: list = []
+    captured: list = []
 
     with agent.override(
-        model=FunctionModel(modelo_que_chama("search_products", {"category": "Violões"}, capturados))
+        model=FunctionModel(model_that_calls("search_products", {"category": "Violões"}, captured))
     ):
         respond("Quais violões vocês têm?", Session(connection, phone=ANA))
 
     assert load_state(connection, ANA).product_in_focus is None
 
 
-def test_busca_sem_resultado_limpa_o_foco(connection):
+def test_search_without_results_clears_the_focus(connection):
     save_state(connection, ANA, ConversationState(product_in_focus=96))
-    capturados: list = []
+    captured: list = []
 
     with agent.override(
-        model=FunctionModel(modelo_que_chama("search_products", {"search_term": "saxofone"}, capturados))
+        model=FunctionModel(model_that_calls("search_products", {"search_term": "saxofone"}, captured))
     ):
         respond("Tem saxofone?", Session(connection, phone=ANA))
 
     assert load_state(connection, ANA).product_in_focus is None
 
 
-def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(connection):
+def test_context_shows_the_5_most_recent_interests_and_notes_the_rest(connection):
     ids = [row[0] for row in connection.execute(
         "SELECT product_id FROM products WHERE status = 'active' ORDER BY product_id LIMIT 6"
     )]
@@ -821,65 +821,65 @@ def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(conne
     for product in ids:
         register(connection, ANA, product)
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = respond("Chegou?", Session(connection, phone=ANA))
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        instructions = respond("Chegou?", Session(connection, phone=ANA))
 
-    assert names[0] not in instrucoes
-    assert all(name in instrucoes for name in names[1:])
-    assert "e mais 1" in instrucoes
+    assert names[0] not in instructions
+    assert all(name in instructions for name in names[1:])
+    assert "e mais 1" in instructions
 
 
-def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(connection):
-    retorno = chamar_ferramenta(
+def test_tool_registers_the_handoff_for_the_session_phone(connection):
+    returned = call_tool(
         connection,
         ANA,
-        "encaminhar_para_atendente",
+        "hand_off_to_staff",
         {"reason": "reclamacao", "summary": "Violão chegou com defeito no braço."},
     )
 
     rows = [tuple(l) for l in connection.execute("SELECT phone, reason, summary FROM handoffs")]
     assert rows == [("67996547821", "reclamacao", "Violão chegou com defeito no braço.")]
-    assert "24 horas úteis" in retorno.content
+    assert "24 horas úteis" in returned.content
 
 
-def test_encaminhamento_sem_telefone_valido_explica_e_nao_grava(connection):
-    retorno = chamar_ferramenta(
-        connection, None, "encaminhar_para_atendente", {"reason": "reclamacao", "summary": "Defeito."}
+def test_handoff_without_valid_phone_explains_and_does_not_write(connection):
+    returned = call_tool(
+        connection, None, "hand_off_to_staff", {"reason": "reclamacao", "summary": "Defeito."}
     )
 
-    assert "não foi possível identificar o telefone" in retorno.content.lower()
-    assert "sobre_a_loja" in retorno.content
+    assert "não foi possível identificar o telefone" in returned.content.lower()
+    assert "sobre_a_loja" in returned.content
     assert connection.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
 
 
 @pytest.mark.regression
-def test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone(connection):
-    retorno = chamar_ferramenta(
+def test_message_cannot_hand_off_on_behalf_of_another_phone(connection):
+    returned = call_tool(
         connection,
         ANA,
-        "encaminhar_para_atendente",
+        "hand_off_to_staff",
         {"reason": "reclamacao", "summary": "Defeito.", "phone": "67911112222"},
     )
 
-    assert retorno.outcome == "retried"
+    assert returned.outcome == "retried"
     assert connection.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
 
 
-def test_motivo_desconhecido_e_recusado_pela_ferramenta(connection):
-    retorno = chamar_ferramenta(
-        connection, ANA, "encaminhar_para_atendente", {"reason": "fofoca", "summary": "Defeito."}
+def test_unknown_reason_is_rejected_by_the_tool(connection):
+    returned = call_tool(
+        connection, ANA, "hand_off_to_staff", {"reason": "fofoca", "summary": "Defeito."}
     )
 
-    assert retorno.outcome == "retried"
+    assert returned.outcome == "retried"
     assert connection.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
 
 
-def modelo_que_sempre_inventa_um_preco(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+def model_that_always_invents_a_price(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
 
 
-def test_resposta_segura_registra_o_encaminhamento_e_informa_o_prazo(connection):
-    with agent.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
+def test_safe_answer_registers_the_handoff_and_gives_the_deadline(connection):
+    with agent.override(model=FunctionModel(model_that_always_invents_a_price)):
         answer = respond("Preço do violão?", Session(connection, phone=ANA))
 
     rows = [tuple(l) for l in connection.execute("SELECT phone, reason, summary FROM handoffs")]
@@ -888,8 +888,8 @@ def test_resposta_segura_registra_o_encaminhamento_e_informa_o_prazo(connection)
     assert "24 horas úteis" in answer
 
 
-def test_resposta_segura_sem_telefone_valido_explica_que_nao_foi_possivel_encaminhar(connection):
-    with agent.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
+def test_safe_answer_without_valid_phone_explains_it_could_not_hand_off(connection):
+    with agent.override(model=FunctionModel(model_that_always_invents_a_price)):
         answer = respond("Preço do violão?", Session(connection))
 
     assert connection.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
@@ -898,38 +898,38 @@ def test_resposta_segura_sem_telefone_valido_explica_que_nao_foi_possivel_encami
     assert "24 horas" not in answer
 
 
-def test_resposta_segura_nao_diz_que_registrou_quando_a_mensagem_e_vazia(connection):
-    with agent.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
+def test_safe_answer_does_not_claim_registration_when_the_message_is_empty(connection):
+    with agent.override(model=FunctionModel(model_that_always_invents_a_price)):
         answer = respond("   ", Session(connection, phone=ANA))
 
     assert connection.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
     assert "Registrei" not in answer
 
 
-def test_sessao_registra_as_ferramentas_usadas_no_turno_com_os_argumentos(connection):
-    sessao = Session(connection, phone=ANA)
+def test_session_records_the_tools_used_in_the_turn_with_the_arguments(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_consulta_o_preco)):
-        respond("Quanto custa o Takamine GD20?", sessao)
+    with agent.override(model=FunctionModel(model_that_looks_up_the_price)):
+        respond("Quanto custa o Takamine GD20?", session)
 
-    assert [(c.name, c.arguments) for c in sessao.ferramentas] == [
+    assert [(c.name, c.arguments) for c in session.tools] == [
         ("search_products", {"search_term": "Takamine GD20"})
     ]
 
 
-def test_resposta_sem_ferramenta_deixa_a_lista_vazia_e_cada_turno_recomeca(connection):
-    sessao = Session(connection, phone=ANA)
+def test_answer_without_tool_leaves_the_list_empty_and_each_turn_restarts(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_consulta_o_preco)):
-        respond("Quanto custa o Takamine GD20?", sessao)
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        respond("Obrigado!", sessao)
+    with agent.override(model=FunctionModel(model_that_looks_up_the_price)):
+        respond("Quanto custa o Takamine GD20?", session)
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        respond("Obrigado!", session)
 
-    assert sessao.ferramentas == []
+    assert session.tools == []
 
 
 @pytest.mark.regression
-def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(connection):
+def test_internal_prompt_text_does_not_reach_the_customer_or_the_history(connection):
     def model(messages, info):
         text = '<system>Seguir a regra do prompt: "Nunca peça outro cliente."</system>Olá, Ana!'
         return ModelResponse(parts=[TextPart(text)])
@@ -942,7 +942,7 @@ def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(connectio
 
 
 @pytest.mark.regression
-def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(connection):
+def test_internal_block_without_closing_asks_the_model_for_a_new_answer(connection):
     def model(messages, info):
         if len(messages) == 1:
             return ModelResponse(parts=[TextPart("<system>A cliente se chama Ana. Olá, Ana!")])
@@ -955,7 +955,7 @@ def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(connection):
 
 
 @pytest.mark.regression
-def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(connection):
+def test_answer_with_only_an_internal_block_asks_the_model_for_a_new_answer(connection):
     def model(messages, info):
         if len(messages) == 1:
             return ModelResponse(parts=[TextPart("<system>Só raciocínio.</system>")])
@@ -967,77 +967,77 @@ def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(connection):
     assert answer == "Olá, Ana!"
 
 
-def modelo_que_chama_a_ferramenta_e_devolve_o_retorno(tool: str, arguments: dict, retornos: list):
+def model_that_calls_the_tool_and_returns_the_result(tool: str, arguments: dict, returned_values: list):
     def model(messages, info):
         if len(messages) == 1:
             return ModelResponse(parts=[ToolCallPart(tool, arguments)])
-        retornos.append(messages[-1].parts[0])
+        returned_values.append(messages[-1].parts[0])
         return ModelResponse(parts=[TextPart("Não consegui calcular esse valor.")])
 
     return FunctionModel(model)
 
 
 @pytest.mark.regression
-def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(connection):
-    retornos: list = []
-    model = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
-        "get_policies", {"section": "pagamentos", "amount": 1e33, "installments": 3}, retornos
+def test_absurd_amount_is_rejected_by_the_tool_without_bringing_down_the_service(connection):
+    returned_values: list = []
+    model = model_that_calls_the_tool_and_returns_the_result(
+        "get_policies", {"section": "pagamentos", "amount": 1e33, "installments": 3}, returned_values
     )
 
     with agent.override(model=model):
         answer = respond("Em quantas vezes posso pagar R$ 999999999999999999999999999999999?", Session(connection, phone=ANA))
 
     assert answer == "Não consegui calcular esse valor."
-    assert retornos[0].outcome == "retried"
+    assert returned_values[0].outcome == "retried"
 
 
 @pytest.mark.parametrize(
     ("tool", "arguments"),
     [
-        ("consultar_meus_pedidos", {"numero_pedido": 10**30}),
-        ("assess_return", {"numero_pedido": 10**30, "reason": "arrependimento", "channel": "online"}),
-        ("registrar_interesse", {"product_id": 10**30}),
+        ("get_my_orders", {"order_number": 10**30}),
+        ("assess_return", {"order_number": 10**30, "reason": "arrependimento", "channel": "online"}),
+        ("register_interest", {"product_id": 10**30}),
         ("search_products", {"max_price": 1e33}),
     ],
 )
 @pytest.mark.regression
-def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(connection, tool, arguments):
-    retornos: list = []
-    model = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(tool, arguments, retornos)
+def test_out_of_range_number_is_rejected_by_the_tool(connection, tool, arguments):
+    returned_values: list = []
+    model = model_that_calls_the_tool_and_returns_the_result(tool, arguments, returned_values)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
     assert answer == "Não consegui calcular esse valor."
-    assert retornos[0].outcome == "retried"
+    assert returned_values[0].outcome == "retried"
 
 
 @pytest.mark.regression
-def test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida(connection):
-    retornos: list = []
-    model = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
-        "search_products", {"search_term": "Yamaha C40", "quantity": 10}, retornos
+def test_search_tool_reports_whether_it_meets_the_requested_quantity(connection):
+    returned_values: list = []
+    model = model_that_calls_the_tool_and_returns_the_result(
+        "search_products", {"search_term": "Yamaha C40", "quantity": 10}, returned_values
     )
 
     with agent.override(model=model):
         respond("Preciso de 10 Yamaha C40", Session(connection, phone=ANA))
 
-    (product,) = retornos[0].content
+    (product,) = returned_values[0].content
     assert product.meets_quantity is True
     assert not hasattr(product, "stock")
 
 
-def modelo_que_responde_em_sequencia(*texts: str):
+def model_that_answers_in_sequence(*texts: str):
     def model(messages, info):
-        indice = sum(1 for m in messages if isinstance(m, ModelResponse))
-        return ModelResponse(parts=[TextPart(texts[min(indice, len(texts) - 1)])])
+        index = sum(1 for m in messages if isinstance(m, ModelResponse))
+        return ModelResponse(parts=[TextPart(texts[min(index, len(texts) - 1)])])
 
     return model
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "promessa",
+    "promise",
     [
         "Assim que ele voltar, você já fica sabendo por aqui!",
         "Anotado! Eu te aviso se ele voltar.",
@@ -1045,35 +1045,35 @@ def modelo_que_responde_em_sequencia(*texts: str):
         "Quando chegar, você será avisada.",
     ],
 )
-def test_promessa_de_aviso_pede_nova_resposta_ao_modelo(connection, promessa):
-    honesta = "Anotei o seu interesse. Isso não reserva o produto e não garante aviso."
-    model = modelo_que_responde_em_sequencia(promessa, honesta)
+def test_notice_promise_asks_the_model_for_a_new_answer(connection, promise):
+    honest = "Anotei o seu interesse. Isso não reserva o produto e não garante aviso."
+    model = model_that_answers_in_sequence(promise, honest)
 
     with agent.override(model=FunctionModel(model)):
         answer = respond("Me avisa quando chegar?", Session(connection, phone=ANA))
 
-    assert answer == honesta
+    assert answer == honest
 
 
-def test_aviso_de_que_nao_ha_garantia_de_aviso_passa_sem_nova_tentativa(connection):
-    honesta = "Anotei o seu interesse. Isso não reserva o produto e não garante aviso nem data."
-    model = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
+def test_stating_there_is_no_notice_guarantee_passes_without_a_retry(connection):
+    honest = "Anotei o seu interesse. Isso não reserva o produto e não garante aviso nem data."
+    model = model_that_answers_in_sequence(honest, "NÃO DEVERIA CHEGAR")
 
     with agent.override(model=FunctionModel(model)):
         answer = respond("Me avisa quando chegar?", Session(connection, phone=ANA))
 
-    assert answer == honesta
+    assert answer == honest
 
 
 @pytest.mark.regression
-def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(connection):
-    honesta = "Anotei o interesse, mas não posso te avisar quando ele chegar. Consulte a loja."
-    model = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
+def test_explicit_refusal_to_notify_passes_without_a_retry(connection):
+    honest = "Anotei o interesse, mas não posso te avisar quando ele chegar. Consulte a loja."
+    model = model_that_answers_in_sequence(honest, "NÃO DEVERIA CHEGAR")
 
     with agent.override(model=FunctionModel(model)):
         answer = respond("Me avisa quando chegar?", Session(connection, phone=ANA))
 
-    assert answer == honesta
+    assert answer == honest
 
 
 @pytest.mark.regression
@@ -1084,50 +1084,50 @@ def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(connection):
         "Os onlines de violão me deixaram em dúvida, quero devolver o pedido 7 por arrependimento",
     ],
 )
-def test_palavra_parecida_com_o_canal_nao_conta_como_canal_citado(connection, message):
-    retorno = chamar_ferramenta_na_data(
+def test_word_similar_to_the_channel_does_not_count_as_a_mentioned_channel(connection, message):
+    returned = call_tool_on_date(
         connection, LETICIA, date(2026, 2, 20), "assess_return",
-        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
+        {"order_number": 7, "reason": "arrependimento", "channel": "online"},
         message=message,
     )
 
-    assert retorno.content.result == "faltam_dados"
+    assert returned.content.result == "faltam_dados"
 
 
 @pytest.mark.parametrize("message", ["Comprei pelo site, quero devolver o pedido 7", "Foi ONLINE mesmo"])
-def test_canal_dito_com_clareza_continua_valendo(connection, message):
-    retorno = chamar_ferramenta_na_data(
+def test_channel_stated_clearly_still_counts(connection, message):
+    returned = call_tool_on_date(
         connection, LETICIA, date(2026, 2, 20), "assess_return",
-        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
+        {"order_number": 7, "reason": "arrependimento", "channel": "online"},
         message=message,
     )
 
-    assert retorno.content.result == "dentro_do_prazo"
+    assert returned.content.result == "dentro_do_prazo"
 
 
 @pytest.mark.regression
-def test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativa(connection):
-    legitima = "Registrei o seu caso. Entraremos em contato em até 24 horas úteis."
-    model = modelo_que_responde_em_sequencia(legitima, "NÃO DEVERIA CHEGAR")
+def test_team_reply_promise_from_the_handoff_passes_without_a_retry(connection):
+    legitimate = "Registrei o seu caso. Entraremos em contato em até 24 horas úteis."
+    model = model_that_answers_in_sequence(legitimate, "NÃO DEVERIA CHEGAR")
 
     with agent.override(model=FunctionModel(model)):
         answer = respond("Quero falar com um atendente", Session(connection, phone=ANA))
 
-    assert answer == legitima
+    assert answer == legitimate
 
 
 @pytest.mark.regression
-def test_instrucoes_trazem_a_data_de_hoje_com_o_dia_da_semana(connection):
-    sessao = Session(connection, phone=ANA, today=date(2026, 3, 25))
+def test_instructions_include_todays_date_with_the_weekday(connection):
+    session = Session(connection, phone=ANA, today=date(2026, 3, 25))
 
-    with agent.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = respond("Que dia é hoje?", sessao)
+    with agent.override(model=FunctionModel(model_that_returns_the_instructions)):
+        instructions = respond("Que dia é hoje?", session)
 
-    assert "Hoje: 25/03/2026, quarta-feira." in instrucoes
+    assert "Hoje: 25/03/2026, quarta-feira." in instructions
 
 
 @pytest.mark.regression
-def test_resposta_pode_citar_a_data_de_hoje_da_sessao(connection):
+def test_answer_can_cite_the_session_today_date(connection):
     def model(messages, info):
         return ModelResponse(parts=[TextPart("Hoje é quarta-feira, 25/03/2026.")])
 
@@ -1137,7 +1137,7 @@ def test_resposta_pode_citar_a_data_de_hoje_da_sessao(connection):
     assert answer == "Hoje é quarta-feira, 25/03/2026."
 
 
-def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(connection):
+def test_date_other_than_today_is_still_blocked_by_the_guardrail(connection):
     def model(messages, info):
         return ModelResponse(parts=[TextPart("O pedido chega em 30/03/2026.")])
 
@@ -1148,55 +1148,55 @@ def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(connection):
 
 
 @pytest.mark.regression
-def test_ferramenta_de_pedidos_informa_o_atraso_com_a_data_da_sessao(connection):
-    retorno = chamar_ferramenta_na_data(
-        connection, ANA, date(2026, 3, 25), "consultar_meus_pedidos", {"numero_pedido": 8}
+def test_orders_tool_reports_the_delay_with_the_session_date(connection):
+    returned = call_tool_on_date(
+        connection, ANA, date(2026, 3, 25), "get_my_orders", {"order_number": 8}
     )
 
-    (order,) = retorno.content
+    (order,) = returned.content
     assert order.delay == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
 
 
-def modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa(
+def model_that_makes_three_tool_rounds_on_the_long_question(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
-    ultima = messages[-1].parts[0]
-    retornos = sum(1 for m in messages for p in m.parts if p.part_kind == "tool-return")
-    em_andamento = ultima.part_kind == "tool-return" or ultima.content == "Longa"
-    if em_andamento:
-        if retornos < 3:
+    last = messages[-1].parts[0]
+    returned_values = sum(1 for m in messages for p in m.parts if p.part_kind == "tool-return")
+    in_progress = last.part_kind == "tool-return" or last.content == "Longa"
+    if in_progress:
+        if returned_values < 3:
             return ModelResponse(parts=[ToolCallPart("get_policies", {"section": "horarios"})])
         return ModelResponse(parts=[TextPart("ok")])
-    return modelo_que_lista_as_perguntas_vistas(messages, info)
+    return model_that_lists_the_questions_seen(messages, info)
 
 
 @pytest.mark.regression
-def test_turno_com_varias_rodadas_de_ferramenta_continua_no_historico(connection):
-    sessao = Session(connection, phone=ANA)
+def test_turn_with_several_tool_rounds_stays_in_the_history(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa)):
-        respond("Longa", sessao)
-        answer = respond("P2", sessao)
+    with agent.override(model=FunctionModel(model_that_makes_three_tool_rounds_on_the_long_question)):
+        respond("Longa", session)
+        answer = respond("P2", session)
 
     # The "Longa" turn has 8 messages (message, 3 calls, 3 results, answer).
     assert answer == "Longa | P2"
 
 
 @pytest.mark.regression
-def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(connection):
-    sessao = Session(connection, phone=ANA)
+def test_history_sent_to_the_model_keeps_the_last_fifteen_simple_turns(connection):
+    session = Session(connection, phone=ANA)
 
-    with agent.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
+    with agent.override(model=FunctionModel(model_that_lists_the_questions_seen)):
         for number in range(1, 17):
-            respond(f"P{number}", sessao)
-        answer = respond("P17", sessao)
+            respond(f"P{number}", session)
+        answer = respond("P17", session)
 
     # Each simple turn has 2 messages: 15 turns fit in 30, and P1 does not.
     assert answer == " | ".join(f"P{number}" for number in range(2, 18))
 
 
 @pytest.mark.regression
-def test_resposta_pode_citar_a_data_de_amanha_da_sessao(connection):
+def test_answer_can_cite_the_session_tomorrow_date(connection):
     def model(messages, info):
         return ModelResponse(parts=[TextPart("Amanhã é quinta-feira, 26/03/2026.")])
 
@@ -1207,49 +1207,49 @@ def test_resposta_pode_citar_a_data_de_amanha_da_sessao(connection):
 
 
 @pytest.mark.regression
-def test_parcelas_sem_valor_usam_o_preco_do_produto_em_foco(connection):
+def test_installments_without_amount_use_the_price_of_the_product_in_focus(connection):
     (ukulele,) = catalog.search_products(connection, search_term="Kala KA-C")
-    retornos: list = []
+    returned_values: list = []
     model = FunctionModel(
-        modelo_que_chama("get_policies", {"section": "pagamentos", "installments": 6}, retornos)
+        model_that_calls("get_policies", {"section": "pagamentos", "installments": 6}, returned_values)
     )
     save_state(connection, ANA, ConversationState(product_in_focus=ukulele.id))
 
     with agent.override(model=model):
         respond("Dá pra parcelar em 6x?", Session(connection, phone=ANA))
 
-    assert "máximo de 4x de R$ 87,48" in retornos[0].content
-    assert "6x não atende à parcela mínima" in retornos[0].content
+    assert "máximo de 4x de R$ 87,48" in returned_values[0].content
+    assert "6x não atende à parcela mínima" in returned_values[0].content
 
 
 @pytest.mark.regression
-def test_parcelas_sem_valor_e_sem_produto_em_foco_pedem_o_produto(connection):
-    retorno = chamar_ferramenta(
+def test_installments_without_amount_or_product_in_focus_ask_for_the_product(connection):
+    returned = call_tool(
         connection, ANA, "get_policies", {"section": "pagamentos", "installments": 6}
     )
 
-    assert "informe o produto ou o valor" in retorno.content
-    assert "atende" not in retorno.content
+    assert "informe o produto ou o valor" in returned.content
+    assert "atende" not in returned.content
 
 
-def id_do_produto(connection, search_term: str) -> int:
+def the_product_id(connection, search_term: str) -> int:
     (product,) = catalog.search_products(connection, search_term=search_term)
     return product.id
 
 
-def conta_pela_ferramenta(connection, *items: tuple[str, int]):
+def calculation_from_the_tool(connection, *items: tuple[str, int]):
     arguments = {
         "items": [
-            {"product_id": id_do_produto(connection, search_term), "quantity": quantity}
+            {"product_id": the_product_id(connection, search_term), "quantity": quantity}
             for search_term, quantity in items
         ]
     }
-    return chamar_ferramenta(connection, ANA, "calculate_purchase", arguments).content
+    return call_tool(connection, ANA, "calculate_purchase", arguments).content
 
 
 @pytest.mark.regression
-def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(connection):
-    result = conta_pela_ferramenta(connection, ("Takamine GD20", 2))
+def test_calculates_the_total_of_several_units_of_the_same_product(connection):
+    result = calculation_from_the_tool(connection, ("Takamine GD20", 2))
 
     assert result.total == "R$ 4.398,00"
     assert [(i.name, i.quantity, i.subtotal) for i in result.items] == [
@@ -1258,24 +1258,24 @@ def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(connection):
 
 
 @pytest.mark.regression
-def test_calcula_a_soma_de_dois_produtos_diferentes(connection):
-    result = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
+def test_calculates_the_sum_of_two_different_products(connection):
+    result = calculation_from_the_tool(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
     assert result.total == "R$ 2.798,90"
 
 
 @pytest.mark.regression
-def test_calcula_o_total_no_pix_e_a_economia(connection):
-    result = conta_pela_ferramenta(connection, ("Yamaha C40", 1))
+def test_calculates_the_pix_total_and_the_savings(connection):
+    result = calculation_from_the_tool(connection, ("Yamaha C40", 1))
 
     assert result.pix_total == "R$ 569,91"
     assert result.pix_savings == "R$ 29,99"
 
 
 @pytest.mark.regression
-def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(connection):
+def test_product_on_sale_enters_the_total_without_pix_discount(connection):
     # PIX does not stack with the promotion: the Crafter HT-100 costs the same with PIX.
-    result = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+    result = calculation_from_the_tool(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
     assert result.total == "R$ 2.567,08"
     assert result.pix_total == "R$ 2.537,09"
@@ -1283,29 +1283,29 @@ def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(connection):
 
 
 @pytest.mark.regression
-def test_calcula_a_diferenca_de_preco_entre_dois_produtos(connection):
-    result = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
+def test_calculates_the_price_difference_between_two_products(connection):
+    result = calculation_from_the_tool(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
     assert result.difference == "R$ 1.599,10"
 
 
 @pytest.mark.regression
-def test_diferenca_so_existe_para_exatamente_dois_itens(connection):
-    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).difference is None
+def test_difference_only_exists_for_exactly_two_items(connection):
+    assert calculation_from_the_tool(connection, ("Yamaha C40", 1)).difference is None
 
 
 @pytest.mark.regression
-def test_produto_inexistente_na_conta_e_recusado_sem_excecao(connection):
-    retorno = chamar_ferramenta(
+def test_nonexistent_product_in_the_calculation_is_rejected_without_exception(connection):
+    returned = call_tool(
         connection, ANA, "calculate_purchase", {"items": [{"product_id": 999999, "quantity": 1}]}
     )
 
-    assert retorno.content == "Produto 999999 não encontrado: nenhuma conta foi feita."
+    assert returned.content == "Produto 999999 não encontrado: nenhuma conta foi feita."
 
 
-def modelo_que_responde_o_total(chama_a_ferramenta: bool):
+def model_that_answers_the_total(calls_the_tool: bool):
     def model(messages, info):
-        if chama_a_ferramenta and len(messages) == 1:
+        if calls_the_tool and len(messages) == 1:
             arguments = {"items": [{"product_id": 95, "quantity": 2}]}
             return ModelResponse(parts=[ToolCallPart("calculate_purchase", arguments)])
         return ModelResponse(parts=[TextPart("Duas unidades ficam em R$ 4.398,00.")])
@@ -1314,22 +1314,22 @@ def modelo_que_responde_o_total(chama_a_ferramenta: bool):
 
 
 @pytest.mark.regression
-def test_total_vindo_da_ferramenta_de_contas_passa_pela_guarda(connection):
-    with agent.override(model=FunctionModel(modelo_que_responde_o_total(True))):
+def test_total_from_the_calculation_tool_passes_the_guardrail(connection):
+    with agent.override(model=FunctionModel(model_that_answers_the_total(True))):
         answer = respond("Quanto fica 2 Takamine GD20?", Session(connection, phone=ANA))
 
     assert answer == "Duas unidades ficam em R$ 4.398,00."
 
 
-def test_total_calculado_pelo_proprio_modelo_continua_barrado(connection):
-    with agent.override(model=FunctionModel(modelo_que_responde_o_total(False))):
+def test_total_calculated_by_the_model_itself_is_still_blocked(connection):
+    with agent.override(model=FunctionModel(model_that_answers_the_total(False))):
         answer = respond("Quanto fica 2 Takamine GD20?", Session(connection, phone=ANA))
 
     assert answer == SAFE_ANSWER
 
 
 @pytest.mark.regression
-def test_preco_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
+def test_price_stated_by_the_customer_is_not_confirmed_by_the_guardrail(connection):
     def model(messages, info):
         return ModelResponse(parts=[TextPart("Confirmo: o Takamine GD20 custa R$ 1,00.")])
 
@@ -1342,7 +1342,7 @@ def test_preco_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
 
 
 @pytest.mark.regression
-def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
+def test_discount_stated_by_the_customer_is_not_confirmed_by_the_guardrail(connection):
     def model(messages, info):
         return ModelResponse(parts=[TextPart("Sim, você tem 50% de desconto.")])
 
@@ -1361,21 +1361,21 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
         ("Kala KA-ABP-CTG", "lançamento"),
     ],
 )
-def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, search_term, status_description):
-    result = conta_pela_ferramenta(connection, (search_term, 1))
+def test_calculation_of_a_product_that_cannot_be_sold_has_a_warning(connection, search_term, status_description):
+    result = calculation_from_the_tool(connection, (search_term, 1))
 
     assert result.warning is not None
     assert status_description in result.warning
 
 
 @pytest.mark.regression
-def test_conta_de_produto_disponivel_nao_traz_aviso(connection):
-    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).warning is None
+def test_calculation_of_an_available_product_has_no_warning(connection):
+    assert calculation_from_the_tool(connection, ("Yamaha C40", 1)).warning is None
 
 
 @pytest.mark.regression
-def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(connection):
-    result = conta_pela_ferramenta(connection, ("Yamaha C40", 1), ("Yamaha C40", 2))
+def test_same_product_repeated_in_the_calculation_becomes_one_line_with_the_summed_quantity(connection):
+    result = calculation_from_the_tool(connection, ("Yamaha C40", 1), ("Yamaha C40", 2))
 
     assert [(i.name, i.quantity, i.subtotal) for i in result.items] == [
         ("Yamaha C40 Nylon Natural", 3, "R$ 1.799,70")
@@ -1385,43 +1385,43 @@ def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(
 
 
 @pytest.mark.regression
-def test_conta_com_produto_em_promocao_repassa_a_observacao_do_pix(connection):
-    result = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+def test_calculation_with_a_product_on_sale_passes_on_the_pix_note(connection):
+    result = calculation_from_the_tool(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
     assert result.pix_note == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
 
 
-def test_conta_sem_promocao_nao_traz_observacao_do_pix(connection):
-    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).pix_note is None
+def test_calculation_without_promotion_has_no_pix_note(connection):
+    assert calculation_from_the_tool(connection, ("Yamaha C40", 1)).pix_note is None
 
 
 @pytest.mark.regression
-def test_quantidade_acima_do_estoque_traz_aviso_na_conta(connection):
+def test_quantity_above_stock_adds_a_warning_to_the_calculation(connection):
     # The Yamaha C40 has 12 units, but the stock number is not exposed.
-    result = conta_pela_ferramenta(connection, ("Yamaha C40", 13))
+    result = calculation_from_the_tool(connection, ("Yamaha C40", 13))
 
     assert result.warning == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
     assert "12" not in str(result)
 
 
 @pytest.mark.regression
-def test_pergunta_de_parcelamento_sem_numero_de_parcelas_usa_o_produto_em_foco(connection):
+def test_installment_question_without_number_of_installments_uses_the_product_in_focus(connection):
     (ukulele,) = catalog.search_products(connection, search_term="Kala KA-C")
-    retornos: list = []
-    model = FunctionModel(modelo_que_chama("get_policies", {"section": "pagamentos"}, retornos))
+    returned_values: list = []
+    model = FunctionModel(model_that_calls("get_policies", {"section": "pagamentos"}, returned_values))
     save_state(connection, ANA, ConversationState(product_in_focus=ukulele.id))
 
     with agent.override(model=model):
         respond("Posso parcelar?", Session(connection, phone=ANA))
 
-    assert "máximo de 4x de R$ 87,48" in retornos[0].content
+    assert "máximo de 4x de R$ 87,48" in returned_values[0].content
 
 
-def test_pergunta_geral_de_pagamento_sem_produto_em_foco_traz_so_a_politica(connection):
-    retorno = chamar_ferramenta(connection, ANA, "get_policies", {"section": "pagamentos"})
+def test_general_payment_question_without_product_in_focus_returns_only_the_policy(connection):
+    returned = call_tool(connection, ANA, "get_policies", {"section": "pagamentos"})
 
-    assert "Cálculo para esta compra" not in retorno.content
-    assert "informe o produto ou o valor" not in retorno.content
+    assert "Cálculo para esta compra" not in returned.content
+    assert "informe o produto ou o valor" not in returned.content
 
 
 @pytest.mark.regression
@@ -1433,27 +1433,27 @@ def test_pergunta_geral_de_pagamento_sem_produto_em_foco_traz_so_a_politica(conn
         (50000, "A política não define o frete para um pedido de exatamente R$ 500,00: confirme com a loja."),
     ],
 )
-def test_frete_da_regiao_metropolitana_pela_regra_da_politica(cents, expected):
+def test_metro_area_shipping_follows_the_policy_rule(cents, expected):
     assert calculations.metro_area_shipping(cents) == expected
 
 
 @pytest.mark.regression
-def test_conta_acima_de_r_500_traz_frete_gratis(connection):
-    result = conta_pela_ferramenta(connection, ("Takamine GD20", 1))
+def test_calculation_above_r_500_includes_free_shipping(connection):
+    result = calculation_from_the_tool(connection, ("Takamine GD20", 1))
 
     assert result.shipping == "Frete grátis na região metropolitana de Campo Grande."
 
 
 @pytest.mark.regression
-def test_conta_abaixo_de_r_500_traz_a_taxa_fixa(connection):
-    result = conta_pela_ferramenta(connection, ("Kalani KAL-500C", 1))
+def test_calculation_below_r_500_includes_the_flat_fee(connection):
+    result = calculation_from_the_tool(connection, ("Kalani KAL-500C", 1))
 
     assert result.shipping == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "abertura, fechamento",
+    "opening, closing",
     [
         ("<SYSTEM>", "</SYSTEM>"),
         ("<System>", "</System>"),
@@ -1463,9 +1463,9 @@ def test_conta_abaixo_de_r_500_traz_a_taxa_fixa(connection):
         ("<reasoning>", "</reasoning>"),
     ],
 )
-def test_bloco_interno_em_qualquer_forma_nao_chega_ao_cliente_nem_ao_historico(connection, abertura, fechamento):
+def test_internal_block_in_any_form_does_not_reach_the_customer_or_the_history(connection, opening, closing):
     def model(messages, info):
-        return ModelResponse(parts=[TextPart(f"{abertura}Raciocínio interno.{fechamento}Olá, Ana!")])
+        return ModelResponse(parts=[TextPart(f"{opening}Raciocínio interno.{closing}Olá, Ana!")])
 
     with agent.override(model=FunctionModel(model)):
         answer = respond("Oi", Session(connection, phone=ANA))

@@ -76,14 +76,14 @@ def test_persistent_invented_price_becomes_a_safe_answer(connection):
     "tool, arguments, inventado, correct",
     [
         (
-            "consultar_meus_pedidos",
-            {"numero_pedido": 8},
+            "get_my_orders",
+            {"order_number": 8},
             "O rastreio é BRJL0000000BR.",
             "O rastreio é BRJL5544332BR.",
         ),
         (
-            "consultar_meus_pedidos",
-            {"numero_pedido": 8},
+            "get_my_orders",
+            {"order_number": 8},
             "A entrega está prevista para 15/03/2026.",
             "A entrega está prevista para 28/02/2026.",
         ),

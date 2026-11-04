@@ -13,7 +13,7 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 @pytest.fixture(autouse=True)
-def log_de_limites_temporario(tmp_path, monkeypatch):
+def temporary_limits_log(tmp_path, monkeypatch):
     """No test writes to the local environment's limit log."""
     path = tmp_path / "provider_limits.log"
     monkeypatch.setattr("src.config.LIMITS_LOG_PATH", path)

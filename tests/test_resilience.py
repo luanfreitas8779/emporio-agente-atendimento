@@ -20,12 +20,12 @@ from pydantic_ai.exceptions import (
 from pydantic_ai.models.function import FunctionModel
 
 from src.agent import (
-    MENSAGEM_DE_ERRO_TECNICO,
-    MENSAGEM_DE_LIMITE,
-    MENSAGEM_DE_LIMITE_DIARIO,
-    MENSAGEM_DE_TIMEOUT,
-    ChamadaDeFerramenta,
-    RESPOSTA_SEGURA_SEM_REGISTRO,
+    TECHNICAL_ERROR_MESSAGE,
+    RATE_LIMIT_MESSAGE,
+    DAILY_LIMIT_MESSAGE,
+    TIMEOUT_MESSAGE,
+    ToolCall,
+    SAFE_ANSWER_WITHOUT_REGISTRATION,
     Session,
     agent,
     respond,
@@ -36,76 +36,76 @@ from src.memory import load_state, conversation_for_display
 ANA = "(67) 99654-7821"
 
 
-def limite_atingido(retry_after: float | None = None) -> ModelRateLimitError:
+def limit_reached(retry_after: float | None = None) -> ModelRateLimitError:
     return ModelRateLimitError("modelo", "limite de uso", retry_after=retry_after)
 
 
-def modelo_que_falha_antes_de_responder(falhas: list[Exception], tentativas: list[int]):
+def model_that_fails_before_answering(failures: list[Exception], attempts: list[int]):
     """Raises each error in the list, one per call, and then answers."""
 
     def model(messages, info):
-        tentativas.append(1)
-        if falhas:
-            raise falhas.pop(0)
+        attempts.append(1)
+        if failures:
+            raise failures.pop(0)
         return ModelResponse(parts=[TextPart("Resposta do Tom")])
 
     return FunctionModel(model)
 
 
 @pytest.fixture
-def esperas(monkeypatch):
-    registradas: list[float] = []
-    monkeypatch.setattr("src.agent._aguardar", registradas.append)
-    return registradas
+def waits(monkeypatch):
+    registered_rows: list[float] = []
+    monkeypatch.setattr("src.agent._wait", registered_rows.append)
+    return registered_rows
 
 
-def test_erro_de_limite_gera_nova_tentativa(connection, esperas):
-    tentativas: list[int] = []
-    model = modelo_que_falha_antes_de_responder([limite_atingido()], tentativas)
+def test_rate_limit_error_triggers_a_retry(connection, waits):
+    attempts: list[int] = []
+    model = model_that_fails_before_answering([limit_reached()], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
     assert answer == "Resposta do Tom"
-    assert len(tentativas) == 2
+    assert len(attempts) == 2
 
 
 @pytest.mark.parametrize(
     "retry_after, expected",
     [(7, [7]), (300, [15]), (None, [2])],
 )
-def test_espera_o_tempo_pedido_pelo_provedor_com_teto_de_15_segundos(
-    connection, esperas, retry_after, expected
+def test_waits_the_time_requested_by_the_provider_capped_at_15_seconds(
+    connection, waits, retry_after, expected
 ):
-    model = modelo_que_falha_antes_de_responder([limite_atingido(retry_after)], [])
+    model = model_that_fails_before_answering([limit_reached(retry_after)], [])
 
     with agent.override(model=model):
         respond("Oi", Session(connection, phone=ANA))
 
-    assert esperas == expected
+    assert waits == expected
 
 
-def test_limite_persistente_gera_mensagem_clara_apos_3_tentativas(connection, esperas):
-    tentativas: list[int] = []
-    model = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], tentativas)
+def test_persistent_limit_produces_a_clear_message_after_3_attempts(connection, waits):
+    attempts: list[int] = []
+    model = model_that_fails_before_answering([limit_reached() for _ in range(5)], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_LIMITE
-    assert len(tentativas) == 3
-    assert esperas == [2, 5]
+    assert answer == RATE_LIMIT_MESSAGE
+    assert len(attempts) == 3
+    assert waits == [2, 5]
 
 
-def test_a_conversa_nao_se_perde_quando_o_limite_persiste(connection, esperas):
-    model = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
+def test_the_conversation_is_not_lost_when_the_limit_persists(connection, waits):
+    model = model_that_fails_before_answering([limit_reached() for _ in range(5)], [])
 
     with agent.override(model=model):
         respond("Quanto custa o Takamine GD20?", Session(connection, phone=ANA))
 
     assert conversation_for_display(connection, ANA) == [
         ("user", "Quanto custa o Takamine GD20?"),
-        ("assistant", MENSAGEM_DE_LIMITE),
+        ("assistant", RATE_LIMIT_MESSAGE),
     ]
 
 
@@ -113,18 +113,18 @@ def test_a_conversa_nao_se_perde_quando_o_limite_persiste(connection, esperas):
     "error",
     [ModelTimeoutError("modelo", "sem resposta"), ModelRequestTimeout("modelo", 40)],
 )
-def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa(
-    connection, esperas, error
+def test_call_without_provider_response_produces_a_clear_message_without_retry(
+    connection, waits, error
 ):
-    tentativas: list[int] = []
-    model = modelo_que_falha_antes_de_responder([error], tentativas)
+    attempts: list[int] = []
+    model = model_that_fails_before_answering([error], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_TIMEOUT
-    assert len(tentativas) == 1
-    assert conversation_for_display(connection, ANA) == [("user", "Oi"), ("assistant", MENSAGEM_DE_TIMEOUT)]
+    assert answer == TIMEOUT_MESSAGE
+    assert len(attempts) == 1
+    assert conversation_for_display(connection, ANA) == [("user", "Oi"), ("assistant", TIMEOUT_MESSAGE)]
 
 
 @pytest.mark.parametrize(
@@ -136,16 +136,16 @@ def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa
         sqlite3.OperationalError("no such table: products"),
     ],
 )
-def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, error):
-    model = modelo_que_falha_antes_de_responder([error], [])
+def test_technical_error_produces_a_friendly_message_without_details(connection, waits, error):
+    model = model_that_fails_before_answering([error], [])
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_ERRO_TECNICO
+    assert answer == TECHNICAL_ERROR_MESSAGE
     for detail in ("sem rede", "chave inválida", "erro qualquer", "products"):
         assert detail not in answer
-    assert conversation_for_display(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
+    assert conversation_for_display(connection, ANA)[-1] == ("assistant", TECHNICAL_ERROR_MESSAGE)
 
 
 @pytest.mark.regression
@@ -154,39 +154,39 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, e
         ModelOverloadedError("modelo", "sobrecarga"),
         ModelServerError("modelo", "erro 504"),
     ])
-def test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa(connection, esperas, error):
-    tentativas: list[int] = []
-    model = modelo_que_falha_antes_de_responder([error], tentativas)
+def test_temporary_provider_unavailability_also_triggers_a_retry(connection, waits, error):
+    attempts: list[int] = []
+    model = model_that_fails_before_answering([error], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
     assert answer == "Resposta do Tom"
-    assert len(tentativas) == 2
+    assert len(attempts) == 2
 
 
-def test_cota_esgotada_nao_repete_e_informa_o_limite(connection, esperas):
-    tentativas: list[int] = []
-    model = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], tentativas)
+def test_exhausted_quota_does_not_retry_and_reports_the_limit(connection, waits):
+    attempts: list[int] = []
+    model = model_that_fails_before_answering([ModelQuotaExceededError("modelo", "cota")], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_LIMITE_DIARIO
-    assert len(tentativas) == 1
-    assert esperas == []
+    assert answer == DAILY_LIMIT_MESSAGE
+    assert len(attempts) == 1
+    assert waits == []
 
 
-def test_banco_sem_tabelas_gera_mensagem_amigavel_em_vez_de_traceback(tmp_path):
+def test_database_without_tables_produces_a_friendly_message_instead_of_a_traceback(tmp_path):
     empty = connect(tmp_path / "vazio.db")
 
     answer = respond("Oi", Session(empty, phone=ANA))
 
-    assert answer == MENSAGEM_DE_ERRO_TECNICO
+    assert answer == TECHNICAL_ERROR_MESSAGE
     empty.close()
 
 
-def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_atendimento(connection):
+def test_failure_to_register_the_safe_answer_handoff_does_not_bring_down_the_service(connection):
     connection.execute("DROP TABLE handoffs")
 
     def model(messages, info):
@@ -195,48 +195,48 @@ def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_at
     with agent.override(model=FunctionModel(model)):
         answer = respond("Preço do violão?", Session(connection, phone=ANA))
 
-    assert answer == RESPOSTA_SEGURA_SEM_REGISTRO
+    assert answer == SAFE_ANSWER_WITHOUT_REGISTRATION
 
 
-def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
-    connection, esperas, log_de_limites_temporario
+def test_persistent_limit_is_logged_with_what_the_provider_reported(
+    connection, waits, temporary_limits_log
 ):
     body = {"error": {"details": [{"violations": [{"quotaValue": "20", "quotaId": "PorDia"}]}]}}
     error = ModelHTTPError.for_category(
         ModelRateLimitError, status_code=429, model_name="gemini-3.5-flash-lite", body=body
     )
-    model = modelo_que_falha_antes_de_responder([error, error, error], [])
+    model = model_that_fails_before_answering([error, error, error], [])
 
     with agent.override(model=model):
         respond("Oi", Session(connection, phone=ANA))
 
-    events = [json.loads(l) for l in log_de_limites_temporario.read_text(encoding="utf-8").splitlines()]
+    events = [json.loads(l) for l in temporary_limits_log.read_text(encoding="utf-8").splitlines()]
     assert [(e["status"], e["limit"], e["quota"]) for e in events] == [(429, "20", "PorDia")]
 
 
-def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(connection, esperas, tmp_path, monkeypatch):
+def test_failure_to_write_the_limits_log_does_not_prevent_the_message(connection, waits, tmp_path, monkeypatch):
     # A directory in place of the file makes the write fail.
     monkeypatch.setattr("src.config.LIMITS_LOG_PATH", tmp_path)
-    model = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
+    model = model_that_fails_before_answering([limit_reached() for _ in range(5)], [])
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_LIMITE
+    assert answer == RATE_LIMIT_MESSAGE
 
 
-def test_turno_com_erro_nao_herda_as_ferramentas_do_turno_anterior(connection, esperas):
-    sessao = Session(connection, phone=ANA)
-    sessao.ferramentas = [ChamadaDeFerramenta("search_products", {"search_term": "x"})]
-    model = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
+def test_turn_with_error_does_not_inherit_the_previous_turn_tools(connection, waits):
+    session = Session(connection, phone=ANA)
+    session.tools = [ToolCall("search_products", {"search_term": "x"})]
+    model = model_that_fails_before_answering([limit_reached() for _ in range(5)], [])
 
     with agent.override(model=model):
-        respond("Oi", sessao)
+        respond("Oi", session)
 
-    assert sessao.ferramentas == []
+    assert session.tools == []
 
 
-def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, esperas):
+def test_retry_does_not_inherit_the_state_of_the_failed_attempt(connection, waits):
     calls: list[int] = []
 
     def model(messages, info):
@@ -246,7 +246,7 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, e
                 parts=[ToolCallPart("search_products", {"search_term": "Takamine GD20"})]
             )
         if len(calls) == 2:
-            raise limite_atingido()
+            raise limit_reached()
         return ModelResponse(parts=[TextPart("Resposta do Tom")])
 
     with agent.override(model=FunctionModel(model)):
@@ -257,74 +257,74 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, e
 
 @pytest.mark.regression
 @pytest.mark.parametrize("error", [ValueError("data inválida"), decimal.InvalidOperation(), OverflowError("grande")])
-def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(connection, esperas, error):
-    model = modelo_que_falha_antes_de_responder([error], [])
+def test_unexpected_exception_produces_a_friendly_message_and_stores_the_conversation(connection, waits, error):
+    model = model_that_fails_before_answering([error], [])
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_ERRO_TECNICO
-    assert conversation_for_display(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
+    assert answer == TECHNICAL_ERROR_MESSAGE
+    assert conversation_for_display(connection, ANA)[-1] == ("assistant", TECHNICAL_ERROR_MESSAGE)
 
 
 @pytest.mark.regression
-def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(connection, esperas):
-    tentativas: list[int] = []
-    erros = [ModelServerError("modelo", "erro 504")] * 3
-    model = modelo_que_falha_antes_de_responder(erros, tentativas)
+def test_persistent_server_error_produces_the_technical_message_not_the_rate_limit_one(connection, waits):
+    attempts: list[int] = []
+    errors = [ModelServerError("modelo", "erro 504")] * 3
+    model = model_that_fails_before_answering(errors, attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_ERRO_TECNICO
-    assert len(tentativas) == 3
+    assert answer == TECHNICAL_ERROR_MESSAGE
+    assert len(attempts) == 3
 
 
-def limite_do_provedor(cota: str, retry_delay: str | None = None) -> ModelRateLimitError:
+def provider_limit(quota: str, retry_delay: str | None = None) -> ModelRateLimitError:
     """429 in the Gemini format: the quota violation and, sometimes, the RetryInfo."""
-    detalhes = [{"violations": [{"quotaId": cota, "quotaValue": "15"}]}]
+    details = [{"violations": [{"quotaId": quota, "quotaValue": "15"}]}]
     if retry_delay:
-        detalhes.append({"retryDelay": retry_delay})
+        details.append({"retryDelay": retry_delay})
     return ModelHTTPError.for_category(
         ModelRateLimitError,
         status_code=429,
         model_name="gemini-3.5-flash-lite",
-        body={"error": {"details": detalhes}},
+        body={"error": {"details": details}},
     )
 
 
 @pytest.mark.regression
-def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(connection, esperas):
-    tentativas: list[int] = []
-    error = limite_do_provedor("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
-    model = modelo_que_falha_antes_de_responder([error, error, error], tentativas)
+def test_daily_limit_does_not_retry_and_says_the_service_returns_tomorrow(connection, waits):
+    attempts: list[int] = []
+    error = provider_limit("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+    model = model_that_fails_before_answering([error, error, error], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert len(tentativas) == 1
-    assert esperas == []
-    assert answer == MENSAGEM_DE_LIMITE_DIARIO
+    assert len(attempts) == 1
+    assert waits == []
+    assert answer == DAILY_LIMIT_MESSAGE
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize("retry_delay, expected", [("27s", [15]), ("7.5s", [7.5]), ("lixo", [2])])
-def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
-    connection, esperas, retry_delay, expected
+def test_wait_uses_the_body_retry_delay_when_retry_after_is_empty(
+    connection, waits, retry_delay, expected
 ):
-    error = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", retry_delay)
-    model = modelo_que_falha_antes_de_responder([error], [])
+    error = provider_limit("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", retry_delay)
+    model = model_that_fails_before_answering([error], [])
 
     with agent.override(model=model):
         respond("Oi", Session(connection, phone=ANA))
 
-    assert esperas == expected
+    assert waits == expected
 
 
 @pytest.mark.regression
-def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(connection, esperas):
-    error = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "20s")
-    model = modelo_que_falha_antes_de_responder([error, error, error], [])
+def test_rate_limit_message_does_not_mention_the_ai_service_or_the_provider(connection, waits):
+    error = provider_limit("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "20s")
+    model = model_that_fails_before_answering([error, error, error], [])
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
@@ -333,8 +333,8 @@ def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(connection
 
 
 @pytest.mark.regression
-def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_minuto(connection, esperas):
-    violacoes = [
+def test_daily_limit_is_recognized_even_after_the_per_minute_violation(connection, waits):
+    violations = [
         {"quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"},
         {"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"},
     ]
@@ -342,38 +342,38 @@ def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_min
         ModelRateLimitError,
         status_code=429,
         model_name="gemini-3.5-flash-lite",
-        body={"error": {"details": [{"violations": violacoes}]}},
+        body={"error": {"details": [{"violations": violations}]}},
     )
-    tentativas: list[int] = []
-    model = modelo_que_falha_antes_de_responder([error, error, error], tentativas)
+    attempts: list[int] = []
+    model = model_that_fails_before_answering([error, error, error], attempts)
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert len(tentativas) == 1
-    assert answer == MENSAGEM_DE_LIMITE_DIARIO
+    assert len(attempts) == 1
+    assert answer == DAILY_LIMIT_MESSAGE
 
 
 @pytest.mark.regression
-def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(connection, esperas):
-    model = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
+def test_exhausted_quota_says_the_service_returns_tomorrow(connection, waits):
+    model = model_that_fails_before_answering([ModelQuotaExceededError("modelo", "cota")], [])
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == DAILY_LIMIT_MESSAGE
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize("error", [ValueError("dado inválido"), OSError("disco cheio")])
-def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(connection, esperas, monkeypatch, error):
-    def gravar_com_falha(*arguments, **nomeados):
+def test_any_failure_to_store_the_technical_message_does_not_prevent_the_answer(connection, waits, monkeypatch, error):
+    def write_with_failure(*arguments, **named):
         raise error
 
-    monkeypatch.setattr("src.agent.memory.save_messages", gravar_com_falha)
-    model = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
+    monkeypatch.setattr("src.agent.memory.save_messages", write_with_failure)
+    model = model_that_fails_before_answering([ModelQuotaExceededError("modelo", "cota")], [])
 
     with agent.override(model=model):
         answer = respond("Oi", Session(connection, phone=ANA))
 
-    assert answer == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == DAILY_LIMIT_MESSAGE

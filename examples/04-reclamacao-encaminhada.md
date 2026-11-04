@@ -10,7 +10,7 @@
 > O retorno é feito em até 24 horas úteis, tá?
 > Se quiser aproveitar e me passar o número do pedido, posso verificar os detalhes da sua compra e te ajudar com o processo de troca ou devolução do violão.
 
-Ferramenta usada: `encaminhar_para_atendente(reason="reclamacao", summary=...)`.
+Ferramenta usada: `hand_off_to_staff(reason="reclamacao", summary=...)`.
 
 ## O que a conversa mostra
 

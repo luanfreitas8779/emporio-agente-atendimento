@@ -16,7 +16,7 @@ Ferramenta usada: `search_products(search_term="gianini gf 3d")`.
 > **Tom:** Deixei seu interesse anotado, Ana! Assim que tivermos novidades, você fica sabendo.
 > Quer dar uma olhada em outros violões que temos disponíveis por aqui?
 
-Ferramenta usada: `registrar_interesse(product_id=96)`.
+Ferramenta usada: `register_interest(product_id=96)`.
 
 ## O que a conversa mostra
 

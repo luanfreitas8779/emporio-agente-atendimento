@@ -3,7 +3,7 @@ import sqlite3
 
 import streamlit as st
 
-from src.agent import MENSAGEM_DE_ERRO_TECNICO, Session, respond
+from src.agent import TECHNICAL_ERROR_MESSAGE, Session, respond
 from src.config import DATABASE_PATH
 from src.database import connect
 from src.load_data import database_loaded
@@ -19,10 +19,10 @@ ROTULOS_DAS_FERRAMENTAS = {
     "search_products": "Consulta ao catálogo",
     "get_policies": "Consulta às políticas da loja",
     "calculate_purchase": "Cálculo da compra",
-    "consultar_meus_pedidos": "Consulta aos seus pedidos",
+    "get_my_orders": "Consulta aos seus pedidos",
     "assess_return": "Avaliação de devolução",
-    "registrar_interesse": "Registro de interesse no produto",
-    "encaminhar_para_atendente": "Encaminhamento para a equipe",
+    "register_interest": "Registro de interesse no produto",
+    "hand_off_to_staff": "Encaminhamento para a equipe",
 }
 
 
@@ -30,7 +30,7 @@ ROTULOS_DAS_FERRAMENTAS = {
 FERRAMENTAS_SEM_CADASTRO = frozenset({"search_products", "get_policies", "calculate_purchase"})
 
 
-def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None:
+def exibir(papel: str, text: str, tools: list[dict] | None = None) -> None:
     with st.chat_message(papel):
         if papel == "user":
             # What the customer types is not interpreted: headings, external images, and colors become text.
@@ -39,11 +39,11 @@ def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None
             # Streamlit interprets "$" as a math formula, which breaks the prices.
             st.markdown(text.replace("$", r"\$"))
         # The panel only exists for answers on this screen; the reloaded history does not bring it.
-        if ferramentas is not None:
+        if tools is not None:
             with st.expander("Como o Tom chegou a essa resposta"):
-                if ferramentas:
-                    for chamada in ferramentas:
-                        st.caption(ROTULOS_DAS_FERRAMENTAS.get(chamada["name"], "Consulta interna"))
+                if tools:
+                    for call in tools:
+                        st.caption(ROTULOS_DAS_FERRAMENTAS.get(call["name"], "Consulta interna"))
                 else:
                     st.caption("Nenhuma ferramenta.")
 
@@ -94,15 +94,15 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         connection.close()
     # The last question asked without a phone number is answered again, now with the phone number,
     # unless the answer only used lookups that do not depend on the customer record.
-    perguntas = [m["text"] for m in sem_telefone if m["papel"] == "user"]
-    usadas = {c["name"] for m in sem_telefone[-1:] for c in m.get("ferramentas") or []}
+    questions = [m["text"] for m in sem_telefone if m["papel"] == "user"]
+    usadas = {c["name"] for m in sem_telefone[-1:] for c in m.get("tools") or []}
     if (
         telefone_da_conversa
-        and perguntas
+        and questions
         and not (usadas and usadas <= FERRAMENTAS_SEM_CADASTRO)
         and st.session_state.get("pendente") is None
     ):
-        st.session_state.pendente = {"pergunta": perguntas[-1], "phone": st.session_state.phone}
+        st.session_state.pendente = {"question": questions[-1], "phone": st.session_state.phone}
 
 # On mobile the sidebar starts collapsed and the phone field is hidden.
 if not st.session_state.phone.strip():
@@ -113,28 +113,28 @@ if not st.session_state.messages:
     exibir("assistant", SAUDACAO)
 
 for message in st.session_state.messages:
-    exibir(message["papel"], message["text"], message.get("ferramentas"))
+    exibir(message["papel"], message["text"], message.get("tools"))
 
 # A new message during the answer interrupts the run and leaves the previous one unanswered.
 # That is why the field is locked while there is a pending question (ADR-020). The question
 # keeps the phone number of whoever sent it, which does not change if the sidebar field changes.
 pendente = st.session_state.get("pendente")
-if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
-    st.session_state.messages.append({"papel": "user", "text": pergunta})
-    st.session_state.pendente = {"pergunta": pergunta, "phone": st.session_state.phone}
+if question := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
+    st.session_state.messages.append({"papel": "user", "text": question})
+    st.session_state.pendente = {"question": question, "phone": st.session_state.phone}
     st.rerun()
 
 if pendente is not None:
-    sessao = None
+    session = None
     try:
         try:
-            sessao = Session(connect(DATABASE_PATH), pendente["phone"])
+            session = Session(connect(DATABASE_PATH), pendente["phone"])
             with st.spinner("O Tom está digitando..."):
-                answer = respond(pendente["pergunta"], sessao)
+                answer = respond(pendente["question"], session)
         except Exception:
             # Without this the traceback would reach the customer and the field would stay locked (ADR-020).
             logging.getLogger(__name__).exception("Failed to answer on the screen")
-            answer = MENSAGEM_DE_ERRO_TECNICO
+            answer = TECHNICAL_ERROR_MESSAGE
         # If the screen's phone number changed, the answer was already stored for whoever asked and
         # must not appear in another number's conversation.
         if normalize_phone(pendente["phone"]) == st.session_state.get("conversa_de"):
@@ -142,14 +142,14 @@ if pendente is not None:
                 {
                     "papel": "assistant",
                     "text": answer,
-                    "ferramentas": [
-                        {"name": chamada.name, "arguments": chamada.arguments}
-                        for chamada in (sessao.ferramentas if sessao is not None else [])
+                    "tools": [
+                        {"name": call.name, "arguments": call.arguments}
+                        for call in (session.tools if session is not None else [])
                     ],
                 }
             )
     finally:
-        if sessao is not None:
-            sessao.connection.close()
+        if session is not None:
+            session.connection.close()
         st.session_state.pendente = None
     st.rerun()
