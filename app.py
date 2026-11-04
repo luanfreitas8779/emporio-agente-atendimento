@@ -16,7 +16,7 @@ SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar
 
 # Tool names and arguments are internal: the customer only sees what was looked up.
 ROTULOS_DAS_FERRAMENTAS = {
-    "buscar_produtos": "Consulta ao catálogo",
+    "search_products": "Consulta ao catálogo",
     "get_policies": "Consulta às políticas da loja",
     "calcular_compra": "Cálculo da compra",
     "consultar_meus_pedidos": "Consulta aos seus pedidos",
@@ -27,7 +27,7 @@ ROTULOS_DAS_FERRAMENTAS = {
 
 
 # Lookups that answer the same with or without a registered phone number.
-FERRAMENTAS_SEM_CADASTRO = frozenset({"buscar_produtos", "get_policies", "calcular_compra"})
+FERRAMENTAS_SEM_CADASTRO = frozenset({"search_products", "get_policies", "calcular_compra"})
 
 
 def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None:

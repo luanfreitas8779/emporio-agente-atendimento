@@ -9,7 +9,7 @@
 > **Tom:** Opa, Ana! O Giannini GF-3D Dreadnought Sunburst está sem estoque no momento. 🎸
 > Quer que eu te avise se ele pintar por aqui de novo ou prefere dar uma olhada em outros violões disponíveis?
 
-Ferramenta usada: `buscar_produtos(termo="gianini gf 3d")`.
+Ferramenta usada: `search_products(search_term="gianini gf 3d")`.
 
 > **Cliente:** Quero ser avisado quando chegar
 >

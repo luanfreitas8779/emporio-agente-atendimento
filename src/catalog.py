@@ -4,16 +4,16 @@ import unicodedata
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
-DISPONIVEL = "disponivel"
-INDISPONIVEL = "indisponivel"
-FORA_DE_CATALOGO = "fora_de_catalogo"
-LANCAMENTO = "lancamento"
-PERCENTUAL_PIX = 5
-OBSERVACAO_PIX_EM_PROMOCAO = "O PIX não soma ao desconto da promoção."
+AVAILABLE = "disponivel"
+UNAVAILABLE = "indisponivel"
+DISCONTINUED = "fora_de_catalogo"
+NEW_RELEASE = "lancamento"
+PIX_PERCENT = 5
+PIX_NOTE_ON_PROMOTION = "O PIX não soma ao desconto da promoção."
 # Fields that the record contradicts in another column (DQ-05); the model must not state them.
-CAMPOS_DIVERGENTES = {137: {"strings"}}
+CONFLICTING_FIELDS = {137: {"strings"}}
 # The record has the `specs` keys and some values in English; the customer reads Portuguese.
-NOMES_DAS_ESPECIFICACOES = {
+SPEC_NAMES = {
     "top": "tampo",
     "back_sides": "fundo e laterais",
     "neck": "braço",
@@ -29,157 +29,157 @@ NOMES_DAS_ESPECIFICACOES = {
     "type": "tipo",
     "polyphony": "polifonia",
 }
-VALORES_DAS_ESPECIFICACOES = {
+SPEC_VALUES = {
     "yes": "sim",
     "no": "não",
     "steel": "aço",
     "nylon": "náilon",
     "included": "incluídas",
 }
-TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO = 5
+MIN_LENGTH_FOR_TYPO = 5
 # Connecting words the customer writes that are not part of any name.
-PALAVRAS_DE_LIGACAO = frozenset(
+CONNECTING_WORDS = frozenset(
     "a as o os um uma e ou da das de do dos com para pra no na em".split()
 )
 
 
 @dataclass(frozen=True)
-class Filtros:
+class Filters:
     """What the customer asked for in the search, already normalized."""
 
-    palavras: list[str]
-    categoria: str
-    preco_maximo: float | None
-    somente_disponiveis: bool
-    quantidade: int | None
-    somente_promocao: bool
+    words: list[str]
+    category: str
+    max_price: float | None
+    only_available: bool
+    quantity: int | None
+    only_on_sale: bool
 
 
 @dataclass(frozen=True)
-class Produto:
+class Product:
     id: int
     name: str
-    categoria: str
-    preco: str
-    desconto_percentual: int | None
-    preco_final: str
-    preco_pix: str | None
-    disponibilidade: str
-    especificacoes: dict[str, str]
+    category: str
+    price: str
+    discount_percent: int | None
+    final_price: str
+    pix_price: str | None
+    availability: str
+    specifications: dict[str, str]
     # Only present when the customer asked for a quantity; the exact stock is never exposed.
-    atende_quantidade: bool | None = None
+    meets_quantity: bool | None = None
     # Only present when there is an active promotion, which does not stack with the PIX discount.
-    observacao_pix: str | None = None
-    # The PIX discount ("5%"), present together with preco_pix; the answer may cite it.
-    percentual_pix: str | None = None
+    pix_note: str | None = None
+    # The PIX discount ("5%"), present together with pix_price; the answer may cite it.
+    pix_percent: str | None = None
 
 
 def format_price(cents: int) -> str:
-    reais, resto = divmod(cents, 100)
-    return f"R$ {reais:,}".replace(",", ".") + f",{resto:02d}"
+    reais, remainder = divmod(cents, 100)
+    return f"R$ {reais:,}".replace(",", ".") + f",{remainder:02d}"
 
 
-def normalizar(text: str) -> str:
-    sem_acento = unicodedata.normalize("NFD", text.casefold())
-    return "".join(c for c in sem_acento if not unicodedata.combining(c))
+def normalize(text: str) -> str:
+    without_accents = unicodedata.normalize("NFD", text.casefold())
+    return "".join(c for c in without_accents if not unicodedata.combining(c))
 
 
-def singularizar(text: str) -> str:
+def singularize(text: str) -> str:
     """Reduces each normalized word to the singular, so that "violão" matches "Violões"."""
-    palavras = []
-    for palavra in text.split():
-        if len(palavra) > 3:
+    words = []
+    for word in text.split():
+        if len(word) > 3:
             for plural, singular in (("oes", "ao"), ("aes", "ao"), ("ns", "m"), ("s", "")):
-                if palavra.endswith(plural):
-                    palavra = palavra.removesuffix(plural) + singular
+                if word.endswith(plural):
+                    word = word.removesuffix(plural) + singular
                     break
-        palavras.append(palavra)
-    return " ".join(palavras)
+        words.append(word)
+    return " ".join(words)
 
 
-def _difere_em_ate_um_caractere(a: str, b: str) -> bool:
+def _differs_by_at_most_one_character(a: str, b: str) -> bool:
     """Says whether two words differ by at most one insertion, deletion, or substitution."""
     if abs(len(a) - len(b)) > 1:
         return False
     if len(a) == len(b):
         return sum(x != y for x, y in zip(a, b)) <= 1
-    curta, longa = sorted((a, b), key=len)
-    return any(longa[:i] + longa[i + 1 :] == curta for i in range(len(longa)))
+    short, long_turn = sorted((a, b), key=len)
+    return any(long_turn[:i] + long_turn[i + 1 :] == short for i in range(len(long_turn)))
 
 
-def _contem(palavra: str, name: str) -> bool:
-    return palavra in name
+def _contains(word: str, name: str) -> bool:
+    return word in name
 
 
-def _palavra_aproximada(palavra: str, name: str) -> bool:
+def _approximate_word(word: str, name: str) -> bool:
     """Accepts a typo only in long names; model codes stay exact."""
-    if palavra in name:
+    if word in name:
         return True
-    comprida = len(palavra) >= TAMANHO_MINIMO_PARA_ERRO_DE_DIGITACAO
-    return palavra.isalpha() and comprida and any(
-        _difere_em_ate_um_caractere(palavra, parte) for parte in name.split()
+    long_enough = len(word) >= MIN_LENGTH_FOR_TYPO
+    return word.isalpha() and long_enough and any(
+        _differs_by_at_most_one_character(word, part) for part in name.split()
     )
 
 
-def classificar(status: str, estoque: int) -> str:
+def classify(status: str, stock: int) -> str:
     # The status takes precedence over the stock.
     if status == "discontinued":
-        return FORA_DE_CATALOGO
+        return DISCONTINUED
     if status == "coming_soon":
-        return LANCAMENTO
-    return DISPONIVEL if estoque > 0 else INDISPONIVEL
+        return NEW_RELEASE
+    return AVAILABLE if stock > 0 else UNAVAILABLE
 
 
-def aplicar_desconto(cents: int, percentual: int) -> int:
-    return int((Decimal(cents) * (100 - percentual) / 100).quantize(Decimal(1), ROUND_HALF_UP))
+def apply_discount(cents: int, percent: int) -> int:
+    return int((Decimal(cents) * (100 - percent) / 100).quantize(Decimal(1), ROUND_HALF_UP))
 
 
-def calcular_preco_final(row: sqlite3.Row) -> int:
-    desconto = row["discount_percent"]
-    return aplicar_desconto(row["price_cents"], desconto) if desconto else row["price_cents"]
+def calculate_final_price(row: sqlite3.Row) -> int:
+    discount = row["discount_percent"]
+    return apply_discount(row["price_cents"], discount) if discount else row["price_cents"]
 
 
-def montar_produto(row: sqlite3.Row, quantidade: int | None = None) -> Produto:
-    desconto = row["discount_percent"]
+def build_product(row: sqlite3.Row, quantity: int | None = None) -> Product:
+    discount = row["discount_percent"]
     cents = row["price_cents"]
     # PIX applies to the list price and does not stack with promotions.
-    pix = None if desconto else format_price(aplicar_desconto(cents, PERCENTUAL_PIX))
-    disponibilidade = classificar(row["status"], row["stock_quantity"])
-    atende = None
-    if quantidade is not None:
-        atende = disponibilidade == DISPONIVEL and row["stock_quantity"] >= quantidade
-    return Produto(
+    pix = None if discount else format_price(apply_discount(cents, PIX_PERCENT))
+    availability = classify(row["status"], row["stock_quantity"])
+    meets = None
+    if quantity is not None:
+        meets = availability == AVAILABLE and row["stock_quantity"] >= quantity
+    return Product(
         row["product_id"],
         row["name"],
-        row["categoria"],
+        row["category"],
         format_price(cents),
-        desconto,
-        format_price(calcular_preco_final(row)),
+        discount,
+        format_price(calculate_final_price(row)),
         pix,
-        disponibilidade,
+        availability,
         {
-            NOMES_DAS_ESPECIFICACOES.get(chave, chave): VALORES_DAS_ESPECIFICACOES.get(amount, amount)
-            for chave, amount in json.loads(row["specs"]).items()
-            if chave not in CAMPOS_DIVERGENTES.get(row["product_id"], ())
+            SPEC_NAMES.get(key, key): SPEC_VALUES.get(amount, amount)
+            for key, amount in json.loads(row["specs"]).items()
+            if key not in CONFLICTING_FIELDS.get(row["product_id"], ())
         },
-        atende,
-        OBSERVACAO_PIX_EM_PROMOCAO if desconto else None,
-        None if desconto else f"{PERCENTUAL_PIX}%",
+        meets,
+        PIX_NOTE_ON_PROMOTION if discount else None,
+        None if discount else f"{PIX_PERCENT}%",
     )
 
 
-def buscar_produtos(
+def search_products(
     connection: sqlite3.Connection,
-    termo: str | None = None,
-    categoria: str | None = None,
-    preco_maximo: float | None = None,
-    somente_disponiveis: bool = False,
-    quantidade: int | None = None,
-    somente_promocao: bool = False,
-) -> list[Produto]:
+    search_term: str | None = None,
+    category: str | None = None,
+    max_price: float | None = None,
+    only_available: bool = False,
+    quantity: int | None = None,
+    only_on_sale: bool = False,
+) -> list[Product]:
     rows = connection.execute(
         """
-        SELECT p.product_id, p.name, c.name AS categoria, p.price_cents,
+        SELECT p.product_id, p.name, c.name AS category, p.price_cents,
                p.stock_quantity, p.status, p.specs, pr.discount_percent
         FROM products p
         JOIN categories c ON c.category_id = p.category_id
@@ -188,59 +188,59 @@ def buscar_produtos(
         """
     ).fetchall()
 
-    palavras_do_cliente = normalizar(termo or "").split()
-    palavras = [p for p in palavras_do_cliente if p not in PALAVRAS_DE_LIGACAO]
-    if palavras_do_cliente and not palavras:
+    customer_words = normalize(search_term or "").split()
+    words = [p for p in customer_words if p not in CONNECTING_WORDS]
+    if customer_words and not words:
         # Only connecting words do not say what the customer is looking for.
         return []
-    categoria_normalizada = singularizar(normalizar(categoria or ""))
-    filtros = Filtros(
-        palavras, categoria_normalizada, preco_maximo, somente_disponiveis, quantidade, somente_promocao
+    normalized_category = singularize(normalize(category or ""))
+    filters = Filters(
+        words, normalized_category, max_price, only_available, quantity, only_on_sale
     )
-    produtos = _filtrar(rows, filtros)
-    if not produtos and (palavras or categoria_normalizada):
-        produtos = _filtrar(rows, filtros, aproximado=True)
-    return produtos
+    products = _filter_rows(rows, filters)
+    if not products and (words or normalized_category):
+        products = _filter_rows(rows, filters, approximate=True)
+    return products
 
 
-def _filtrar(rows, filtros: Filtros, aproximado: bool = False):
-    produtos = []
+def _filter_rows(rows, filters: Filters, approximate: bool = False):
+    products = []
     for row in rows:
-        name = normalizar(row["name"])
-        categoria_do_produto = singularizar(normalizar(row["categoria"]))
-        palavras_da_categoria = set(categoria_do_produto.split())
-        casa = _palavra_aproximada if aproximado else _contem
+        name = normalize(row["name"])
+        product_category = singularize(normalize(row["category"]))
+        category_words = set(product_category.split())
+        matches = _approximate_word if approximate else _contains
         # "violão takamine": the category word is not in the product name.
         # "GF3D" and "GF-3D" are the same model: the hyphen does not count in the exact comparison.
-        nome_sem_hifen = name.replace("-", "")
+        name_without_hyphen = name.replace("-", "")
         if not all(
-            casa(palavra, name)
-            or _contem(palavra.replace("-", ""), nome_sem_hifen)
-            or singularizar(palavra) in palavras_da_categoria
-            for palavra in filtros.palavras
+            matches(word, name)
+            or _contains(word.replace("-", ""), name_without_hyphen)
+            or singularize(word) in category_words
+            for word in filters.words
         ):
             continue
         # The category also tolerates a typo, but only after the exact comparison.
-        if filtros.categoria not in categoria_do_produto and not (
-            aproximado
-            and all(_palavra_aproximada(palavra, categoria_do_produto) for palavra in filtros.categoria.split())
+        if filters.category not in product_category and not (
+            approximate
+            and all(_approximate_word(word, product_category) for word in filters.category.split())
         ):
             continue
-        if filtros.somente_promocao and not row["discount_percent"]:
+        if filters.only_on_sale and not row["discount_percent"]:
             continue
         if (
-            filtros.preco_maximo is not None
-            and calcular_preco_final(row) > Decimal(str(filtros.preco_maximo)) * 100
+            filters.max_price is not None
+            and calculate_final_price(row) > Decimal(str(filters.max_price)) * 100
         ):
             continue
-        produto = montar_produto(row, filtros.quantidade)
-        if filtros.somente_disponiveis and produto.disponibilidade != DISPONIVEL:
+        product = build_product(row, filters.quantity)
+        if filters.only_available and product.availability != AVAILABLE:
             continue
-        produtos.append(produto)
-    return produtos
+        products.append(product)
+    return products
 
 
-def _linha_de_preco(connection: sqlite3.Connection, produto_id: int) -> sqlite3.Row | None:
+def _price_row(connection: sqlite3.Connection, product_id: int) -> sqlite3.Row | None:
     return connection.execute(
         """
         SELECT p.name, p.price_cents, p.stock_quantity, p.status, pr.discount_percent
@@ -248,44 +248,44 @@ def _linha_de_preco(connection: sqlite3.Connection, produto_id: int) -> sqlite3.
         LEFT JOIN promotions pr ON pr.product_id = p.product_id AND pr.is_active = 1
         WHERE p.product_id = ?
         """,
-        (produto_id,),
+        (product_id,),
     ).fetchone()
 
 
-def preco_final_em_centavos(connection: sqlite3.Connection, produto_id: int) -> int | None:
-    row = _linha_de_preco(connection, produto_id)
-    return calcular_preco_final(row) if row else None
+def final_price_cents(connection: sqlite3.Connection, product_id: int) -> int | None:
+    row = _price_row(connection, product_id)
+    return calculate_final_price(row) if row else None
 
 
 @dataclass(frozen=True)
-class DadosParaConta:
+class PricingData:
     name: str
-    preco_final: int
+    final_price: int
     # Paying with PIX: the discount applies to the list price and does not stack with the promotion.
-    preco_no_pix: int
-    em_promocao: bool
-    disponibilidade: str
-    estoque: int
+    price_with_pix: int
+    on_promotion: bool
+    availability: str
+    stock: int
 
 
-def dados_para_conta(connection: sqlite3.Connection, produto_id: int) -> DadosParaConta | None:
-    row = _linha_de_preco(connection, produto_id)
+def pricing_data(connection: sqlite3.Connection, product_id: int) -> PricingData | None:
+    row = _price_row(connection, product_id)
     if row is None:
         return None
-    em_promocao = bool(row["discount_percent"])
-    preco_final = calcular_preco_final(row)
-    return DadosParaConta(
+    on_promotion = bool(row["discount_percent"])
+    final_price = calculate_final_price(row)
+    return PricingData(
         row["name"],
-        preco_final,
-        preco_final if em_promocao else aplicar_desconto(row["price_cents"], PERCENTUAL_PIX),
-        em_promocao,
-        classificar(row["status"], row["stock_quantity"]),
+        final_price,
+        final_price if on_promotion else apply_discount(row["price_cents"], PIX_PERCENT),
+        on_promotion,
+        classify(row["status"], row["stock_quantity"]),
         row["stock_quantity"],
     )
 
 
-def nome_do_produto(connection: sqlite3.Connection, produto_id: int) -> str | None:
+def product_name(connection: sqlite3.Connection, product_id: int) -> str | None:
     row = connection.execute(
-        "SELECT name FROM products WHERE product_id = ?", (produto_id,)
+        "SELECT name FROM products WHERE product_id = ?", (product_id,)
     ).fetchone()
     return row["name"] if row else None

@@ -1,6 +1,6 @@
 import pytest
 
-from src.catalog import buscar_produtos
+from src.catalog import search_products
 from src.database import connect
 from src.load_data import carregar_dados
 from src.restock import ErroDeReposicao, principal, repor_estoque
@@ -11,13 +11,13 @@ GIANNINI_GF_3D = 96
 
 def test_reposicao_deixa_o_giannini_gf_3d_disponivel_sem_alterar_a_origem(connection):
     csv_antes = (DATA_DIR / "products.csv").read_bytes()
-    (antes,) = buscar_produtos(connection, "Giannini GF-3D")
-    assert antes.disponibilidade == "indisponivel"
+    (antes,) = search_products(connection, "Giannini GF-3D")
+    assert antes.availability == "indisponivel"
 
     repor_estoque(connection, GIANNINI_GF_3D, 5)
 
-    (depois,) = buscar_produtos(connection, "Giannini GF-3D")
-    assert depois.disponibilidade == "disponivel"
+    (depois,) = search_products(connection, "Giannini GF-3D")
+    assert depois.availability == "disponivel"
     assert (DATA_DIR / "products.csv").read_bytes() == csv_antes
 
 
@@ -26,19 +26,19 @@ def test_recusa_produto_inexistente(connection):
         repor_estoque(connection, 99999, 5)
 
 
-@pytest.mark.parametrize("quantidade", [0, -3])
-def test_recusa_quantidade_menor_que_um(connection, quantidade):
+@pytest.mark.parametrize("quantity", [0, -3])
+def test_recusa_quantidade_menor_que_um(connection, quantity):
     with pytest.raises(ErroDeReposicao, match="quantity"):
-        repor_estoque(connection, GIANNINI_GF_3D, quantidade)
+        repor_estoque(connection, GIANNINI_GF_3D, quantity)
 
-    (produto,) = buscar_produtos(connection, "Giannini GF-3D")
-    assert produto.disponibilidade == "indisponivel"
+    (product,) = search_products(connection, "Giannini GF-3D")
+    assert product.availability == "indisponivel"
 
 
-@pytest.mark.parametrize("produto", [130, 136])  # new release and discontinued
-def test_recusa_produto_que_nao_esta_ativo(connection, produto):
+@pytest.mark.parametrize("product", [130, 136])  # new release and discontinued
+def test_recusa_produto_que_nao_esta_ativo(connection, product):
     with pytest.raises(ErroDeReposicao, match="not active"):
-        repor_estoque(connection, produto, 5)
+        repor_estoque(connection, product, 5)
 
 
 def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, capsys):
@@ -46,14 +46,14 @@ def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, ca
     connection = connect(banco)
     carregar_dados(connection, DATA_DIR)
 
-    codigo = principal(["96", "--quantidade", "3", "--banco", str(banco)])
+    codigo = principal(["96", "--quantity", "3", "--banco", str(banco)])
 
     assert codigo == 0
     assert "3" in capsys.readouterr().out
-    assert buscar_produtos(connection, "Giannini GF-3D")[0].disponibilidade == "disponivel"
+    assert search_products(connection, "Giannini GF-3D")[0].availability == "disponivel"
 
     carregar_dados(connection, DATA_DIR)
-    assert buscar_produtos(connection, "Giannini GF-3D")[0].disponibilidade == "indisponivel"
+    assert search_products(connection, "Giannini GF-3D")[0].availability == "indisponivel"
     connection.close()
 
 

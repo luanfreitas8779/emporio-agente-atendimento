@@ -20,7 +20,7 @@ def modelo_que_consulta_o_preco(
 ) -> ModelResponse:
     if len(mensagens) == 1:
         return ModelResponse(
-            parts=[ToolCallPart("buscar_produtos", {"termo": "Takamine GD20"})]
+            parts=[ToolCallPart("search_products", {"search_term": "Takamine GD20"})]
         )
     resultado = mensagens[-1].parts[0].content
     return ModelResponse(parts=[TextPart(f"Encontrei: {resultado}")])
@@ -49,13 +49,13 @@ def modelo_que_busca_violoes_disponiveis_ate_1000(
 ) -> ModelResponse:
     if len(mensagens) == 1:
         argumentos = {
-            "categoria": "Violões",
-            "preco_maximo": 1000,
-            "somente_disponiveis": True,
+            "category": "Violões",
+            "max_price": 1000,
+            "only_available": True,
         }
-        return ModelResponse(parts=[ToolCallPart("buscar_produtos", argumentos)])
-    produtos = mensagens[-1].parts[0].content
-    return ModelResponse(parts=[TextPart(str(len(produtos)))])
+        return ModelResponse(parts=[ToolCallPart("search_products", argumentos)])
+    products = mensagens[-1].parts[0].content
+    return ModelResponse(parts=[TextPart(str(len(products)))])
 
 
 def test_agente_lista_os_12_violoes_disponiveis_ate_1000_reais(connection):
@@ -69,9 +69,9 @@ def test_agente_lista_os_12_violoes_disponiveis_ate_1000_reais(connection):
 
 def modelo_que_lista_as_promocoes_ativas(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     if len(mensagens) == 1:
-        return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"somente_promocao": True})])
-    produtos = mensagens[-1].parts[0].content
-    rows = [f"{p.name}: {p.preco}, {p.desconto_percentual}%, {p.preco_final}" for p in produtos]
+        return ModelResponse(parts=[ToolCallPart("search_products", {"only_on_sale": True})])
+    products = mensagens[-1].parts[0].content
+    rows = [f"{p.name}: {p.price}, {p.discount_percent}%, {p.final_price}" for p in products]
     return ModelResponse(parts=[TextPart("\n".join(rows))])
 
 
@@ -87,22 +87,22 @@ def modelo_que_sugere_alternativas_ao_produto_indisponivel(
     mensagens: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     resultados = [
-        parte.content
+        part.content
         for mensagem in mensagens
-        for parte in mensagem.parts
-        if parte.part_kind == "tool-return"
+        for part in mensagem.parts
+        if part.part_kind == "tool-return"
     ]
     if not resultados:
         return ModelResponse(
-            parts=[ToolCallPart("buscar_produtos", {"termo": "Giannini GF-3D"})]
+            parts=[ToolCallPart("search_products", {"search_term": "Giannini GF-3D"})]
         )
     if len(resultados) == 1:
         (giannini,) = resultados[0]
-        assert giannini.disponibilidade == "indisponivel"
-        argumentos = {"categoria": giannini.categoria, "somente_disponiveis": True}
-        return ModelResponse(parts=[ToolCallPart("buscar_produtos", argumentos)])
-    nomes = [produto.name for produto in resultados[1]]
-    return ModelResponse(parts=[TextPart("; ".join(nomes))])
+        assert giannini.availability == "indisponivel"
+        argumentos = {"category": giannini.category, "only_available": True}
+        return ModelResponse(parts=[ToolCallPart("search_products", argumentos)])
+    names = [product.name for product in resultados[1]]
+    return ModelResponse(parts=[TextPart("; ".join(names))])
 
 
 def test_agente_encontra_alternativas_disponiveis_para_produto_sem_estoque(connection):
@@ -278,9 +278,9 @@ def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(connection):
 def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
     def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         pediu_correcao = any(
-            getattr(parte, "outcome", None) == "retried" or parte.part_kind == "retry-prompt"
+            getattr(part, "outcome", None) == "retried" or part.part_kind == "retry-prompt"
             for mensagem in mensagens
-            for parte in mensagem.parts
+            for part in mensagem.parts
         )
         if pediu_correcao:
             return ModelResponse(parts=[TextPart("argumento recusado")])
@@ -296,7 +296,7 @@ def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
     [
         ("get_policies", {"section": "pagamentos", "amount": -5}),
         ("get_policies", {"section": "pagamentos", "amount": 100, "installments": 0}),
-        ("buscar_produtos", {"preco_maximo": -1}),
+        ("search_products", {"max_price": -1}),
         ("consultar_meus_pedidos", {"numero_pedido": 0}),
     ],
 )
@@ -323,10 +323,10 @@ def modelo_que_lista_as_perguntas_vistas(
     mensagens: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     perguntas = [
-        parte.content
+        part.content
         for mensagem in mensagens
-        for parte in mensagem.parts
-        if parte.part_kind == "user-prompt"
+        for part in mensagem.parts
+        if part.part_kind == "user-prompt"
     ]
     return ModelResponse(parts=[TextPart(" | ".join(perguntas))])
 
@@ -404,7 +404,7 @@ def modelo_que_repete_um_preco_de_turno_anterior(
     ultima = mensagens[-1].parts[0]
     if ultima.part_kind == "user-prompt" and ultima.content == "Quanto custa?":
         return ModelResponse(
-            parts=[ToolCallPart("buscar_produtos", {"termo": "Takamine GD20"})]
+            parts=[ToolCallPart("search_products", {"search_term": "Takamine GD20"})]
         )
     if ultima.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("Custa R$ 2.199,00")])
@@ -429,10 +429,10 @@ def modelo_que_inventa_um_preco_ate_a_pergunta_seguinte(
     # The correction requested by the guardrail also arrives as a customer message, so
     # the model insists while the next question has not appeared yet.
     perguntas = [
-        parte.content
+        part.content
         for mensagem in mensagens
-        for parte in mensagem.parts
-        if parte.part_kind == "user-prompt"
+        for part in mensagem.parts
+        if part.part_kind == "user-prompt"
     ]
     if "Preço do violão?" in perguntas and "Oi" not in perguntas:
         return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
@@ -468,7 +468,7 @@ def modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes(
     ultima = mensagens[-1].parts[0]
     if ultima.part_kind == "user-prompt" and ultima.content == "Tem o Giannini?":
         return ModelResponse(
-            parts=[ToolCallPart("buscar_produtos", {"termo": "Giannini GF-3D"})]
+            parts=[ToolCallPart("search_products", {"search_term": "Giannini GF-3D"})]
         )
     if ultima.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("ok")])
@@ -533,7 +533,7 @@ def modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes(
 ) -> ModelResponse:
     ultima = mensagens[-1].parts[0]
     if ultima.part_kind == "user-prompt" and ultima.content == "Quais violões?":
-        return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"categoria": "Violões"})])
+        return ModelResponse(parts=[ToolCallPart("search_products", {"category": "Violões"})])
     if ultima.part_kind == "tool-return":
         return ModelResponse(parts=[TextPart("ok")])
     return ModelResponse(parts=[TextPart(info.instructions or "")])
@@ -755,9 +755,9 @@ def modelo_que_retoma_o_interesse(mensagens: list[ModelMessage], info: AgentInfo
     """Reads the interest's name in the context and looks up the catalog, as the prompt says."""
     if len(mensagens) == 1:
         name = info.instructions.split("Interesses pendentes: ")[1].split(".")[0].split(";")[0]
-        return ModelResponse(parts=[ToolCallPart("buscar_produtos", {"termo": name})])
-    (produto,) = mensagens[-1].parts[0].content
-    return ModelResponse(parts=[TextPart(f"{produto.name}: {produto.disponibilidade}")])
+        return ModelResponse(parts=[ToolCallPart("search_products", {"search_term": name})])
+    (product,) = mensagens[-1].parts[0].content
+    return ModelResponse(parts=[TextPart(f"{product.name}: {product.availability}")])
 
 
 def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(connection):
@@ -794,7 +794,7 @@ def test_busca_com_varios_produtos_limpa_o_foco(connection):
     capturados: list = []
 
     with agente.override(
-        model=FunctionModel(modelo_que_chama("buscar_produtos", {"categoria": "Violões"}, capturados))
+        model=FunctionModel(modelo_que_chama("search_products", {"category": "Violões"}, capturados))
     ):
         responder("Quais violões vocês têm?", Sessao(connection, phone=ANA))
 
@@ -806,7 +806,7 @@ def test_busca_sem_resultado_limpa_o_foco(connection):
     capturados: list = []
 
     with agente.override(
-        model=FunctionModel(modelo_que_chama("buscar_produtos", {"termo": "saxofone"}, capturados))
+        model=FunctionModel(modelo_que_chama("search_products", {"search_term": "saxofone"}, capturados))
     ):
         responder("Tem saxofone?", Sessao(connection, phone=ANA))
 
@@ -817,15 +817,15 @@ def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(conne
     ids = [row[0] for row in connection.execute(
         "SELECT product_id FROM products WHERE status = 'active' ORDER BY product_id LIMIT 6"
     )]
-    nomes = [catalog.nome_do_produto(connection, i) for i in ids]
-    for produto in ids:
-        registrar(connection, ANA, produto)
+    names = [catalog.product_name(connection, i) for i in ids]
+    for product in ids:
+        registrar(connection, ANA, product)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Chegou?", Sessao(connection, phone=ANA))
 
-    assert nomes[0] not in instrucoes
-    assert all(name in instrucoes for name in nomes[1:])
+    assert names[0] not in instrucoes
+    assert all(name in instrucoes for name in names[1:])
     assert "e mais 1" in instrucoes
 
 
@@ -913,7 +913,7 @@ def test_sessao_registra_as_ferramentas_usadas_no_turno_com_os_argumentos(connec
         responder("Quanto custa o Takamine GD20?", sessao)
 
     assert [(c.name, c.argumentos) for c in sessao.ferramentas] == [
-        ("buscar_produtos", {"termo": "Takamine GD20"})
+        ("search_products", {"search_term": "Takamine GD20"})
     ]
 
 
@@ -997,7 +997,7 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
         ("consultar_meus_pedidos", {"numero_pedido": 10**30}),
         ("avaliar_devolucao", {"numero_pedido": 10**30, "motivo": "arrependimento", "canal": "online"}),
         ("registrar_interesse", {"product_id": 10**30}),
-        ("buscar_produtos", {"preco_maximo": 1e33}),
+        ("search_products", {"max_price": 1e33}),
     ],
 )
 @pytest.mark.regression
@@ -1016,15 +1016,15 @@ def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(connection, ferramenta,
 def test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida(connection):
     retornos: list = []
     modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(
-        "buscar_produtos", {"termo": "Yamaha C40", "quantidade": 10}, retornos
+        "search_products", {"search_term": "Yamaha C40", "quantity": 10}, retornos
     )
 
     with agente.override(model=modelo):
         responder("Preciso de 10 Yamaha C40", Sessao(connection, phone=ANA))
 
-    (produto,) = retornos[0].content
-    assert produto.atende_quantidade is True
-    assert not hasattr(produto, "estoque")
+    (product,) = retornos[0].content
+    assert product.meets_quantity is True
+    assert not hasattr(product, "stock")
 
 
 def modelo_que_responde_em_sequencia(*textos: str):
@@ -1208,7 +1208,7 @@ def test_resposta_pode_citar_a_data_de_amanha_da_sessao(connection):
 
 @pytest.mark.regression
 def test_parcelas_sem_valor_usam_o_preco_do_produto_em_foco(connection):
-    (ukulele,) = catalog.buscar_produtos(connection, termo="Kala KA-C")
+    (ukulele,) = catalog.search_products(connection, search_term="Kala KA-C")
     retornos: list = []
     modelo = FunctionModel(
         modelo_que_chama("get_policies", {"section": "pagamentos", "installments": 6}, retornos)
@@ -1232,16 +1232,16 @@ def test_parcelas_sem_valor_e_sem_produto_em_foco_pedem_o_produto(connection):
     assert "atende" not in retorno.content
 
 
-def id_do_produto(connection, termo: str) -> int:
-    (produto,) = catalog.buscar_produtos(connection, termo=termo)
-    return produto.id
+def id_do_produto(connection, search_term: str) -> int:
+    (product,) = catalog.search_products(connection, search_term=search_term)
+    return product.id
 
 
 def conta_pela_ferramenta(connection, *itens: tuple[str, int]):
     argumentos = {
         "itens": [
-            {"product_id": id_do_produto(connection, termo), "quantidade": quantidade}
-            for termo, quantidade in itens
+            {"product_id": id_do_produto(connection, search_term), "quantity": quantity}
+            for search_term, quantity in itens
         ]
     }
     return chamar_ferramenta(connection, ANA, "calcular_compra", argumentos).content
@@ -1252,7 +1252,7 @@ def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(connection):
     resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 2))
 
     assert resultado.total == "R$ 4.398,00"
-    assert [(i.name, i.quantidade, i.subtotal) for i in resultado.itens] == [
+    assert [(i.name, i.quantity, i.subtotal) for i in resultado.itens] == [
         ("Takamine GD20 Dreadnought Natural", 2, "R$ 4.398,00")
     ]
 
@@ -1297,7 +1297,7 @@ def test_diferenca_so_existe_para_exatamente_dois_itens(connection):
 @pytest.mark.regression
 def test_produto_inexistente_na_conta_e_recusado_sem_excecao(connection):
     retorno = chamar_ferramenta(
-        connection, ANA, "calcular_compra", {"itens": [{"product_id": 999999, "quantidade": 1}]}
+        connection, ANA, "calcular_compra", {"itens": [{"product_id": 999999, "quantity": 1}]}
     )
 
     assert retorno.content == "Produto 999999 não encontrado: nenhuma conta foi feita."
@@ -1306,7 +1306,7 @@ def test_produto_inexistente_na_conta_e_recusado_sem_excecao(connection):
 def modelo_que_responde_o_total(chama_a_ferramenta: bool):
     def modelo(mensagens, info):
         if chama_a_ferramenta and len(mensagens) == 1:
-            argumentos = {"itens": [{"product_id": 95, "quantidade": 2}]}
+            argumentos = {"itens": [{"product_id": 95, "quantity": 2}]}
             return ModelResponse(parts=[ToolCallPart("calcular_compra", argumentos)])
         return ModelResponse(parts=[TextPart("Duas unidades ficam em R$ 4.398,00.")])
 
@@ -1354,15 +1354,15 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    ("termo", "situacao"),
+    ("search_term", "situacao"),
     [
         ("Giannini GF-3D", "sem estoque"),
         ("Ibanez Bass 2X", "fora de catálogo"),
         ("Kala KA-ABP-CTG", "lançamento"),
     ],
 )
-def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, termo, situacao):
-    resultado = conta_pela_ferramenta(connection, (termo, 1))
+def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, search_term, situacao):
+    resultado = conta_pela_ferramenta(connection, (search_term, 1))
 
     assert resultado.aviso is not None
     assert situacao in resultado.aviso
@@ -1377,7 +1377,7 @@ def test_conta_de_produto_disponivel_nao_traz_aviso(connection):
 def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(connection):
     resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 1), ("Yamaha C40", 2))
 
-    assert [(i.name, i.quantidade, i.subtotal) for i in resultado.itens] == [
+    assert [(i.name, i.quantity, i.subtotal) for i in resultado.itens] == [
         ("Yamaha C40 Nylon Natural", 3, "R$ 1.799,70")
     ]
     assert resultado.total == "R$ 1.799,70"
@@ -1388,11 +1388,11 @@ def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(
 def test_conta_com_produto_em_promocao_repassa_a_observacao_do_pix(connection):
     resultado = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
-    assert resultado.observacao_pix == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
+    assert resultado.pix_note == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
 
 
 def test_conta_sem_promocao_nao_traz_observacao_do_pix(connection):
-    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).observacao_pix is None
+    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).pix_note is None
 
 
 @pytest.mark.regression
@@ -1406,7 +1406,7 @@ def test_quantidade_acima_do_estoque_traz_aviso_na_conta(connection):
 
 @pytest.mark.regression
 def test_pergunta_de_parcelamento_sem_numero_de_parcelas_usa_o_produto_em_foco(connection):
-    (ukulele,) = catalog.buscar_produtos(connection, termo="Kala KA-C")
+    (ukulele,) = catalog.search_products(connection, search_term="Kala KA-C")
     retornos: list = []
     modelo = FunctionModel(modelo_que_chama("get_policies", {"section": "pagamentos"}, retornos))
     salvar_estado(connection, ANA, Estado(produto_em_foco=ukulele.id))

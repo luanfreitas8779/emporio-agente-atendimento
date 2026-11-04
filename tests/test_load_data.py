@@ -1,6 +1,6 @@
 import pytest
 
-from src.catalog import buscar_produtos
+from src.catalog import search_products
 from src.database import connect
 from src.load_data import (
     ErroDeCarga,
@@ -14,13 +14,13 @@ from src.orders import consultar_pedidos, identificar_cliente
 from tests.conftest import DATA_DIR
 
 
-def escrever_catalogo(pasta, produto):
+def escrever_catalogo(pasta, product):
     (pasta / "categories.csv").write_text(
         "category_id,name,description\n1,Guitarras,Elétricas\n", encoding="utf-8"
     )
     (pasta / "products.csv").write_text(
         "product_id,price_brl,name,category_id,description,stock_quantity,status,specs,created_at\n"
-        f"{produto}\n",
+        f"{product}\n",
         encoding="utf-8",
     )
 
@@ -28,7 +28,7 @@ def escrever_catalogo(pasta, produto):
 def test_recarregar_recria_o_catalogo_sem_duplicar_produtos(connection):
     carregar_catalogo(connection, DATA_DIR)
 
-    assert len(buscar_produtos(connection, termo="Takamine GD20")) == 1
+    assert len(search_products(connection, search_term="Takamine GD20")) == 1
 
 
 @pytest.mark.regression
@@ -135,8 +135,8 @@ def test_interrompe_a_carga_quando_o_total_do_pedido_e_invalido(tmp_path):
         )
 
 
-def carregar_produtos_de(pasta, produtos):
-    escrever_catalogo(pasta, produtos)
+def carregar_produtos_de(pasta, products):
+    escrever_catalogo(pasta, products)
     (pasta / "promotions.csv").write_text(
         "promotion_id,product_id,discount_percent,description,is_active\n", encoding="utf-8"
     )
@@ -190,7 +190,7 @@ def test_falha_na_carga_preserva_o_banco_anterior(connection, tmp_path):
     with pytest.raises(ErroDeCarga):
         carregar_catalogo(connection, tmp_path)
 
-    assert len(buscar_produtos(connection, termo="Takamine GD20")) == 1
+    assert len(search_products(connection, search_term="Takamine GD20")) == 1
 
 
 def carregar_clientes_de(pasta, *clientes):

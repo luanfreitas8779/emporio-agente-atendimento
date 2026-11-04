@@ -49,7 +49,7 @@ def test_pedido_mostra_itens_data_e_pagamento(connection):
 
     assert pedido.order_date == "15/02/2026"
     assert pedido.pagamento == "débito"
-    assert [(i.name, i.quantidade) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
+    assert [(i.name, i.quantity) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
 
 
 def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(connection):
@@ -58,7 +58,7 @@ def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(connecti
 
     assert pedido.total == "R$ 3.450,00"
     assert pedido.pagamento == "cartão de crédito em 12x"
-    assert [(i.name, i.quantidade) for i in pedido.itens] == [
+    assert [(i.name, i.quantity) for i in pedido.itens] == [
         ("Kala KA-ABP-CTG Barítono Cedar", 2)
     ]
 

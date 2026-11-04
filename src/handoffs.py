@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from enum import StrEnum
 
-from src.catalog import normalizar
+from src.catalog import normalize
 from src.memory import agora
 from src.phone import normalize_phone
 
@@ -22,8 +22,8 @@ PALAVRAS_SEM_ASSUNTO = {
 
 def _assunto(resumo: str) -> set[str]:
     """Words that identify the case: those with 5 letters or more, without the common ones, and the numbers."""
-    palavras = re.findall(r"\w+", normalizar(resumo))
-    return {p for p in palavras if (len(p) >= 5 or p.isdigit()) and p not in PALAVRAS_SEM_ASSUNTO}
+    words = re.findall(r"\w+", normalize(resumo))
+    return {p for p in words if (len(p) >= 5 or p.isdigit()) and p not in PALAVRAS_SEM_ASSUNTO}
 
 
 def _mesmo_assunto(anterior: str, resumo: str) -> bool:
@@ -51,15 +51,15 @@ class Resultado(StrEnum):
 
 
 def registrar(connection: sqlite3.Connection, phone: str, motivo: Motivo, resumo: str) -> Resultado:
-    chave = normalize_phone(phone)
-    if chave is None:
+    key = normalize_phone(phone)
+    if key is None:
         return Resultado.TELEFONE_INVALIDO
     resumo = resumo.strip()[:MAX_RESUMO].strip()
     if not resumo:
         return Resultado.RESUMO_INVALIDO
     corte = datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO
     anteriores = connection.execute(
-        "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (chave, motivo)
+        "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (key, motivo)
     ).fetchall()
     # The same summary is a repeat at any time; another summary only within the window and, for a
     # complaint, only if it is about the same subject.
@@ -75,7 +75,7 @@ def registrar(connection: sqlite3.Connection, phone: str, motivo: Motivo, resumo
         return Resultado.JA_REGISTRADO
     connection.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
-        (chave, motivo, resumo, agora()),
+        (key, motivo, resumo, agora()),
     )
     connection.commit()
     return Resultado.REGISTRADO

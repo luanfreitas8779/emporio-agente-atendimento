@@ -30,7 +30,7 @@ class Cliente:
 @dataclass(frozen=True)
 class ItemPedido:
     name: str
-    quantidade: int
+    quantity: int
 
 
 @dataclass_pydantic(frozen=True)

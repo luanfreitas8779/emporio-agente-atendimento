@@ -99,8 +99,8 @@ def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
 
 
 def _ler_mensagens(connection: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
-    chave = normalize_phone(phone or "")
-    if chave is None:
+    key = normalize_phone(phone or "")
+    if key is None:
         return []
     rows = connection.execute(
         """
@@ -108,7 +108,7 @@ def _ler_mensagens(connection: sqlite3.Connection, phone: str | None) -> list[Mo
         JOIN conversations c ON c.id = m.conversation_id
         WHERE c.phone = ? ORDER BY m.id
         """,
-        (chave,),
+        (key,),
     ).fetchall()
     mensagens: list[ModelMessage] = []
     for row in rows:
@@ -151,16 +151,16 @@ def exibir_conversa(connection: sqlite3.Connection, phone: str | None) -> list[t
 def salvar_mensagens(
     connection: sqlite3.Connection, phone: str | None, mensagens: list[ModelMessage]
 ) -> None:
-    chave = normalize_phone(phone or "")
-    if chave is None:
+    key = normalize_phone(phone or "")
+    if key is None:
         return
     momento = agora()
     connection.execute(
         "INSERT INTO conversations (phone, created_at, updated_at) VALUES (?, ?, ?) "
         "ON CONFLICT (phone) DO UPDATE SET updated_at = excluded.updated_at",
-        (chave, momento, momento),
+        (key, momento, momento),
     )
-    conversa = connection.execute("SELECT id FROM conversations WHERE phone = ?", (chave,)).fetchone()
+    conversa = connection.execute("SELECT id FROM conversations WHERE phone = ?", (key,)).fetchone()
     connection.executemany(
         "INSERT INTO messages (conversation_id, content, created_at) VALUES (?, ?, ?)",
         [
@@ -172,17 +172,17 @@ def salvar_mensagens(
 
 
 def carregar_estado(connection: sqlite3.Connection, phone: str | None) -> Estado:
-    chave = normalize_phone(phone or "")
+    key = normalize_phone(phone or "")
     row = connection.execute(
         "SELECT pedido_em_analise, produto_em_foco FROM conversation_state WHERE phone = ?",
-        (chave,),
+        (key,),
     ).fetchone()
     return Estado(row["pedido_em_analise"], row["produto_em_foco"]) if row else Estado()
 
 
 def salvar_estado(connection: sqlite3.Connection, phone: str | None, estado: Estado) -> None:
-    chave = normalize_phone(phone or "")
-    if chave is None:
+    key = normalize_phone(phone or "")
+    if key is None:
         return
     connection.execute(
         """
@@ -193,6 +193,6 @@ def salvar_estado(connection: sqlite3.Connection, phone: str | None, estado: Est
             produto_em_foco = excluded.produto_em_foco,
             updated_at = excluded.updated_at
         """,
-        (chave, estado.pedido_em_analise, estado.produto_em_foco, agora()),
+        (key, estado.pedido_em_analise, estado.produto_em_foco, agora()),
     )
     connection.commit()

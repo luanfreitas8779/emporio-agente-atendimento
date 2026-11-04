@@ -216,7 +216,7 @@ def test_texto_do_cliente_e_exibido_literal_sem_interpretar_markdown(tela):
 def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(tela, monkeypatch):
     def responder_com_ferramentas(mensagem, sessao):
         sessao.ferramentas = [
-            ChamadaDeFerramenta("buscar_produtos", {"termo": "violão"}),
+            ChamadaDeFerramenta("search_products", {"search_term": "violão"}),
             ChamadaDeFerramenta("consultar_meus_pedidos", {"customer_id": 1}),
         ]
         return "Olá!"
@@ -252,7 +252,7 @@ def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, mon
 
     def responder_com_catalogo(mensagem, sessao):
         chamadas.append(sessao.phone)
-        sessao.ferramentas = [ChamadaDeFerramenta("buscar_produtos", {"termo": "violão"})]
+        sessao.ferramentas = [ChamadaDeFerramenta("search_products", {"search_term": "violão"})]
         return "Custa R$ 100,00."
 
     monkeypatch.setattr("src.agent.responder", responder_com_catalogo)

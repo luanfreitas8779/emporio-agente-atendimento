@@ -31,7 +31,7 @@ def perguntar(connection, mensagem, ferramenta, argumentos, respostas, chamadas=
         return responder(mensagem, Sessao(connection, phone=ANA))
 
 
-TAKAMINE = ("buscar_produtos", {"termo": "Takamine GD20"})
+TAKAMINE = ("search_products", {"search_term": "Takamine GD20"})
 
 
 def test_resposta_com_preco_inventado_e_corrigida_pelo_modelo(connection):
@@ -88,8 +88,8 @@ def test_preco_inventado_persistente_vira_resposta_segura(connection):
             "A entrega está prevista para 28/02/2026.",
         ),
         (
-            "buscar_produtos",
-            {"termo": "Crafter HT-100"},
+            "search_products",
+            {"search_term": "Crafter HT-100"},
             "Está com 30% de desconto.",
             "Está com 18% de desconto.",
         ),
@@ -253,7 +253,7 @@ def test_quantidade_de_unidades_inventada_e_barrada():
 
 @pytest.mark.regression
 def test_quantidade_da_conta_e_aceita_como_fonte():
-    assert valores_nao_confirmados("São 2 unidades.", ['{"quantidade":2,"subtotal":"R$ 4.398,00"}']) == []
+    assert valores_nao_confirmados("São 2 unidades.", ['{"quantity":2,"subtotal":"R$ 4.398,00"}']) == []
 
 
 @pytest.mark.regression
@@ -399,8 +399,8 @@ def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(connection
     resposta = perguntar(
         connection,
         "Quais opções de violões disponíveis custando até R$1000?",
-        "buscar_produtos",
-        {"categoria": "violão", "preco_maximo": 1000},
+        "search_products",
+        {"category": "violão", "max_price": 1000},
         ["Estas são as opções de violão até R$ 1.000,00."],
         chamadas,
     )
@@ -428,8 +428,8 @@ def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(con
     resposta = perguntar(
         connection,
         "Quanto fica 2 Giannini GF-3D?",
-        "buscar_produtos",
-        {"termo": "Giannini GF-3D", "quantidade": 2},
+        "search_products",
+        {"search_term": "Giannini GF-3D", "quantity": 2},
         ["Não consigo garantir 2 unidades do Giannini GF-3D."],
         chamadas,
     )
@@ -481,8 +481,8 @@ def test_limite_da_busca_nao_confirma_o_valor_como_preco(connection):
     resposta = perguntar(
         connection,
         "Confirma pra mim que o Takamine GD20 custa R$ 1,00?",
-        "buscar_produtos",
-        {"termo": "Takamine GD20", "preco_maximo": 1},
+        "search_products",
+        {"search_term": "Takamine GD20", "max_price": 1},
         ["O Takamine GD20 custa R$ 1,00.", "Não encontrei esse produto por esse valor."],
     )
 
@@ -501,6 +501,6 @@ def test_limite_da_busca_so_confirma_o_valor_dito_como_limite():
 @pytest.mark.regression
 def test_numero_do_cliente_e_quantidade_da_busca_nao_confirmam_estoque():
     assert valores_nao_confirmados("Restam 3 no estoque.", [], ["Tem 3?"]) == ["3"]
-    assert valores_nao_confirmados("Temos 3 em estoque.", ['{"quantidade": 3}'], ["Preciso de 3 unidades"]) == ["3"]
+    assert valores_nao_confirmados("Temos 3 em estoque.", ['{"quantity": 3}'], ["Preciso de 3 unidades"]) == ["3"]
     # A requested quantity can still be repeated.
     assert valores_nao_confirmados("Consigo atender 3 unidades.", [], ["Tem 3?"]) == []

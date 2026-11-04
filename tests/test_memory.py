@@ -46,10 +46,10 @@ def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
 
 
 @pytest.mark.parametrize(
-    "produto, status",
+    "product, status",
     [(0, "pending"), (-1, "pending"), (96, "notified")],
 )
-def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, produto, status):
+def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, product, status):
     connection = connect(tmp_path / "novo.db")
     create_tables(connection)
 
@@ -57,7 +57,7 @@ def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, produto, status
         connection.execute(
             "INSERT INTO product_interests (phone, product_id, status, created_at) "
             "VALUES ('67996547821', ?, ?, '2026-03-25')",
-            (produto, status),
+            (product, status),
         )
     connection.close()
 

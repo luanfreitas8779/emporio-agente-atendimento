@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from src.catalog import normalizar
+from src.catalog import normalize
 
 PADRAO_DINHEIRO = re.compile(r"R\$\s*(\d[\d.]*(?:,\d+)?)")
 # Amounts written with the word "reais" ("2.199 reais", "2 mil reais") are also money.
@@ -15,7 +15,7 @@ MESES = {
 }
 PADRAO_DATA_EXTENSO = re.compile(r"\b(\d{1,2})º?\s+de\s+(" + "|".join(MESES) + r")(?:\s+de\s+(\d{4}))?\b")
 PADRAO_PERCENTUAL = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:%|por cento)")
-PADRAO_PERCENTUAL_JSON = re.compile(r'percentual"?\s*:\s*(\d+(?:\.\d+)?)')
+PADRAO_PERCENTUAL_JSON = re.compile(r'percent(?:ual)?"?\s*:\s*(\d+(?:\.\d+)?)')
 PADRAO_RASTREIO = re.compile(r"\b[A-Z]{2,4}\d{7,9}[A-Z]{2}\b")
 PADRAO_DATA_BR = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 PADRAO_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
@@ -31,7 +31,7 @@ PADRAO_TELEFONE = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
 # "3 unidades", "6 parcelas", "6 vezes", "4x"/"4 x", "restam 3", and "3 em estoque" in the answer;
 # "quantidade": 2 in the calculation result.
 PADRAO_QUANTIDADE = re.compile(
-    r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|quantidade\W{1,3}(\d+)"
+    r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|(?:quantidade|quantity)\W{1,3}(\d+)"
 )
 # "Restam 3" and "3 em estoque" state the stock, which no tool reports and the customer does not
 # confirm: asking for 3 units does not prove that there are 3.
@@ -70,7 +70,7 @@ def promete_aviso(resposta: str) -> bool:
 
     The team's reply after a handoff ("entraremos em contato") is not a notice promise.
     """
-    text = normalizar(resposta)
+    text = normalize(resposta)
     for achado in PADRAO_PROMESSA_DE_AVISO.finditer(text):
         antes = text[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
         if not PADRAO_NEGACAO.search(antes):
@@ -89,7 +89,7 @@ def valores(text: str) -> dict[str, set]:
     Money, time, phone number, and tracking code use the text as it came; dates written out, quantities,
     and relative dates use the text without accents and in lowercase.
     """
-    normalizado = normalizar(text)
+    normalizado = normalize(text)
     # In percentages the period and the comma are decimal: "18.5%" and "18,5%" mean 18.5.
     percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(text)}
     percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(text)}
@@ -122,13 +122,13 @@ def valores(text: str) -> dict[str, set]:
     quantidades = {
         int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizado) for numero_ in achado if numero_
     }
-    estoque = {int(n) for achado in PADRAO_ESTOQUE.findall(normalizado) for n in achado if n}
+    stock = {int(n) for achado in PADRAO_ESTOQUE.findall(normalizado) for n in achado if n}
     relativas = {EXPRESSOES_RELATIVAS[achado] for achado in PADRAO_DATA_RELATIVA.findall(normalizado)}
     return {
         "dinheiro": dinheiro,
         "data_relativa": relativas,
-        "quantidade": quantidades,
-        "estoque": estoque,
+        "quantity": quantidades,
+        "estoque": stock,
         "horario": horarios,
         "phone": telefones,
         "dia_mes": por_extenso,
@@ -172,10 +172,10 @@ def valores_nao_confirmados(
             if tipo not in TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA:
                 confirmados[tipo] |= encontrados
         # "Tem 13 Yamaha C40? E 12?": the loose number is also the quantity the customer asked for.
-        confirmados["quantidade"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
+        confirmados["quantity"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
     confirmados["dia_mes"] |= {found_date.strftime("%d/%m") for found_date in confirmados["data"]}
     citados = valores(resposta)
-    limites_citados = {numero(v) for v in PADRAO_LIMITE.findall(normalizar(resposta))}
+    limites_citados = {numero(v) for v in PADRAO_LIMITE.findall(normalize(resposta))}
     confirmados["dinheiro"] |= limites_citados & set(limites_da_busca or [])
     return [
         str(amount)

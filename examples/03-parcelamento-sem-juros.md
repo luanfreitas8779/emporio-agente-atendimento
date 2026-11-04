@@ -8,7 +8,7 @@
 >
 > **Tom:** Dá sim, Ana! O Takamine GD20 Dreadnought Natural sai por R$ 2.199,00 e dá para parcelar em até 12x sem juros de R$ 183,25 no cartão de crédito. 🎵
 
-Ferramentas usadas: `buscar_produtos(termo="Takamine GD20")` e `get_policies(section="pagamentos", amount=2199, installments=12)`.
+Ferramentas usadas: `search_products(search_term="Takamine GD20")` e `get_policies(section="pagamentos", amount=2199, installments=12)`.
 
 ## O que a conversa mostra
 

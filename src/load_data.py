@@ -100,21 +100,21 @@ def ler_csv(path: Path) -> list[dict[str, str]]:
 
 
 def preparar_produto(
-    produto: dict[str, str], categorias: set[str], vistos: set[str]
+    product: dict[str, str], categorias: set[str], vistos: set[str]
 ) -> tuple:
-    identificador = produto["product_id"]
+    identificador = product["product_id"]
     rejeitar_duplicado("product", identificador, vistos)
-    if produto["category_id"] not in categorias:
+    if product["category_id"] not in categorias:
         raise ErroDeCarga(f"product {identificador}: nonexistent category")
     try:
         registro = (
             int(identificador),
-            produto["name"],
-            int(produto["category_id"]),
-            para_centavos(produto["price_brl"]),
-            int(produto["stock_quantity"]),
-            produto["status"],
-            produto["specs"],
+            product["name"],
+            int(product["category_id"]),
+            para_centavos(product["price_brl"]),
+            int(product["stock_quantity"]),
+            product["status"],
+            product["specs"],
         )
     except (ValueError, ArithmeticError) as error:
         raise ErroDeCarga(f"product {identificador}: invalid value") from error
@@ -124,11 +124,11 @@ def preparar_produto(
 
 
 def preparar_promocao(
-    promocao: dict[str, str], produtos: set[str], vistos: set[str]
+    promocao: dict[str, str], products: set[str], vistos: set[str]
 ) -> tuple:
     identificador = promocao["promotion_id"]
     rejeitar_duplicado("promotion", identificador, vistos)
-    if promocao["product_id"] not in produtos:
+    if promocao["product_id"] not in products:
         raise ErroDeCarga(f"promotion {identificador}: nonexistent product")
     try:
         registro = (
@@ -147,12 +147,12 @@ def preparar_promocao(
 
 def carregar_catalogo(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     categorias = ler_csv(pasta_dados / "categories.csv")
-    ids_categorias = {categoria["category_id"] for categoria in categorias}
+    ids_categorias = {category["category_id"] for category in categorias}
     # Validation comes before the schema so that a failure does not erase the current database.
     linhas_produtos = ler_csv(pasta_dados / "products.csv")
     vistos: set[str] = set()
-    produtos = [preparar_produto(produto, ids_categorias, vistos) for produto in linhas_produtos]
-    ids_produtos = {produto["product_id"] for produto in linhas_produtos}
+    products = [preparar_produto(product, ids_categorias, vistos) for product in linhas_produtos]
+    ids_produtos = {product["product_id"] for product in linhas_produtos}
     vistas: set[str] = set()
     promocoes = [
         preparar_promocao(promocao, ids_produtos, vistas)
@@ -170,7 +170,7 @@ def carregar_catalogo(connection: sqlite3.Connection, pasta_dados: Path) -> None
             product_id, name, category_id, price_cents, stock_quantity, status, specs
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        produtos,
+        products,
     )
     connection.executemany(
         """
@@ -237,28 +237,28 @@ def preparar_pedido(pedido: dict[str, str], clientes: set[int], vistos: set[str]
     )
 
 
-def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -> tuple:
+def preparar_item(item: dict[str, str], pedidos: set[int], products: set[int]) -> tuple:
     identificador = item["order_id"]
     try:
-        numero, produto, quantidade = (
+        numero, product, quantity = (
             int(identificador),
             int(item["product_id"]),
             int(item["quantity"]),
         )
     except ValueError as error:
         raise ErroDeCarga(f"order item {identificador}: invalid value") from error
-    if quantidade < 1:
+    if quantity < 1:
         raise ErroDeCarga(f"order item {identificador}: invalid value")
     if numero not in pedidos:
         raise ErroDeCarga(f"order item {identificador}: nonexistent order")
-    if produto not in produtos:
+    if product not in products:
         raise ErroDeCarga(f"order item {identificador}: nonexistent product")
-    return (numero, produto, quantidade)
+    return (numero, product, quantity)
 
 
 def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     clientes = {row[0] for row in connection.execute("SELECT customer_id FROM customers")}
-    produtos = {row[0] for row in connection.execute("SELECT product_id FROM products")}
+    products = {row[0] for row in connection.execute("SELECT product_id FROM products")}
     # Validation comes before the schema so that a failure does not erase the current database.
     vistos: set[str] = set()
     pedidos = [
@@ -267,7 +267,7 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     ]
     ids_pedidos = {pedido[0] for pedido in pedidos}
     itens = [
-        preparar_item(item, ids_pedidos, produtos)
+        preparar_item(item, ids_pedidos, products)
         for item in ler_csv(pasta_dados / "order_items.csv")
     ]
     connection.executescript(ESQUEMA_PEDIDOS)

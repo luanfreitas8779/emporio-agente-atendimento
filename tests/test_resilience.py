@@ -227,7 +227,7 @@ def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(connection,
 
 def test_turno_com_erro_nao_herda_as_ferramentas_do_turno_anterior(connection, esperas):
     sessao = Sessao(connection, phone=ANA)
-    sessao.ferramentas = [ChamadaDeFerramenta("buscar_produtos", {"termo": "x"})]
+    sessao.ferramentas = [ChamadaDeFerramenta("search_products", {"search_term": "x"})]
     modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
 
     with agente.override(model=modelo):
@@ -243,7 +243,7 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, e
         chamadas.append(1)
         if len(chamadas) == 1:
             return ModelResponse(
-                parts=[ToolCallPart("buscar_produtos", {"termo": "Takamine GD20"})]
+                parts=[ToolCallPart("search_products", {"search_term": "Takamine GD20"})]
             )
         if len(chamadas) == 2:
             raise limite_atingido()

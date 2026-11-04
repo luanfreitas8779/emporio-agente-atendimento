@@ -52,7 +52,7 @@ informado. Troca, devolução e reembolso nunca são automáticos: não use essa
 passe só o que a política e a ferramenta de devolução disserem.
 
 Antes de informar preço, estoque ou qualquer dado de produto, use a ferramenta
-buscar_produtos. Nunca informe preço de memória e nunca calcule valores: use
+search_products. Nunca informe preço de memória e nunca calcule valores: use
 exatamente os campos devolvidos pela ferramenta.
 
 Para horários, endereço, contatos, pagamento, parcelamento, entrega, troca,
@@ -92,11 +92,11 @@ condições do produto.
 
 Sempre que o cliente perguntar preço, estoque ou disponibilidade de um produto que
 já apareceu na conversa, que está em foco ou que consta nos interesses pendentes,
-consulte buscar_produtos de novo com o nome dele antes de responder. Nunca reaproveite
+consulte search_products de novo com o nome dele antes de responder. Nunca reaproveite
 valores ou disponibilidade de mensagens anteriores.
 
 Interesses: quando o produto estiver indisponível e o cliente quiser acompanhá-lo,
-use registrar_interesse com o id devolvido por buscar_produtos e diga que o interesse
+use registrar_interesse com o id devolvido por search_products e diga que o interesse
 ficou anotado. Isso não reserva o produto, e você não avisa o cliente nem promete data
 de reposição. Nunca prometa aviso ao cliente, com nenhuma redação: ao confirmar o registro,
 diga que o interesse ficou anotado e que isso não reserva o produto nem garante aviso. Se o cliente perguntar "chegou o violão?" ou algo parecido, olhe os
@@ -144,14 +144,14 @@ consulte get_policies (seção sobre_a_loja) e passe os contatos. Ao informar um
 inclua o código de rastreio quando o campo vier preenchido.
 
 Especificações e quantidade: sobre material, cordas, captação, cor e outros detalhes de um
-produto, responda só com o campo especificacoes devolvido por buscar_produtos. O que não estiver
+produto, responda só com o campo specifications devolvido por search_products. O que não estiver
 nele, diga que não tem essa informação; não use a memória nem deduza. Quando o cliente quiser
-uma quantidade, informe quantidade na busca e use atende_quantidade: a loja não informa o estoque
+uma quantidade, informe quantity na busca e use meets_quantity: a loja não informa o estoque
 exato, e você nunca cita nem estima quantas unidades existem. Se não atender, diga que não consegue
 garantir essa quantidade e ofereça falar com um atendente.
 
 Assuntos sem fonte: nunca afirme que a loja vende, não vende, faz ou não faz algo sem consultar.
-Para tipos de instrumento, busque no catálogo (buscar_produtos); para serviços e demais assuntos,
+Para tipos de instrumento, busque no catálogo (search_products); para serviços e demais assuntos,
 consulte get_policies. Se nenhuma ferramenta cobrir, diga que não tem essa informação e
 passe os contatos da loja. Não diga que há ou que não há lojas parceiras, regulagem, conserto ou
 aulas sem a política confirmar: se a política não menciona o serviço, a resposta é que você não
@@ -186,7 +186,7 @@ Comparações: ao comparar ou perguntar "qual dos dois", use só os produtos que
 nesta conversa. Se não tiver certeza de quais são, pergunte, em vez de escolher outro produto.
 
 Contas: para qualquer conta (quanto fica N unidades, a soma de produtos, a diferença de preço,
-o total ou a economia no PIX), use calcular_compra com o id devolvido por buscar_produtos e a
+o total ou a economia no PIX), use calcular_compra com o id devolvido por search_products e a
 quantidade, e repasse os valores como vieram. Nunca some, multiplique nem subtraia por conta
 própria. Valores que o cliente escreveu ("o preço é tanto", "tenho tanto de desconto") não são
 confirmação: confirme só o que as ferramentas devolveram. Se o cliente afirmar um preço errado,
@@ -195,22 +195,22 @@ diga o preço do sistema sem repetir o valor errado.
 Parcelamento: nunca diga que dá para parcelar sem o resultado de get_policies (pagamentos)
 para aquele valor. Se o cliente não disser o produto ou o valor e não houver produto em foco,
 pergunte qual produto. Repasse o máximo de parcelas e a parcela mínima como a ferramenta devolveu.
-Quando um produto trouxer observacao_pix, repita essa observação ao falar do PIX.
+Quando um produto trouxer pix_note, repita essa observação ao falar do PIX.
 
 Regras de catálogo:
 - Só confirme disponibilidade quando a disponibilidade for "disponivel".
 - "indisponivel": informe que está sem estoque, sem prometer data de reposição, e
-  sugira alternativas buscando a mesma categoria com somente_disponiveis.
+  sugira alternativas buscando a mesma categoria com only_available.
 - "fora_de_catalogo": informe que o produto saiu do catálogo e sugira modelos
   equivalentes, mesmo que haja estoque.
 - "lancamento": não confirme disponibilidade.
-- Quando o cliente perguntar quais produtos estão em promoção, use buscar_produtos com
-  somente_promocao em vez de consultar a seção promocoes, e mostre cada produto com preço
+- Quando o cliente perguntar quais produtos estão em promoção, use search_products com
+  only_on_sale em vez de consultar a seção promocoes, e mostre cada produto com preço
   original, percentual e preço final.
-- Com desconto_percentual, mostre o preço original, o percentual e o preço final.
-- Informe o preço com PIX (preco_pix) quando houver, e só então. Se ele for nulo, não cite
-  preço no PIX e repita a observacao_pix. Só fale que o PIX não soma ao desconto quando o
-  produto trouxer observacao_pix; nunca diga isso de um produto que mostra preço no PIX.
+- Com discount_percent, mostre o preço original, o percentual e o preço final.
+- Informe o preço com PIX (pix_price) quando houver, e só então. Se ele for nulo, não cite
+  preço no PIX e repita a pix_note. Só fale que o PIX não soma ao desconto quando o
+  produto trouxer pix_note; nunca diga isso de um produto que mostra preço no PIX.
 - Se a busca não retornar produtos, diga que a loja não tem esse item no catálogo
   atual. Não invente produtos, marcas ou lojas. Não diga que existem outras opções
   do mesmo tipo (por exemplo, outros instrumentos de sopro) sem antes buscá-las com
@@ -320,11 +320,11 @@ agente = Agent(
 
 def ferramentas_do_turno(mensagens: list) -> list[ChamadaDeFerramenta]:
     return [
-        ChamadaDeFerramenta(parte.tool_name, parte.args_as_dict())
+        ChamadaDeFerramenta(part.tool_name, part.args_as_dict())
         for mensagem in mensagens
         if isinstance(mensagem, ModelResponse)
-        for parte in mensagem.parts
-        if isinstance(parte, ToolCallPart)
+        for part in mensagem.parts
+        if isinstance(part, ToolCallPart)
     ]
 
 
@@ -343,34 +343,34 @@ def _mensagens_do_turno(mensagens: list) -> list:
 
 
 def argumentos_da_busca(mensagens: list, name: str) -> list:
-    """Valid values of the `nome` argument the model passed to `buscar_produtos` in this turn."""
+    """Valid values of the `nome` argument the model passed to `search_products` in this turn."""
     valores = (
         chamada.argumentos.get(name)
         for chamada in ferramentas_do_turno(_mensagens_do_turno(mensagens))
-        if chamada.name == "buscar_produtos"
+        if chamada.name == "search_products"
     )
     return [v for v in valores if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0]
 
 
 def limites_de_preco(mensagens: list) -> list[Decimal]:
     """Price limits applied by the search: the answer may repeat them as a limit, not as a price."""
-    return [Decimal(str(v)) for v in argumentos_da_busca(mensagens, "preco_maximo")]
+    return [Decimal(str(v)) for v in argumentos_da_busca(mensagens, "max_price")]
 
 
 def quantidades_da_busca(mensagens: list) -> list[str]:
     """Quantities requested from the search, as source text (the format of the calculation result)."""
-    return [f'"quantidade": {int(v)}' for v in argumentos_da_busca(mensagens, "quantidade")]
+    return [f'"quantity": {int(v)}' for v in argumentos_da_busca(mensagens, "quantity")]
 
 
 def fontes_do_turno(mensagens: list) -> FontesDoTurno:
     """Texts that can support the answer: the tool results and the customer's message."""
     das_ferramentas, do_cliente = [], []
     for mensagem in _mensagens_do_turno(mensagens):
-        for parte in mensagem.parts:
-            if isinstance(parte, UserPromptPart):
-                do_cliente.append(str(parte.content))
-            elif isinstance(parte, ToolReturnPart) and parte.outcome != "retried":
-                das_ferramentas.append(parte.model_response_str())
+        for part in mensagem.parts:
+            if isinstance(part, UserPromptPart):
+                do_cliente.append(str(part.content))
+            elif isinstance(part, ToolReturnPart) and part.outcome != "retried":
+                das_ferramentas.append(part.model_response_str())
     return FontesDoTurno(das_ferramentas, do_cliente)
 
 
@@ -390,9 +390,9 @@ def limpar_texto_das_respostas(mensagens: list) -> None:
     """Removes the internal block from what will be stored, so it does not return to the screen or the model."""
     for mensagem in mensagens:
         if isinstance(mensagem, ModelResponse):
-            for parte in mensagem.parts:
-                if isinstance(parte, TextPart):
-                    parte.content = sem_bloco_interno(parte.content)
+            for part in mensagem.parts:
+                if isinstance(part, TextPart):
+                    part.content = sem_bloco_interno(part.content)
 
 
 @agente.output_validator
@@ -449,47 +449,47 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         text += f"\nPedido em análise: {pedido}."
     foco = ctx.deps.estado.produto_em_foco
     if foco is not None:
-        name = catalog.nome_do_produto(ctx.deps.connection, foco)
+        name = catalog.product_name(ctx.deps.connection, foco)
         if name:
             text += f"\nProduto em foco: {name}."
     interesses = interests.listar_pendentes(ctx.deps.connection, ctx.deps.phone or "")
-    # Only the names: the current stock always comes from buscar_produtos.
+    # Only the names: the current stock always comes from search_products.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
-    nomes = "; ".join(recentes) or "nenhum"
+    names = "; ".join(recentes) or "nenhum"
     if len(interesses) > len(recentes):
-        nomes += f" (e mais {len(interesses) - len(recentes)} mais antigos)"
-    text += f"\nInteresses pendentes: {nomes}."
+        names += f" (e mais {len(interesses) - len(recentes)} mais antigos)"
+    text += f"\nInteresses pendentes: {names}."
     return text
 
 
 @agente.tool
-def buscar_produtos(
+def search_products(
     ctx: RunContext[Sessao],
-    termo: str | None = None,
-    categoria: str | None = None,
-    preco_maximo: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
-    somente_disponiveis: bool = False,
-    quantidade: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None,
-    somente_promocao: bool = False,
-) -> list[catalog.Produto]:
+    search_term: str | None = None,
+    category: str | None = None,
+    max_price: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
+    only_available: bool = False,
+    quantity: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None,
+    only_on_sale: bool = False,
+) -> list[catalog.Product]:
     """Busca produtos do catálogo da loja, com preços e disponibilidade.
 
     Args:
-        termo: Nome ou parte do nome do produto, por exemplo "Takamine GD20".
-        categoria: Nome da categoria, por exemplo "Violões" ou "Guitarras".
-        preco_maximo: Preço máximo em reais, considerando o preço final.
-        somente_disponiveis: Use true quando o cliente pedir apenas opções disponíveis.
-        quantidade: Número de unidades que o cliente quer comprar, se ele disse. O resultado
-            traz atende_quantidade (true ou false); a loja não informa o estoque exato.
-        somente_promocao: Use true para listar só os produtos com promoção ativa.
+        search_term: Nome ou parte do nome do produto, por exemplo "Takamine GD20".
+        category: Nome da categoria, por exemplo "Violões" ou "Guitarras".
+        max_price: Preço máximo em reais, considerando o preço final.
+        only_available: Use true quando o cliente pedir apenas opções disponíveis.
+        quantity: Número de unidades que o cliente quer comprar, se ele disse. O resultado
+            traz meets_quantity (true ou false); a loja não informa o estoque exato.
+        only_on_sale: Use true para listar só os produtos com promoção ativa.
     """
-    produtos = catalog.buscar_produtos(
-        ctx.deps.connection, termo, categoria, preco_maximo, somente_disponiveis, quantidade,
-        somente_promocao,
+    products = catalog.search_products(
+        ctx.deps.connection, search_term, category, max_price, only_available, quantity,
+        only_on_sale,
     )
     # With several results "ele" ("it") is ambiguous, and with none the previous focus would mislead.
-    ctx.deps.estado.produto_em_foco = produtos[0].id if len(produtos) == 1 else None
-    return produtos
+    ctx.deps.estado.produto_em_foco = products[0].id if len(products) == 1 else None
+    return products
 
 
 @agente.tool
@@ -513,7 +513,7 @@ def get_policies(
     if section == "pagamentos" and amount is None:
         # Without an amount the installments would be stated blindly: the product in focus sets the price.
         foco = ctx.deps.estado.produto_em_foco
-        cents = catalog.preco_final_em_centavos(ctx.deps.connection, foco) if foco else None
+        cents = catalog.final_price_cents(ctx.deps.connection, foco) if foco else None
         if cents is not None:
             amount = cents / 100
         elif installments is not None:
@@ -532,7 +532,7 @@ def calcular_compra(
     preço e economia no PIX. Nunca faça a conta você mesmo. Repasse os valores como vieram.
 
     Args:
-        itens: Produtos (id devolvido por buscar_produtos) e quantidade de cada um.
+        itens: Produtos (id devolvido por search_products) e quantidade de cada um.
     """
     return calculos.calcular_compra(ctx.deps.connection, itens)
 
@@ -572,10 +572,10 @@ PADRAO_DO_CANAL = {
 def canal_citado_pelo_cliente(mensagens: list, canal: returns.Canal) -> bool:
     """The order does not record the channel: only what a customer message in the conversation said counts."""
     falas = (
-        catalog.normalizar(str(parte.content))
+        catalog.normalize(str(part.content))
         for mensagem in mensagens
-        for parte in mensagem.parts
-        if isinstance(parte, UserPromptPart)
+        for part in mensagem.parts
+        if isinstance(part, UserPromptPart)
     )
     return any(PADRAO_DO_CANAL[canal].search(fala) for fala in falas)
 
@@ -619,7 +619,7 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     produto nem garante aviso ou data de reposição.
 
     Args:
-        product_id: Id do produto, como devolvido por buscar_produtos.
+        product_id: Id do produto, como devolvido por search_products.
     """
     resultado = interests.registrar(ctx.deps.connection, ctx.deps.phone or "", product_id)
     if resultado in (interests.Resultado.REGISTRADO, interests.Resultado.JA_REGISTRADO):

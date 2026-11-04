@@ -15,13 +15,13 @@ QUANTIDADE_MAXIMA = 1000
 @dataclass_pydantic(frozen=True)
 class ItemDaCompra:
     product_id: Annotated[int, Field(ge=1, le=ID_MAXIMO)]
-    quantidade: Annotated[int, Field(ge=1, le=QUANTIDADE_MAXIMA)]
+    quantity: Annotated[int, Field(ge=1, le=QUANTIDADE_MAXIMA)]
 
 
 @dataclass_pydantic(frozen=True)
 class LinhaDaCompra:
     name: str
-    quantidade: int
+    quantity: int
     preco_unitario: str
     subtotal: str
 
@@ -37,7 +37,7 @@ class CalculoDaCompra:
     # A product that cannot be sold now: the calculation is only a price reference.
     aviso: str | None = None
     # A product on promotion: PIX does not stack with the discount, so there are no savings on it.
-    observacao_pix: str | None = None
+    pix_note: str | None = None
     frete: str = ""
 
 
@@ -59,9 +59,9 @@ def frete_na_regiao_metropolitana(total: int) -> str:
 
 
 AVISO_DA_DISPONIBILIDADE = {
-    catalog.INDISPONIVEL: "sem estoque.",
-    catalog.FORA_DE_CATALOGO: "fora de catálogo.",
-    catalog.LANCAMENTO: "lançamento, ainda não está à venda.",
+    catalog.UNAVAILABLE: "sem estoque.",
+    catalog.DISCONTINUED: "fora de catálogo.",
+    catalog.NEW_RELEASE: "lançamento, ainda não está à venda.",
 }
 
 
@@ -71,14 +71,14 @@ def calcular_compra(
     # The same product cited twice becomes a single line, with the quantity summed.
     quantidades: dict[int, int] = {}
     for item in itens:
-        quantidades[item.product_id] = quantidades.get(item.product_id, 0) + item.quantidade
+        quantidades[item.product_id] = quantidades.get(item.product_id, 0) + item.quantity
 
-    produtos = {}
+    products = {}
     for product_id in quantidades:
-        produto = catalog.dados_para_conta(connection, product_id)
-        if produto is None:
+        product = catalog.pricing_data(connection, product_id)
+        if product is None:
             return f"Produto {product_id} não encontrado: nenhuma conta foi feita."
-        produtos[product_id] = produto
+        products[product_id] = product
 
     rows = []
     subtotais = []
@@ -86,23 +86,23 @@ def calcular_compra(
     observacoes_do_pix = []
     total = 0
     total_no_pix = 0
-    for product_id, quantidade in quantidades.items():
-        produto = produtos[product_id]
-        subtotal = produto.preco_final * quantidade
+    for product_id, quantity in quantidades.items():
+        product = products[product_id]
+        subtotal = product.final_price * quantity
         subtotais.append(subtotal)
         total += subtotal
-        total_no_pix += produto.preco_no_pix * quantidade
-        if produto.disponibilidade in AVISO_DA_DISPONIBILIDADE:
-            avisos.append(f"{produto.name}: {AVISO_DA_DISPONIBILIDADE[produto.disponibilidade]}")
-        elif produto.estoque < quantidade:
-            avisos.append(f"{produto.name}: o estoque não cobre {quantidade} unidades.")
-        if produto.em_promocao:
-            observacoes_do_pix.append(f"{produto.name}: o PIX não soma ao desconto da promoção.")
+        total_no_pix += product.price_with_pix * quantity
+        if product.availability in AVISO_DA_DISPONIBILIDADE:
+            avisos.append(f"{product.name}: {AVISO_DA_DISPONIBILIDADE[product.availability]}")
+        elif product.stock < quantity:
+            avisos.append(f"{product.name}: o estoque não cobre {quantity} unidades.")
+        if product.on_promotion:
+            observacoes_do_pix.append(f"{product.name}: o PIX não soma ao desconto da promoção.")
         rows.append(
             LinhaDaCompra(
-                produto.name,
-                quantidade,
-                catalog.format_price(produto.preco_final),
+                product.name,
+                quantity,
+                catalog.format_price(product.final_price),
                 catalog.format_price(subtotal),
             )
         )
