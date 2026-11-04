@@ -2,9 +2,9 @@ import json
 
 from pydantic_ai.exceptions import ModelHTTPError, ModelRateLimitError
 
-from src.limits import registrar_limite
+from src.limits import log_limit
 
-CORPO_DO_GEMINI = {
+GEMINI_BODY = {
     "error": {
         "code": 429,
         "status": "RESOURCE_EXHAUSTED",
@@ -25,12 +25,12 @@ CORPO_DO_GEMINI = {
 }
 
 
-def erro_429(corpo, retry_after=None):
+def error_429(body, retry_after=None):
     return ModelHTTPError.for_category(
         ModelRateLimitError,
         status_code=429,
         model_name="gemini-3.5-flash-lite",
-        body=corpo,
+        body=body,
         retry_after=retry_after,
     )
 
@@ -39,31 +39,31 @@ def rows(path):
     return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines()]
 
 
-def test_registra_o_limite_efetivo_informado_pelo_provedor(tmp_path):
+def test_logs_the_effective_limit_reported_by_the_provider(tmp_path):
     path = tmp_path / "limites.log"
 
-    registrar_limite(erro_429(CORPO_DO_GEMINI, retry_after=27), path)
+    log_limit(error_429(GEMINI_BODY, retry_after=27), path)
 
-    (evento,) = rows(path)
-    assert evento["modelo"] == "gemini-3.5-flash-lite"
-    assert evento["status"] == 429
-    assert evento["limite"] == "20"
-    assert evento["metrica"].endswith("generate_content_free_tier_requests")
-    assert evento["cota"] == "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
-    assert evento["retry_after"] == 27
-    assert evento["data"]
+    (event,) = rows(path)
+    assert event["model"] == "gemini-3.5-flash-lite"
+    assert event["status"] == 429
+    assert event["limit"] == "20"
+    assert event["metric"].endswith("generate_content_free_tier_requests")
+    assert event["quota"] == "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
+    assert event["retry_after"] == 27
+    assert event["date"]
 
 
-def test_sem_detalhes_do_provedor_os_campos_ficam_nulos_e_cada_evento_ganha_uma_linha(tmp_path):
+def test_without_provider_details_the_fields_are_null_and_each_event_gets_a_line(tmp_path):
     path = tmp_path / "limites.log"
 
-    registrar_limite(erro_429(None), path)
-    registrar_limite(erro_429("texto solto"), path)
+    log_limit(error_429(None), path)
+    log_limit(error_429("texto solto"), path)
 
-    eventos = rows(path)
-    assert len(eventos) == 2
-    for evento in eventos:
-        assert evento["status"] == 429
-        assert evento["limite"] is None
-        assert evento["metrica"] is None
-        assert evento["retry_after"] is None
+    events = rows(path)
+    assert len(events) == 2
+    for event in events:
+        assert event["status"] == 429
+        assert event["limit"] is None
+        assert event["metric"] is None
+        assert event["retry_after"] is None

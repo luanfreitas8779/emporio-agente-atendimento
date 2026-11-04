@@ -667,10 +667,10 @@ def _executar(message: str, sessao: Sessao, historico: list):
         try:
             return execucao.result()
         except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as error:
-            if espera is None or limits.e_limite_diario(error):
+            if espera is None or limits.is_daily_limit(error):
                 raise
             # The provider may say when to try again; a cap avoids freezing the chat.
-            indicada = error.retry_after or limits.espera_indicada(error)
+            indicada = error.retry_after or limits.indicated_wait(error)
             _aguardar(min(indicada, ESPERA_MAXIMA) if indicada else espera)
 
 
@@ -704,12 +704,12 @@ def responder(message: str, sessao: Sessao) -> str:
         return result.output
     except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as error:
         try:
-            limits.registrar_limite(error)
+            limits.log_limit(error)
         except OSError:
             registro.exception("Could not log the provider limit")
         # Exhausted quota is not solved by waiting: there is no retry, only the same message.
         # Exhausted quota also only comes back the next day.
-        diario = isinstance(error, ModelQuotaExceededError) or limits.e_limite_diario(error)
+        diario = isinstance(error, ModelQuotaExceededError) or limits.is_daily_limit(error)
         return _responder_sem_modelo(
             message, sessao, MENSAGEM_DE_LIMITE_DIARIO if diario else MENSAGEM_DE_LIMITE
         )

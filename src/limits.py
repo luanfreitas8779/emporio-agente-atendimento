@@ -7,46 +7,46 @@ from pydantic_ai.exceptions import ModelAPIError
 from src import config
 
 
-def _detalhes(corpo: object) -> list[dict]:
-    error = corpo.get("error", {}) if isinstance(corpo, dict) else {}
+def _details(body: object) -> list[dict]:
+    error = body.get("error", {}) if isinstance(body, dict) else {}
     return [d for d in error.get("details", []) if isinstance(d, dict)]
 
 
-def _violacoes(corpo: object) -> list[dict]:
-    return [v for d in _detalhes(corpo) for v in d.get("violations", [])]
+def _violations(body: object) -> list[dict]:
+    return [v for d in _details(body) for v in d.get("violations", [])]
 
 
-def _violacao(corpo: object) -> dict:
+def _violation(body: object) -> dict:
     """First quota violation in the Gemini error body, or an empty dictionary."""
-    return next(iter(_violacoes(corpo)), {})
+    return next(iter(_violations(body)), {})
 
 
-def registrar_limite(error: ModelAPIError, path: Path | None = None) -> None:
+def log_limit(error: ModelAPIError, path: Path | None = None) -> None:
     """Appends a JSON line with the limit the provider reported; missing fields are null."""
     path = path or config.LIMITS_LOG_PATH
-    violacao = _violacao(error.body)
-    evento = {
-        "data": datetime.now(timezone.utc).isoformat(),
-        "modelo": error.model_name,
+    violation = _violation(error.body)
+    event = {
+        "date": datetime.now(timezone.utc).isoformat(),
+        "model": error.model_name,
         "status": getattr(error, "status_code", None),
         "retry_after": error.retry_after,
-        "metrica": violacao.get("quotaMetric"),
-        "cota": violacao.get("quotaId"),
-        "limite": violacao.get("quotaValue"),
+        "metric": violation.get("quotaMetric"),
+        "quota": violation.get("quotaId"),
+        "limit": violation.get("quotaValue"),
     }
     with path.open("a", encoding="utf-8") as file:
-        file.write(json.dumps(evento, ensure_ascii=False) + "\n")
+        file.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
-def e_limite_diario(error: ModelAPIError) -> bool:
+def is_daily_limit(error: ModelAPIError) -> bool:
     """The daily quota only comes back the next day, so waiting a few seconds does not help."""
-    return any("PerDay" in (v.get("quotaId") or "") for v in _violacoes(error.body))
+    return any("PerDay" in (v.get("quotaId") or "") for v in _violations(error.body))
 
 
-def espera_indicada(error: ModelAPIError) -> float | None:
+def indicated_wait(error: ModelAPIError) -> float | None:
     """Seconds of the `retryDelay` ("27s") in the error body, or None if missing or unreadable."""
-    for detalhe in _detalhes(error.body):
-        delay = detalhe.get("retryDelay")
+    for detail in _details(error.body):
+        delay = detail.get("retryDelay")
         if isinstance(delay, str) and delay.endswith("s"):
             try:
                 return float(delay[:-1])

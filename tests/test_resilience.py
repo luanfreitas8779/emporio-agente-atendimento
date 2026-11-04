@@ -143,8 +143,8 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, e
         answer = responder("Oi", Sessao(connection, phone=ANA))
 
     assert answer == MENSAGEM_DE_ERRO_TECNICO
-    for detalhe in ("sem rede", "chave inválida", "erro qualquer", "products"):
-        assert detalhe not in answer
+    for detail in ("sem rede", "chave inválida", "erro qualquer", "products"):
+        assert detail not in answer
     assert conversation_for_display(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
@@ -201,17 +201,17 @@ def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_at
 def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
     connection, esperas, log_de_limites_temporario
 ):
-    corpo = {"error": {"details": [{"violations": [{"quotaValue": "20", "quotaId": "PorDia"}]}]}}
+    body = {"error": {"details": [{"violations": [{"quotaValue": "20", "quotaId": "PorDia"}]}]}}
     error = ModelHTTPError.for_category(
-        ModelRateLimitError, status_code=429, model_name="gemini-3.5-flash-lite", body=corpo
+        ModelRateLimitError, status_code=429, model_name="gemini-3.5-flash-lite", body=body
     )
     modelo = modelo_que_falha_antes_de_responder([error, error, error], [])
 
     with agente.override(model=modelo):
         responder("Oi", Sessao(connection, phone=ANA))
 
-    eventos = [json.loads(l) for l in log_de_limites_temporario.read_text(encoding="utf-8").splitlines()]
-    assert [(e["status"], e["limite"], e["cota"]) for e in eventos] == [(429, "20", "PorDia")]
+    events = [json.loads(l) for l in log_de_limites_temporario.read_text(encoding="utf-8").splitlines()]
+    assert [(e["status"], e["limit"], e["quota"]) for e in events] == [(429, "20", "PorDia")]
 
 
 def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(connection, esperas, tmp_path, monkeypatch):
