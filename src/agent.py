@@ -225,10 +225,10 @@ SEM_CADASTRO = (
 AVISO_DE_INTERESSE = "Isso não reserva o produto e não garante aviso nem data de reposição."
 
 MENSAGENS_DE_INTERESSE = {
-    interests.Result.REGISTRADO: f"Interesse registrado. {AVISO_DE_INTERESSE}",
-    interests.Result.JA_REGISTRADO: f"Esse interesse já estava registrado. {AVISO_DE_INTERESSE}",
-    interests.Result.PRODUTO_INEXISTENTE: "Produto não encontrado: nenhum interesse foi registrado.",
-    interests.Result.TELEFONE_INVALIDO: (
+    interests.Result.REGISTERED: f"Interesse registrado. {AVISO_DE_INTERESSE}",
+    interests.Result.ALREADY_REGISTERED: f"Esse interesse já estava registrado. {AVISO_DE_INTERESSE}",
+    interests.Result.PRODUCT_NOT_FOUND: "Produto não encontrado: nenhum interesse foi registrado.",
+    interests.Result.INVALID_PHONE: (
         "Sem um telefone válido nesta conversa não é possível guardar o interesse."
     ),
 }
@@ -236,10 +236,10 @@ MENSAGENS_DE_INTERESSE = {
 PRAZO_DE_RETORNO = "A equipe retorna em até 24 horas úteis."
 
 MENSAGENS_DE_ENCAMINHAMENTO = {
-    handoffs.Result.REGISTRADO: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
-    handoffs.Result.JA_REGISTRADO: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
+    handoffs.Result.REGISTERED: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
+    handoffs.Result.ALREADY_REGISTERED: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
     handoffs.Result.RESUMO_INVALIDO: "O resumo está vazio: descreva o caso antes de encaminhar.",
-    handoffs.Result.TELEFONE_INVALIDO: (
+    handoffs.Result.INVALID_PHONE: (
         "Não foi possível identificar o telefone do cliente nesta conversa, então o caso não foi "
         "encaminhado. Explique isso ao cliente e passe os contatos da loja "
         "(get_policies, seção sobre_a_loja)."
@@ -452,7 +452,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         name = catalog.product_name(ctx.deps.connection, foco)
         if name:
             text += f"\nProduto em foco: {name}."
-    interesses = interests.listar_pendentes(ctx.deps.connection, ctx.deps.phone or "")
+    interesses = interests.list_pending(ctx.deps.connection, ctx.deps.phone or "")
     # Only the names: the current stock always comes from search_products.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
     names = "; ".join(recentes) or "nenhum"
@@ -621,8 +621,8 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     Args:
         product_id: Id do produto, como devolvido por search_products.
     """
-    result = interests.registrar(ctx.deps.connection, ctx.deps.phone or "", product_id)
-    if result in (interests.Result.REGISTRADO, interests.Result.JA_REGISTRADO):
+    result = interests.register(ctx.deps.connection, ctx.deps.phone or "", product_id)
+    if result in (interests.Result.REGISTERED, interests.Result.ALREADY_REGISTERED):
         ctx.deps.estado.produto_em_foco = product_id
     return MENSAGENS_DE_INTERESSE[result]
 
@@ -640,7 +640,7 @@ def encaminhar_para_atendente(
         reason: reclamacao, atendente_solicitado ou sem_resposta_segura.
         resumo: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
     """
-    result = handoffs.registrar(ctx.deps.connection, ctx.deps.phone or "", reason, resumo)
+    result = handoffs.register(ctx.deps.connection, ctx.deps.phone or "", reason, resumo)
     return MENSAGENS_DE_ENCAMINHAMENTO[result]
 
 
@@ -719,7 +719,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         # The model insisted on unconfirmed values: the customer does not get its text,
         # and the history keeps only the question and the safe answer, without the rejected attempt.
         try:
-            result = handoffs.registrar(
+            result = handoffs.register(
                 sessao.connection,
                 sessao.phone or "",
                 handoffs.Reason.SEM_RESPOSTA_SEGURA,
@@ -730,9 +730,9 @@ def responder(mensagem: str, sessao: Sessao) -> str:
             result = None
         # The text only claims the registration when it exists.
         resposta = {
-            handoffs.Result.REGISTRADO: RESPOSTA_SEGURA,
-            handoffs.Result.JA_REGISTRADO: RESPOSTA_SEGURA,
-            handoffs.Result.TELEFONE_INVALIDO: RESPOSTA_SEGURA_SEM_TELEFONE,
+            handoffs.Result.REGISTERED: RESPOSTA_SEGURA,
+            handoffs.Result.ALREADY_REGISTERED: RESPOSTA_SEGURA,
+            handoffs.Result.INVALID_PHONE: RESPOSTA_SEGURA_SEM_TELEFONE,
             handoffs.Result.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
             None: RESPOSTA_SEGURA_SEM_REGISTRO,
         }[result]

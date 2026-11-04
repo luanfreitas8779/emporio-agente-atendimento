@@ -286,7 +286,7 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     connection.commit()
 
 
-def carregar_dados(connection: sqlite3.Connection, pasta_dados: Path) -> None:
+def load_all_data(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     # The order follows the foreign keys: orders depend on customers and products.
     carregar_catalogo(connection, pasta_dados)
     carregar_clientes(connection, pasta_dados)
@@ -310,6 +310,6 @@ def banco_carregado(connection: sqlite3.Connection) -> bool:
 
 if __name__ == "__main__":
     connection = connect(DATABASE_PATH)
-    carregar_dados(connection, DATA_DIR)
+    load_all_data(connection, DATA_DIR)
     connection.close()
     print(f"Database created at {DATABASE_PATH}")

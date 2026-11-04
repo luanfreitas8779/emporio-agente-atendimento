@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 
 from src.catalog import normalize
-from src.memory import agora
+from src.memory import now_iso
 from src.phone import normalize_phone
 
 
@@ -44,20 +44,20 @@ class Reason(StrEnum):
 
 
 class Result(StrEnum):
-    REGISTRADO = "registrado"
+    REGISTERED = "registrado"
     RESUMO_INVALIDO = "resumo_invalido"
-    JA_REGISTRADO = "ja_registrado"
-    TELEFONE_INVALIDO = "telefone_invalido"
+    ALREADY_REGISTERED = "ja_registrado"
+    INVALID_PHONE = "telefone_invalido"
 
 
-def registrar(connection: sqlite3.Connection, phone: str, reason: Reason, resumo: str) -> Result:
+def register(connection: sqlite3.Connection, phone: str, reason: Reason, resumo: str) -> Result:
     key = normalize_phone(phone)
     if key is None:
-        return Result.TELEFONE_INVALIDO
+        return Result.INVALID_PHONE
     resumo = resumo.strip()[:MAX_RESUMO].strip()
     if not resumo:
         return Result.RESUMO_INVALIDO
-    corte = datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO
+    corte = datetime.fromisoformat(now_iso()) - JANELA_DE_REPETICAO
     anteriores = connection.execute(
         "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (key, reason)
     ).fetchall()
@@ -72,10 +72,10 @@ def registrar(connection: sqlite3.Connection, phone: str, reason: Reason, resumo
         for anterior, criado_em in anteriores
     )
     if repetido:
-        return Result.JA_REGISTRADO
+        return Result.ALREADY_REGISTERED
     connection.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
-        (key, reason, resumo, agora()),
+        (key, reason, resumo, now_iso()),
     )
     connection.commit()
-    return Result.REGISTRADO
+    return Result.REGISTERED

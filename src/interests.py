@@ -2,33 +2,33 @@ import sqlite3
 from enum import StrEnum
 
 from src.catalog import product_name
-from src.memory import agora
+from src.memory import now_iso
 from src.phone import normalize_phone
 
 
 class Result(StrEnum):
-    REGISTRADO = "registrado"
-    JA_REGISTRADO = "ja_registrado"
-    PRODUTO_INEXISTENTE = "produto_inexistente"
-    TELEFONE_INVALIDO = "telefone_invalido"
+    REGISTERED = "registrado"
+    ALREADY_REGISTERED = "ja_registrado"
+    PRODUCT_NOT_FOUND = "produto_inexistente"
+    INVALID_PHONE = "telefone_invalido"
 
 
-def registrar(connection: sqlite3.Connection, phone: str, product_id: int) -> Result:
+def register(connection: sqlite3.Connection, phone: str, product_id: int) -> Result:
     key = normalize_phone(phone)
     if key is None:
-        return Result.TELEFONE_INVALIDO
+        return Result.INVALID_PHONE
     if product_name(connection, product_id) is None:
-        return Result.PRODUTO_INEXISTENTE
+        return Result.PRODUCT_NOT_FOUND
     cursor = connection.execute(
         "INSERT INTO product_interests (phone, product_id, created_at) VALUES (?, ?, ?) "
         "ON CONFLICT (phone, product_id) DO NOTHING",
-        (key, product_id, agora()),
+        (key, product_id, now_iso()),
     )
     connection.commit()
-    return Result.REGISTRADO if cursor.rowcount else Result.JA_REGISTRADO
+    return Result.REGISTERED if cursor.rowcount else Result.ALREADY_REGISTERED
 
 
-def listar_pendentes(connection: sqlite3.Connection, phone: str) -> list[str]:
+def list_pending(connection: sqlite3.Connection, phone: str) -> list[str]:
     key = normalize_phone(phone)
     if key is None:
         return []

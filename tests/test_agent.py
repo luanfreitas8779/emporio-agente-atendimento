@@ -8,7 +8,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from src import calculations, catalog
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import connect
-from src.interests import listar_pendentes, registrar
+from src.interests import list_pending, register
 from src.load_data import ler_csv
 from src.memory import Estado, carregar_estado, exibir_conversa, salvar_estado
 from src.restock import repor_estoque
@@ -713,8 +713,8 @@ def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(connection, argu
 
 
 def test_instrucoes_trazem_os_interesses_pendentes_so_do_telefone_da_sessao(connection):
-    registrar(connection, ANA, 96)
-    registrar(connection, "(67) 91111-2222", 90)
+    register(connection, ANA, 96)
+    register(connection, "(67) 91111-2222", 90)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         da_ana = responder("Oi!", Sessao(connection, phone=ANA))
@@ -735,7 +735,7 @@ def test_ferramenta_registra_o_interesse_do_telefone_da_sessao_e_define_o_foco(c
     ):
         responder("Quero acompanhar esse violão", sessao)
 
-    assert listar_pendentes(connection, ANA) == ["Giannini GF-3D Dreadnought Sunburst"]
+    assert list_pending(connection, ANA) == ["Giannini GF-3D Dreadnought Sunburst"]
     assert sessao.estado.produto_em_foco == 96
     assert "não reserva o produto" in capturados[0].content
 
@@ -747,8 +747,8 @@ def test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone(connection)
     )
 
     assert retorno.outcome == "retried"
-    assert listar_pendentes(connection, "67911112222") == []
-    assert listar_pendentes(connection, ANA) == []
+    assert list_pending(connection, "67911112222") == []
+    assert list_pending(connection, ANA) == []
 
 
 def modelo_que_retoma_o_interesse(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -761,7 +761,7 @@ def modelo_que_retoma_o_interesse(mensagens: list[ModelMessage], info: AgentInfo
 
 
 def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(connection):
-    registrar(connection, ANA, 96)
+    register(connection, ANA, 96)
 
     with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
         resposta = responder("Chegou o violão?", Sessao(connection, phone=ANA))
@@ -770,7 +770,7 @@ def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(connect
 
 
 def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(connection):
-    registrar(connection, ANA, 96)
+    register(connection, ANA, 96)
     repor_estoque(connection, 96, 5)
 
     with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
@@ -780,7 +780,7 @@ def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(connection):
 
 
 def test_sem_interesse_salvo_o_contexto_diz_que_nao_ha_nenhum(connection):
-    registrar(connection, "(67) 91111-2222", 96)
+    register(connection, "(67) 91111-2222", 96)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Chegou o violão?", Sessao(connection, phone=ANA))
@@ -819,7 +819,7 @@ def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(conne
     )]
     names = [catalog.product_name(connection, i) for i in ids]
     for product in ids:
-        registrar(connection, ANA, product)
+        register(connection, ANA, product)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Chegou?", Sessao(connection, phone=ANA))

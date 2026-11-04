@@ -7,7 +7,7 @@ from src.load_data import (
     banco_carregado,
     carregar_catalogo,
     carregar_clientes,
-    carregar_dados,
+    load_all_data,
     carregar_pedidos,
 )
 from src.orders import get_orders, identify_customer
@@ -70,7 +70,7 @@ def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tm
 
 
 def test_recarregar_todos_os_dados_nao_duplica_pedidos(connection):
-    carregar_dados(connection, DATA_DIR)
+    load_all_data(connection, DATA_DIR)
 
     assert len(get_orders(connection, customer_id=3)) == 2
 

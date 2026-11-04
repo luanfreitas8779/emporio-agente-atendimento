@@ -2,7 +2,7 @@ import pytest
 
 from src.catalog import search_products
 from src.database import connect
-from src.load_data import carregar_dados
+from src.load_data import load_all_data
 from src.restock import ErroDeReposicao, principal, repor_estoque
 from tests.conftest import DATA_DIR
 
@@ -44,7 +44,7 @@ def test_recusa_produto_que_nao_esta_ativo(connection, product):
 def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, capsys):
     banco = tmp_path / "comando.db"
     connection = connect(banco)
-    carregar_dados(connection, DATA_DIR)
+    load_all_data(connection, DATA_DIR)
 
     exit_code = principal(["96", "--quantity", "3", "--banco", str(banco)])
 
@@ -52,7 +52,7 @@ def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, ca
     assert "3" in capsys.readouterr().out
     assert search_products(connection, "Giannini GF-3D")[0].availability == "disponivel"
 
-    carregar_dados(connection, DATA_DIR)
+    load_all_data(connection, DATA_DIR)
     assert search_products(connection, "Giannini GF-3D")[0].availability == "indisponivel"
     connection.close()
 
@@ -60,7 +60,7 @@ def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, ca
 def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
     banco = tmp_path / "comando.db"
     connection = connect(banco)
-    carregar_dados(connection, DATA_DIR)
+    load_all_data(connection, DATA_DIR)
     connection.close()
 
     exit_code = principal(["99999", "--banco", str(banco)])

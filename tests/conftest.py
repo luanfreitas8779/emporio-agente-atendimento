@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai import models
 
 from src.database import connect
-from src.load_data import carregar_dados
+from src.load_data import load_all_data
 
 # Ensures that no automated test calls the real Gemini model.
 models.ALLOW_MODEL_REQUESTS = False
@@ -23,6 +23,6 @@ def log_de_limites_temporario(tmp_path, monkeypatch):
 @pytest.fixture
 def connection(tmp_path):
     connection = connect(tmp_path / "teste.db")
-    carregar_dados(connection, DATA_DIR)
+    load_all_data(connection, DATA_DIR)
     yield connection
     connection.close()

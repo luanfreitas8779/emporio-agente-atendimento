@@ -5,7 +5,7 @@ import pytest
 from src.database import connect
 from src.memory import Estado, carregar_estado, create_tables, salvar_estado
 
-TELEFONE = "67996547821"
+PHONE = "67996547821"
 
 # conversation_state schemas created in previous versions of the project.
 ESQUEMA_COM_COLUNA_ANTIGA = """
@@ -39,9 +39,9 @@ def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
 
     connection = connect(tmp_path / "antigo.db")
 
-    assert carregar_estado(connection, TELEFONE) == Estado(8, 96)
-    salvar_estado(connection, TELEFONE, Estado(7, None))
-    assert carregar_estado(connection, TELEFONE) == Estado(7, None)
+    assert carregar_estado(connection, PHONE) == Estado(8, 96)
+    salvar_estado(connection, PHONE, Estado(7, None))
+    assert carregar_estado(connection, PHONE) == Estado(7, None)
     connection.close()
 
 
@@ -80,7 +80,7 @@ def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp
 def test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo(tmp_path):
     connection = connect(tmp_path / "novo.db")
 
-    salvar_estado(connection, TELEFONE, Estado(pedido_em_analise=8))
+    salvar_estado(connection, PHONE, Estado(pedido_em_analise=8))
 
-    assert carregar_estado(connection, TELEFONE) == Estado(pedido_em_analise=8)
+    assert carregar_estado(connection, PHONE) == Estado(pedido_em_analise=8)
     connection.close()
