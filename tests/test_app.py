@@ -49,10 +49,10 @@ def test_depois_da_resposta_o_campo_libera_e_a_conversa_tem_uma_resposta(tela):
 
 def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, monkeypatch):
     # Changing the phone number during the answer cannot hand the question to another customer (ADR-009).
-    telefones: list = []
+    phones: list = []
 
     def responder_observando(message, sessao):
-        telefones.append(sessao.phone)
+        phones.append(sessao.phone)
         return "Olá!"
 
     monkeypatch.setattr("src.agent.responder", responder_observando)
@@ -60,7 +60,7 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
     tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
-    assert telefones == ["(67) 99654-7821"]
+    assert phones == ["(67) 99654-7821"]
 
 
 def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypatch):

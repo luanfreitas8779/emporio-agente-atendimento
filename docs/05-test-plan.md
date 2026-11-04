@@ -327,7 +327,7 @@ Each fixed bug must leave a test that reproduces it. The automated ones carry th
 | The model could change the customer or the phone number through an argument | `test_mensagem_nao_consegue_trocar_o_cliente_consultado`, `test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone` |
 | The model could hand off a case on behalf of another phone number or with an invented reason | `test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone`, `test_motivo_desconhecido_e_recusado_pela_ferramenta` |
 | A database from a previous version broke reading the state | `test_previous_database_keeps_working_without_migration` |
-| A load with an error erased the previous database | `test_falha_na_carga_preserva_o_banco_anterior` |
+| A load with an error erased the previous database | `test_load_failure_preserves_the_previous_database` |
 | The restock command created an empty database when it did not exist | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
 | A typo in the name ("gianini gf 3d") did not find the product (ADR-019) | `test_search_tolerates_a_missing_letter_in_the_name` |
 | Fuzzy search swapped one model code for another ("D-28E" brought the D-28) | `test_search_does_not_confuse_distinct_models_with_similar_codes` |
@@ -340,7 +340,7 @@ Each fixed bug must leave a test that reproduces it. The automated ones carry th
 | Tom invented the stock when asked for a quantity | `test_reports_whether_stock_meets_the_quantity_without_revealing_the_number`, `test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida` |
 | The purchase channel was assumed by the model | `test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal`, `test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado`, `test_palavra_parecida_com_o_canal_nao_conta_como_canal_citado` |
 | Tom promised to notify the customer when the product came back | `test_promessa_de_aviso_pede_nova_resposta_ao_modelo`, `test_recusa_explicita_de_avisar_passa_sem_nova_tentativa`, `test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativa` |
-| A database loaded before the specifications broke the search | `test_banco_carregado_antes_das_especificacoes_pede_nova_carga` |
+| A database loaded before the specifications broke the search | `test_database_loaded_before_the_specifications_asks_for_a_new_load` |
 | The search denied a product when the query contained the category, a connecting word, or the code without a hyphen | `test_category_word_together_with_the_name_finds_the_product`, `test_connecting_words_in_the_query_do_not_prevent_the_search`, `test_model_code_without_hyphen_finds_the_product`, `test_fragment_of_a_category_word_finds_no_products` |
 | The agent did not know the date and the guardrail blocked today's date | `test_instrucoes_trazem_a_data_de_hoje_com_o_dia_da_semana`, `test_resposta_pode_citar_a_data_de_hoje_da_sessao`, `test_resposta_pode_citar_a_data_de_amanha_da_sessao` |
 | A shipped order with an overdue estimate did not report the delay | `test_shipped_order_after_the_estimated_delivery_reports_the_days_of_delay`, `test_ferramenta_de_pedidos_informa_o_atraso_com_a_data_da_sessao` |
@@ -367,7 +367,7 @@ Each fixed bug must leave a test that reproduces it. The automated ones carry th
 | The guardrail rejected correct text (price limit, requested quantity) and let other formats through (percentage written out, times, a date without a year, hours, notice promises), the internal block leaked in other forms, and an announced list came out empty | `test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta`, `test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta`, `test_numero_dito_pelo_cliente_confirma_quantidade_mas_nao_dinheiro`, `test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado`, `test_product_without_promotion_reports_the_pix_percent`, `test_percentual_por_extenso_e_conferido`, `test_quantidade_em_outros_formatos_e_barrada`, `test_data_curta_sem_ano_e_conferida_contra_as_datas_das_fontes`, `test_horas_escritas_por_extenso_sao_conferidas_como_horario`, `test_outras_formas_de_prometer_aviso_sao_barradas`, `test_negar_a_promessa_de_aviso_continua_passando`, `test_bloco_interno_em_qualquer_forma_nao_chega_ao_cliente_nem_ao_historico`, `test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta`, `test_limite_da_busca_nao_confirma_o_valor_como_preco`, `test_limite_da_busca_so_confirma_o_valor_dito_como_limite`, `test_numero_do_cliente_e_quantidade_da_busca_nao_confirmam_estoque` |
 | The second complaint, about another subject, was discarded within one hour | `test_complaint_about_another_subject_in_the_window_creates_a_new_record`, `test_complaint_about_another_order_in_the_window_creates_a_new_record`, `test_shared_complaint_verb_does_not_merge_two_subjects` |
 
-The load validations (`tests/test_load_data.py`, the `test_interrompe_a_carga_*` tests) also carry the marker: each one prevents invalid source data from entering the database, which was fixed in issues #2 to #5.
+The load validations (`tests/test_load_data.py`, the `test_stops_the_load_*` tests) also carry the marker: each one prevents invalid source data from entering the database, which was fixed in issues #2 to #5.
 
 ### 9.2 Manual script with Gemini
 

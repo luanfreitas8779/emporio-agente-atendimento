@@ -178,12 +178,12 @@ def test_cota_esgotada_nao_repete_e_informa_o_limite(connection, esperas):
 
 
 def test_banco_sem_tabelas_gera_mensagem_amigavel_em_vez_de_traceback(tmp_path):
-    vazio = connect(tmp_path / "vazio.db")
+    empty = connect(tmp_path / "vazio.db")
 
-    answer = responder("Oi", Sessao(vazio, phone=ANA))
+    answer = responder("Oi", Sessao(empty, phone=ANA))
 
     assert answer == MENSAGEM_DE_ERRO_TECNICO
-    vazio.close()
+    empty.close()
 
 
 def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_atendimento(connection):

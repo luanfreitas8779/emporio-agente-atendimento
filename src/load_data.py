@@ -8,7 +8,7 @@ from src.database import connect
 from src.orders import ORDER_STATUS, valid_payment
 from src.phone import normalize_phone
 
-ESQUEMA_CATALOGO = """
+CATALOG_SCHEMA = """
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS promotions;
 DROP TABLE IF EXISTS products;
@@ -38,7 +38,7 @@ CREATE TABLE promotions (
 );
 """
 
-ESQUEMA_CLIENTES = """
+CUSTOMERS_SCHEMA = """
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS customers;
@@ -50,7 +50,7 @@ CREATE TABLE customers (
 );
 """
 
-ESQUEMA_PEDIDOS = """
+ORDERS_SCHEMA = """
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 
@@ -73,14 +73,14 @@ CREATE TABLE order_items (
 """
 
 
-STATUS_DE_PRODUTO = {"active", "coming_soon", "discontinued"}
+PRODUCT_STATUSES = {"active", "coming_soon", "discontinued"}
 
 
-class ErroDeCarga(Exception):
+class LoadError(Exception):
     pass
 
 
-def para_centavos(amount: str) -> int:
+def to_cents(amount: str) -> int:
     """Converts reais to cents, rejecting negative values and fractions of a cent."""
     cents = Decimal(amount) * 100
     if cents < 0 or cents != cents.to_integral_value():
@@ -88,81 +88,81 @@ def para_centavos(amount: str) -> int:
     return int(cents)
 
 
-def rejeitar_duplicado(rotulo: str, identificador: str, vistos: set[str]) -> None:
-    if identificador in vistos:
-        raise ErroDeCarga(f"{rotulo} {identificador}: duplicate id")
-    vistos.add(identificador)
+def reject_duplicate(label: str, identifier: str, seen_ids: set[str]) -> None:
+    if identifier in seen_ids:
+        raise LoadError(f"{label} {identifier}: duplicate id")
+    seen_ids.add(identifier)
 
 
-def ler_csv(path: Path) -> list[dict[str, str]]:
+def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8-sig", newline="") as file:
         return list(csv.DictReader(file))
 
 
-def preparar_produto(
-    product: dict[str, str], categorias: set[str], vistos: set[str]
+def prepare_product(
+    product: dict[str, str], categories: set[str], seen_ids: set[str]
 ) -> tuple:
-    identificador = product["product_id"]
-    rejeitar_duplicado("product", identificador, vistos)
-    if product["category_id"] not in categorias:
-        raise ErroDeCarga(f"product {identificador}: nonexistent category")
+    identifier = product["product_id"]
+    reject_duplicate("product", identifier, seen_ids)
+    if product["category_id"] not in categories:
+        raise LoadError(f"product {identifier}: nonexistent category")
     try:
-        registro = (
-            int(identificador),
+        logger = (
+            int(identifier),
             product["name"],
             int(product["category_id"]),
-            para_centavos(product["price_brl"]),
+            to_cents(product["price_brl"]),
             int(product["stock_quantity"]),
             product["status"],
             product["specs"],
         )
     except (ValueError, ArithmeticError) as error:
-        raise ErroDeCarga(f"product {identificador}: invalid value") from error
-    if registro[4] < 0 or registro[5] not in STATUS_DE_PRODUTO:
-        raise ErroDeCarga(f"product {identificador}: invalid value")
-    return registro
+        raise LoadError(f"product {identifier}: invalid value") from error
+    if logger[4] < 0 or logger[5] not in PRODUCT_STATUSES:
+        raise LoadError(f"product {identifier}: invalid value")
+    return logger
 
 
-def preparar_promocao(
-    promocao: dict[str, str], products: set[str], vistos: set[str]
+def prepare_promotion(
+    promotion: dict[str, str], products: set[str], seen_ids: set[str]
 ) -> tuple:
-    identificador = promocao["promotion_id"]
-    rejeitar_duplicado("promotion", identificador, vistos)
-    if promocao["product_id"] not in products:
-        raise ErroDeCarga(f"promotion {identificador}: nonexistent product")
+    identifier = promotion["promotion_id"]
+    reject_duplicate("promotion", identifier, seen_ids)
+    if promotion["product_id"] not in products:
+        raise LoadError(f"promotion {identifier}: nonexistent product")
     try:
-        registro = (
-            int(identificador),
-            int(promocao["product_id"]),
-            int(promocao["discount_percent"]),
-            promocao["description"],
-            int(promocao["is_active"]),
+        logger = (
+            int(identifier),
+            int(promotion["product_id"]),
+            int(promotion["discount_percent"]),
+            promotion["description"],
+            int(promotion["is_active"]),
         )
     except ValueError as error:
-        raise ErroDeCarga(f"promotion {identificador}: invalid value") from error
-    if not 0 <= registro[2] <= 100 or registro[4] not in (0, 1):
-        raise ErroDeCarga(f"promotion {identificador}: invalid value")
-    return registro
+        raise LoadError(f"promotion {identifier}: invalid value") from error
+    if not 0 <= logger[2] <= 100 or logger[4] not in (0, 1):
+        raise LoadError(f"promotion {identifier}: invalid value")
+    return logger
 
 
-def carregar_catalogo(connection: sqlite3.Connection, pasta_dados: Path) -> None:
-    categorias = ler_csv(pasta_dados / "categories.csv")
-    ids_categorias = {category["category_id"] for category in categorias}
+def load_catalog(connection: sqlite3.Connection, data_folder: Path) -> None:
+    categories = read_csv(data_folder / "categories.csv")
+    category_ids = {category["category_id"] for category in categories}
     # Validation comes before the schema so that a failure does not erase the current database.
-    linhas_produtos = ler_csv(pasta_dados / "products.csv")
-    vistos: set[str] = set()
-    products = [preparar_produto(product, ids_categorias, vistos) for product in linhas_produtos]
-    ids_produtos = {product["product_id"] for product in linhas_produtos}
-    vistas: set[str] = set()
-    promocoes = [
-        preparar_promocao(promocao, ids_produtos, vistas)
-        for promocao in ler_csv(pasta_dados / "promotions.csv")
+    product_rows = read_csv(data_folder / "products.csv")
+    seen_ids: set[str] = set()
+    products = [prepare_product(product, category_ids, seen_ids) for product in product_rows]
+    product_ids = {product["product_id"] for product in product_rows}
+    seen: set[str] = set()
+    promotions = [
+        prepare_promotion(promotion, product_ids, seen)
+        for promotion in read_csv(data_folder / "promotions.csv")
     ]
 
-    connection.executescript(ESQUEMA_CATALOGO)
+    connection.executescript(CATALOG_SCHEMA)
     connection.executemany(
         "INSERT INTO categories (category_id, name) VALUES (:category_id, :name)",
-        categorias,
+        categories,
     )
     connection.executemany(
         """
@@ -178,53 +178,53 @@ def carregar_catalogo(connection: sqlite3.Connection, pasta_dados: Path) -> None
             promotion_id, product_id, discount_percent, description, is_active
         ) VALUES (?, ?, ?, ?, ?)
         """,
-        promocoes,
+        promotions,
     )
     connection.commit()
 
 
-def preparar_cliente(customer: dict[str, str], vistos: set[str], telefones: set[str]) -> tuple:
-    identificador = customer["customer_id"]
-    rejeitar_duplicado("customer", identificador, vistos)
+def prepare_customer(customer: dict[str, str], seen_ids: set[str], phones: set[str]) -> tuple:
+    identifier = customer["customer_id"]
+    reject_duplicate("customer", identifier, seen_ids)
     try:
-        number = int(identificador)
+        number = int(identifier)
     except ValueError as error:
-        raise ErroDeCarga(f"customer {identificador}: invalid value") from error
+        raise LoadError(f"customer {identifier}: invalid value") from error
     phone = normalize_phone(customer["phone"])
     if phone is None or not customer["name"].strip():
-        raise ErroDeCarga(f"customer {identificador}: invalid value")
-    if phone in telefones:
-        raise ErroDeCarga(f"customer {identificador}: duplicate phone number")
-    telefones.add(phone)
+        raise LoadError(f"customer {identifier}: invalid value")
+    if phone in phones:
+        raise LoadError(f"customer {identifier}: duplicate phone number")
+    phones.add(phone)
     # E-mail and city are not loaded: the agent does not need them (privacy).
     return (number, customer["name"].strip(), phone)
 
 
-def carregar_clientes(connection: sqlite3.Connection, pasta_dados: Path) -> None:
-    vistos: set[str] = set()
-    telefones: set[str] = set()
-    clientes = [
-        preparar_cliente(customer, vistos, telefones)
-        for customer in ler_csv(pasta_dados / "customers.csv")
+def load_customers(connection: sqlite3.Connection, data_folder: Path) -> None:
+    seen_ids: set[str] = set()
+    phones: set[str] = set()
+    customers = [
+        prepare_customer(customer, seen_ids, phones)
+        for customer in read_csv(data_folder / "customers.csv")
     ]
-    connection.executescript(ESQUEMA_CLIENTES)
-    connection.executemany("INSERT INTO customers (customer_id, name, phone) VALUES (?, ?, ?)", clientes)
+    connection.executescript(CUSTOMERS_SCHEMA)
+    connection.executemany("INSERT INTO customers (customer_id, name, phone) VALUES (?, ?, ?)", customers)
     connection.commit()
 
 
-def preparar_pedido(order: dict[str, str], clientes: set[int], vistos: set[str]) -> tuple:
-    identificador = order["order_id"]
-    rejeitar_duplicado("order", identificador, vistos)
+def prepare_order(order: dict[str, str], customers: set[int], seen_ids: set[str]) -> tuple:
+    identifier = order["order_id"]
+    reject_duplicate("order", identifier, seen_ids)
     try:
         customer = int(order["customer_id"])
-        total = para_centavos(order["total_brl"])
-        number = int(identificador)
+        total = to_cents(order["total_brl"])
+        number = int(identifier)
     except (ValueError, ArithmeticError) as error:
-        raise ErroDeCarga(f"order {identificador}: invalid value") from error
+        raise LoadError(f"order {identifier}: invalid value") from error
     if order["status"] not in ORDER_STATUS or not valid_payment(order["payment_method"]):
-        raise ErroDeCarga(f"order {identificador}: invalid value")
-    if customer not in clientes:
-        raise ErroDeCarga(f"order {identificador}: nonexistent customer")
+        raise LoadError(f"order {identifier}: invalid value")
+    if customer not in customers:
+        raise LoadError(f"order {identifier}: nonexistent customer")
     return (
         number,
         customer,
@@ -237,40 +237,40 @@ def preparar_pedido(order: dict[str, str], clientes: set[int], vistos: set[str])
     )
 
 
-def preparar_item(item: dict[str, str], order_list: set[int], products: set[int]) -> tuple:
-    identificador = item["order_id"]
+def prepare_item(item: dict[str, str], order_list: set[int], products: set[int]) -> tuple:
+    identifier = item["order_id"]
     try:
         number, product, quantity = (
-            int(identificador),
+            int(identifier),
             int(item["product_id"]),
             int(item["quantity"]),
         )
     except ValueError as error:
-        raise ErroDeCarga(f"order item {identificador}: invalid value") from error
+        raise LoadError(f"order item {identifier}: invalid value") from error
     if quantity < 1:
-        raise ErroDeCarga(f"order item {identificador}: invalid value")
+        raise LoadError(f"order item {identifier}: invalid value")
     if number not in order_list:
-        raise ErroDeCarga(f"order item {identificador}: nonexistent order")
+        raise LoadError(f"order item {identifier}: nonexistent order")
     if product not in products:
-        raise ErroDeCarga(f"order item {identificador}: nonexistent product")
+        raise LoadError(f"order item {identifier}: nonexistent product")
     return (number, product, quantity)
 
 
-def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
-    clientes = {row[0] for row in connection.execute("SELECT customer_id FROM customers")}
+def load_orders(connection: sqlite3.Connection, data_folder: Path) -> None:
+    customers = {row[0] for row in connection.execute("SELECT customer_id FROM customers")}
     products = {row[0] for row in connection.execute("SELECT product_id FROM products")}
     # Validation comes before the schema so that a failure does not erase the current database.
-    vistos: set[str] = set()
+    seen_ids: set[str] = set()
     order_list = [
-        preparar_pedido(order, clientes, vistos)
-        for order in ler_csv(pasta_dados / "orders.csv")
+        prepare_order(order, customers, seen_ids)
+        for order in read_csv(data_folder / "orders.csv")
     ]
-    ids_pedidos = {order[0] for order in order_list}
+    order_ids = {order[0] for order in order_list}
     items = [
-        preparar_item(item, ids_pedidos, products)
-        for item in ler_csv(pasta_dados / "order_items.csv")
+        prepare_item(item, order_ids, products)
+        for item in read_csv(data_folder / "order_items.csv")
     ]
-    connection.executescript(ESQUEMA_PEDIDOS)
+    connection.executescript(ORDERS_SCHEMA)
     connection.executemany(
         """
         INSERT INTO orders (
@@ -286,22 +286,22 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     connection.commit()
 
 
-def load_all_data(connection: sqlite3.Connection, pasta_dados: Path) -> None:
+def load_all_data(connection: sqlite3.Connection, data_folder: Path) -> None:
     # The order follows the foreign keys: orders depend on customers and products.
-    carregar_catalogo(connection, pasta_dados)
-    carregar_clientes(connection, pasta_dados)
-    carregar_pedidos(connection, pasta_dados)
+    load_catalog(connection, data_folder)
+    load_customers(connection, data_folder)
+    load_orders(connection, data_folder)
 
 
-TABELAS_DA_CARGA = ("categories", "products", "promotions", "customers", "orders", "order_items")
+LOADED_TABLES = ("categories", "products", "promotions", "customers", "orders", "order_items")
 
 
-def banco_carregado(connection: sqlite3.Connection) -> bool:
+def database_loaded(connection: sqlite3.Connection) -> bool:
     """Says whether the data load has already created the catalog, customer, and order tables."""
-    existentes = {
+    existing = {
         row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
     }
-    if not set(TABELAS_DA_CARGA) <= existentes:
+    if not set(LOADED_TABLES) <= existing:
         return False
     # A load from before the specifications lacks the column and requires a new load.
     colunas = {row[1] for row in connection.execute("PRAGMA table_info(products)")}

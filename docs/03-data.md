@@ -161,7 +161,7 @@ No data enters the system without validation. There are two boundaries: loading 
 
 ### 8.1 Loading the files
 
-Any violation stops the load with `ErroDeCarga`, which reports the entity and the id. All validation happens before the tables are recreated, so a failed load preserves the previous database.
+Any violation stops the load with `LoadError`, which reports the entity and the id. All validation happens before the tables are recreated, so a failed load preserves the previous database.
 
 | Entity | Rules |
 |---|---|

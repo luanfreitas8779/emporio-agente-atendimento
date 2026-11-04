@@ -264,7 +264,7 @@ MENSAGEM_DE_TIMEOUT = "O serviço demorou para responder. Tente novamente."
 
 MENSAGEM_DE_ERRO_TECNICO = "Tive um problema técnico para atender agora. Tente novamente em instantes."
 
-registro = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 RESPOSTA_SEGURA_SEM_REGISTRO = (
     "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
@@ -687,7 +687,7 @@ def _responder_sem_modelo(message: str, sessao: Sessao, text: str) -> str:
         )
     except Exception:
         # If the database is the cause of the failure, the customer still gets the message.
-        registro.exception("Could not store the conversation")
+        logger.exception("Could not store the conversation")
     return text
 
 
@@ -706,7 +706,7 @@ def responder(message: str, sessao: Sessao) -> str:
         try:
             limits.log_limit(error)
         except OSError:
-            registro.exception("Could not log the provider limit")
+            logger.exception("Could not log the provider limit")
         # Exhausted quota is not solved by waiting: there is no retry, only the same message.
         # Exhausted quota also only comes back the next day.
         diario = isinstance(error, ModelQuotaExceededError) or limits.is_daily_limit(error)
@@ -726,7 +726,7 @@ def responder(message: str, sessao: Sessao) -> str:
                 message,
             )
         except sqlite3.Error:
-            registro.exception("Could not register the handoff")
+            logger.exception("Could not register the handoff")
             result = None
         # The text only claims the registration when it exists.
         answer = {
@@ -740,5 +740,5 @@ def responder(message: str, sessao: Sessao) -> str:
     except Exception:
         # Network, key, provider, database, or unexpected error: the details go to the log,
         # and the customer gets the technical message so that the message field is enabled again.
-        registro.exception("Technical failure while answering")
+        logger.exception("Technical failure while answering")
         return _responder_sem_modelo(message, sessao, MENSAGEM_DE_ERRO_TECNICO)

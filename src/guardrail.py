@@ -118,7 +118,7 @@ def valores(text: str) -> dict[str, set]:
         for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(text)
     }
     horarios |= {f"{int(hora):02d}:00" for hora in PADRAO_HORAS.findall(text)}
-    telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(text)}
+    phones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(text)}
     quantities = {
         int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizado) for numero_ in achado if numero_
     }
@@ -130,7 +130,7 @@ def valores(text: str) -> dict[str, set]:
         "quantity": quantities,
         "estoque": stock,
         "horario": horarios,
-        "phone": telefones,
+        "phone": phones,
         "dia_mes": por_extenso,
         "percentual": percentuais,
         "data": found_dates - {None},

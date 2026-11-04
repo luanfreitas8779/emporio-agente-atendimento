@@ -9,7 +9,7 @@ from src import calculations, catalog
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import connect
 from src.interests import list_pending, register
-from src.load_data import ler_csv
+from src.load_data import read_csv
 from src.memory import ConversationState, load_state, conversation_for_display, save_state
 from src.restock import repor_estoque
 from tests.conftest import DATA_DIR
@@ -252,7 +252,7 @@ def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(connection):
         instrucoes = responder("Oi!", sessao)
 
     # The source of the values is the CSV, not the code under test.
-    for customer in ler_csv(DATA_DIR / "customers.csv"):
+    for customer in read_csv(DATA_DIR / "customers.csv"):
         assert customer["email"] not in instrucoes
         assert customer["phone"] not in instrucoes
 
@@ -261,7 +261,7 @@ def test_retorno_dos_pedidos_nao_expoe_email_nem_cidade(connection):
     retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {})
 
     text = repr(retorno.content)
-    for customer in ler_csv(DATA_DIR / "customers.csv"):
+    for customer in read_csv(DATA_DIR / "customers.csv"):
         assert customer["email"] not in text
     assert "Campo Grande" not in text
 

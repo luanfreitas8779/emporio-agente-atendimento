@@ -6,7 +6,7 @@ import streamlit as st
 from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
 from src.config import DATABASE_PATH
 from src.database import connect
-from src.load_data import banco_carregado
+from src.load_data import database_loaded
 from src.memory import conversation_for_display
 from src.phone import normalize_phone
 
@@ -56,7 +56,7 @@ st.caption("Sua música começa aqui.")
 try:
     _conexao = connect(DATABASE_PATH)
     try:
-        _carregado = banco_carregado(_conexao)
+        _carregado = database_loaded(_conexao)
     finally:
         _conexao.close()
 except (OSError, sqlite3.Error):
