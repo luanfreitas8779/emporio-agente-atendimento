@@ -186,3 +186,5 @@ The store data and handbook leave some points open. The project assumes:
 - **Handbook conflicts are resolved conservatively.** Conflicting phone numbers, minimum installments, and deadlines follow the interpretation recorded in [Data](docs/03-data.md), section 4.5, and must be confirmed by store management before production use.
 
 Commit messages were translated into English at the end of the project to meet the English requirement. Commit contents, order, and dates are unchanged.
+
+GitHub Issues keep their original Portuguese text: they are the planning record written during development, before the English requirement was applied to the repository.
