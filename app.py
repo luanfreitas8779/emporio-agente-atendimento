@@ -20,7 +20,7 @@ ROTULOS_DAS_FERRAMENTAS = {
     "get_policies": "Consulta às políticas da loja",
     "calculate_purchase": "Cálculo da compra",
     "consultar_meus_pedidos": "Consulta aos seus pedidos",
-    "avaliar_devolucao": "Avaliação de devolução",
+    "assess_return": "Avaliação de devolução",
     "registrar_interesse": "Registro de interesse no produto",
     "encaminhar_para_atendente": "Encaminhamento para a equipe",
 }

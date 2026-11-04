@@ -196,7 +196,7 @@ The model is an untrusted input source. Arguments are validated by Pydantic AI, 
 
 - `max_price`, `amount`: greater than zero.
 - `installments`, `numero_pedido`, `product_id`: integers starting at 1.
-- The return's `motivo` (arrependimento, defeito, or preferencia) and `canal` (online or presencial), and the handoff's `motivo` (reclamacao, atendente_solicitado, or sem_resposta_segura): enumerations validated by Pydantic.
+- The return's `reason` (arrependimento, defeito, or preferencia) and `channel` (online or presencial), and the handoff's `reason` (reclamacao, atendente_solicitado, or sem_resposta_segura): enumerations validated by Pydantic.
 - `section`: one of the sections in `policies.SECTIONS`.
 - Installments above 12 are not rejected: the answer states the 12x limit.
 - Unknown arguments, such as `customer_id`, are rejected.

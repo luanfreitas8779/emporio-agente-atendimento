@@ -10,14 +10,14 @@ Conversa não trivial: exige perguntar o canal da compra, avaliar o prazo em có
 >
 > **Tom:** Letícia, para eu avaliar a devolução por arrependimento do pedido 7, você comprou online ou na loja física? 🎸
 
-Ferramenta usada: `avaliar_devolucao(numero_pedido=7, motivo="arrependimento")`, que devolve `faltam_dados` com o canal em falta.
+Ferramenta usada: `assess_return(numero_pedido=7, reason="arrependimento")`, que devolve `faltam_dados` com o canal em falta.
 
 > **Cliente:** foi online
 >
 > **Tom:** Letícia, vi aqui que o prazo para arrependimento do pedido 7 expirou no dia 24/02/2026 (considerando a previsão de entrega de 17/02/2026). Como passou do prazo, não consigo seguir com a devolução por aqui.
 > Quer que eu encaminhe o seu caso para a nossa equipe avaliar? Eles retornam em até 24 horas úteis! 😊
 
-Ferramenta usada: `avaliar_devolucao(numero_pedido=7, motivo="arrependimento", canal="online")`, com resultado `fora_do_prazo`.
+Ferramenta usada: `assess_return(numero_pedido=7, reason="arrependimento", channel="online")`, com resultado `fora_do_prazo`.
 
 ## O que a conversa mostra
 

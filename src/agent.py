@@ -72,11 +72,11 @@ reescrever, e o total registrado, sem recalcular. A entrega
 estimada é uma previsão, não a data real de entrega. Sem cadastro, explique que
 pedidos exigem um telefone cadastrado e siga ajudando com dúvidas gerais.
 
-Para troca ou devolução, use a ferramenta avaliar_devolucao com o número do pedido
+Para troca ou devolução, use a ferramenta assess_return com o número do pedido
 e o motivo (arrependimento, defeito ou preferencia). Pergunte ao cliente o que
 faltar: o motivo, se ele não disse, e o canal de compra (online ou presencial) no
 arrependimento, porque o pedido não registra o canal. Nunca suponha o canal: só
-informe canal na ferramenta se o cliente disse; sem isso, omita o argumento e
+informe channel na ferramenta se o cliente disse; sem isso, omita o argumento e
 pergunte. Se o cliente não informar o
 número e tiver mais de um pedido, consulte os pedidos dele. Repasse o veredito
 como veio, com as datas e os avisos, sem recalcular prazos e sem prometer aprovação:
@@ -225,10 +225,10 @@ SEM_CADASTRO = (
 AVISO_DE_INTERESSE = "Isso não reserva o produto e não garante aviso nem data de reposição."
 
 MENSAGENS_DE_INTERESSE = {
-    interests.Resultado.REGISTRADO: f"Interesse registrado. {AVISO_DE_INTERESSE}",
-    interests.Resultado.JA_REGISTRADO: f"Esse interesse já estava registrado. {AVISO_DE_INTERESSE}",
-    interests.Resultado.PRODUTO_INEXISTENTE: "Produto não encontrado: nenhum interesse foi registrado.",
-    interests.Resultado.TELEFONE_INVALIDO: (
+    interests.Result.REGISTRADO: f"Interesse registrado. {AVISO_DE_INTERESSE}",
+    interests.Result.JA_REGISTRADO: f"Esse interesse já estava registrado. {AVISO_DE_INTERESSE}",
+    interests.Result.PRODUTO_INEXISTENTE: "Produto não encontrado: nenhum interesse foi registrado.",
+    interests.Result.TELEFONE_INVALIDO: (
         "Sem um telefone válido nesta conversa não é possível guardar o interesse."
     ),
 }
@@ -236,10 +236,10 @@ MENSAGENS_DE_INTERESSE = {
 PRAZO_DE_RETORNO = "A equipe retorna em até 24 horas úteis."
 
 MENSAGENS_DE_ENCAMINHAMENTO = {
-    handoffs.Resultado.REGISTRADO: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
-    handoffs.Resultado.JA_REGISTRADO: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
-    handoffs.Resultado.RESUMO_INVALIDO: "O resumo está vazio: descreva o caso antes de encaminhar.",
-    handoffs.Resultado.TELEFONE_INVALIDO: (
+    handoffs.Result.REGISTRADO: f"Encaminhamento registrado. {PRAZO_DE_RETORNO}",
+    handoffs.Result.JA_REGISTRADO: f"Esse encaminhamento já estava registrado. {PRAZO_DE_RETORNO}",
+    handoffs.Result.RESUMO_INVALIDO: "O resumo está vazio: descreva o caso antes de encaminhar.",
+    handoffs.Result.TELEFONE_INVALIDO: (
         "Não foi possível identificar o telefone do cliente nesta conversa, então o caso não foi "
         "encaminhado. Explique isso ao cliente e passe os contatos da loja "
         "(get_policies, seção sobre_a_loja)."
@@ -334,12 +334,12 @@ class FontesDoTurno(NamedTuple):
 
 
 def _mensagens_do_turno(mensagens: list) -> list:
-    inicio = max(
+    start = max(
         (i for i, m in enumerate(mensagens)
          if isinstance(m, ModelRequest) and any(isinstance(p, UserPromptPart) for p in m.parts)),
         default=0,
     )
-    return mensagens[inicio:]
+    return mensagens[start:]
 
 
 def argumentos_da_busca(mensagens: list, name: str) -> list:
@@ -562,14 +562,14 @@ def consultar_meus_pedidos(
 
 # Whole words and phrases that state the purchase channel; "site" alone does not, it may be a lookup.
 PADRAO_DO_CANAL = {
-    returns.Canal.ONLINE: re.compile(r"\bonline\b|\bpel[oa] (?:site|internet|app|aplicativo)\b"),
-    returns.Canal.PRESENCIAL: re.compile(
+    returns.Channel.ONLINE: re.compile(r"\bonline\b|\bpel[oa] (?:site|internet|app|aplicativo)\b"),
+    returns.Channel.IN_PERSON: re.compile(
         r"\bpresencial(?:mente)?\b|\bpessoalmente\b|\bna loja\b|\bno balcao\b"
     ),
 }
 
 
-def canal_citado_pelo_cliente(mensagens: list, canal: returns.Canal) -> bool:
+def canal_citado_pelo_cliente(mensagens: list, channel: returns.Channel) -> bool:
     """The order does not record the channel: only what a customer message in the conversation said counts."""
     falas = (
         catalog.normalize(str(part.content))
@@ -577,16 +577,16 @@ def canal_citado_pelo_cliente(mensagens: list, canal: returns.Canal) -> bool:
         for part in mensagem.parts
         if isinstance(part, UserPromptPart)
     )
-    return any(PADRAO_DO_CANAL[canal].search(fala) for fala in falas)
+    return any(PADRAO_DO_CANAL[channel].search(fala) for fala in falas)
 
 
 @agente.tool
-def avaliar_devolucao(
+def assess_return(
     ctx: RunContext[Sessao],
     numero_pedido: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)],
-    motivo: returns.Motivo,
-    canal: returns.Canal | None = None,
-) -> returns.Veredito | str:
+    reason: returns.Reason,
+    channel: returns.Channel | None = None,
+) -> returns.Verdict | str:
     """Avalia se um pedido do cliente ainda está no prazo de devolução ou troca.
 
     Devolve o veredito já calculado, com os prazos e as datas formatadas. Repasse o
@@ -594,21 +594,21 @@ def avaliar_devolucao(
 
     Args:
         numero_pedido: Número do pedido.
-        motivo: arrependimento, defeito ou preferencia.
-        canal: online ou presencial, somente se o cliente informou. Nunca suponha:
+        reason: arrependimento, defeito ou preferencia.
+        channel: online ou presencial, somente se o cliente informou. Nunca suponha:
             para arrependimento, omita e pergunte, porque o pedido não registra o canal.
     """
     customer = ctx.deps.customer
     if customer is None:
         return SEM_CADASTRO
-    if canal is not None and not canal_citado_pelo_cliente(ctx.messages, canal):
-        canal = None
-    veredito = returns.avaliar_devolucao(
-        ctx.deps.connection, customer.id, numero_pedido, motivo, canal, ctx.deps.today
+    if channel is not None and not canal_citado_pelo_cliente(ctx.messages, channel):
+        channel = None
+    verdict = returns.assess_return(
+        ctx.deps.connection, customer.id, numero_pedido, reason, channel, ctx.deps.today
     )
-    if veredito.resultado != returns.Resultado.PEDIDO_NAO_ENCONTRADO:
+    if verdict.result != returns.Result.ORDER_NOT_FOUND:
         ctx.deps.estado.pedido_em_analise = numero_pedido
-    return veredito
+    return verdict
 
 
 @agente.tool
@@ -621,15 +621,15 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     Args:
         product_id: Id do produto, como devolvido por search_products.
     """
-    resultado = interests.registrar(ctx.deps.connection, ctx.deps.phone or "", product_id)
-    if resultado in (interests.Resultado.REGISTRADO, interests.Resultado.JA_REGISTRADO):
+    result = interests.registrar(ctx.deps.connection, ctx.deps.phone or "", product_id)
+    if result in (interests.Result.REGISTRADO, interests.Result.JA_REGISTRADO):
         ctx.deps.estado.produto_em_foco = product_id
-    return MENSAGENS_DE_INTERESSE[resultado]
+    return MENSAGENS_DE_INTERESSE[result]
 
 
 @agente.tool
 def encaminhar_para_atendente(
-    ctx: RunContext[Sessao], motivo: handoffs.Motivo, resumo: str
+    ctx: RunContext[Sessao], reason: handoffs.Reason, resumo: str
 ) -> str:
     """Registra o caso para a equipe da loja, que retorna ao cliente em até 24 horas úteis.
 
@@ -637,11 +637,11 @@ def encaminhar_para_atendente(
     nenhuma ferramenta responde com segurança.
 
     Args:
-        motivo: reclamacao, atendente_solicitado ou sem_resposta_segura.
+        reason: reclamacao, atendente_solicitado ou sem_resposta_segura.
         resumo: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
     """
-    resultado = handoffs.registrar(ctx.deps.connection, ctx.deps.phone or "", motivo, resumo)
-    return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
+    result = handoffs.registrar(ctx.deps.connection, ctx.deps.phone or "", reason, resumo)
+    return MENSAGENS_DE_ENCAMINHAMENTO[result]
 
 
 # Rate limit and temporary unavailability: waiting may solve it.
@@ -696,12 +696,12 @@ def responder(mensagem: str, sessao: Sessao) -> str:
     try:
         historico = memory.carregar_historico(sessao.connection, sessao.phone)
         sessao.estado = memory.carregar_estado(sessao.connection, sessao.phone)
-        resultado = _executar(mensagem, sessao, historico)
-        sessao.ferramentas = ferramentas_do_turno(resultado.new_messages())
-        limpar_texto_das_respostas(resultado.new_messages())
-        memory.salvar_mensagens(sessao.connection, sessao.phone, resultado.new_messages())
+        result = _executar(mensagem, sessao, historico)
+        sessao.ferramentas = ferramentas_do_turno(result.new_messages())
+        limpar_texto_das_respostas(result.new_messages())
+        memory.salvar_mensagens(sessao.connection, sessao.phone, result.new_messages())
         memory.salvar_estado(sessao.connection, sessao.phone, sessao.estado)
-        return resultado.output
+        return result.output
     except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as error:
         try:
             limits.registrar_limite(error)
@@ -719,23 +719,23 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         # The model insisted on unconfirmed values: the customer does not get its text,
         # and the history keeps only the question and the safe answer, without the rejected attempt.
         try:
-            resultado = handoffs.registrar(
+            result = handoffs.registrar(
                 sessao.connection,
                 sessao.phone or "",
-                handoffs.Motivo.SEM_RESPOSTA_SEGURA,
+                handoffs.Reason.SEM_RESPOSTA_SEGURA,
                 mensagem,
             )
         except sqlite3.Error:
             registro.exception("Could not register the handoff")
-            resultado = None
+            result = None
         # The text only claims the registration when it exists.
         resposta = {
-            handoffs.Resultado.REGISTRADO: RESPOSTA_SEGURA,
-            handoffs.Resultado.JA_REGISTRADO: RESPOSTA_SEGURA,
-            handoffs.Resultado.TELEFONE_INVALIDO: RESPOSTA_SEGURA_SEM_TELEFONE,
-            handoffs.Resultado.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
+            handoffs.Result.REGISTRADO: RESPOSTA_SEGURA,
+            handoffs.Result.JA_REGISTRADO: RESPOSTA_SEGURA,
+            handoffs.Result.TELEFONE_INVALIDO: RESPOSTA_SEGURA_SEM_TELEFONE,
+            handoffs.Result.RESUMO_INVALIDO: RESPOSTA_SEGURA_SEM_REGISTRO,
             None: RESPOSTA_SEGURA_SEM_REGISTRO,
-        }[resultado]
+        }[result]
         return _responder_sem_modelo(mensagem, sessao, resposta)
     except Exception:
         # Network, key, provider, database, or unexpected error: the details go to the log,

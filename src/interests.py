@@ -6,26 +6,26 @@ from src.memory import agora
 from src.phone import normalize_phone
 
 
-class Resultado(StrEnum):
+class Result(StrEnum):
     REGISTRADO = "registrado"
     JA_REGISTRADO = "ja_registrado"
     PRODUTO_INEXISTENTE = "produto_inexistente"
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
-def registrar(connection: sqlite3.Connection, phone: str, product_id: int) -> Resultado:
+def registrar(connection: sqlite3.Connection, phone: str, product_id: int) -> Result:
     key = normalize_phone(phone)
     if key is None:
-        return Resultado.TELEFONE_INVALIDO
+        return Result.TELEFONE_INVALIDO
     if product_name(connection, product_id) is None:
-        return Resultado.PRODUTO_INEXISTENTE
+        return Result.PRODUTO_INEXISTENTE
     cursor = connection.execute(
         "INSERT INTO product_interests (phone, product_id, created_at) VALUES (?, ?, ?) "
         "ON CONFLICT (phone, product_id) DO NOTHING",
         (key, product_id, agora()),
     )
     connection.commit()
-    return Resultado.REGISTRADO if cursor.rowcount else Resultado.JA_REGISTRADO
+    return Result.REGISTRADO if cursor.rowcount else Result.JA_REGISTRADO
 
 
 def listar_pendentes(connection: sqlite3.Connection, phone: str) -> list[str]:

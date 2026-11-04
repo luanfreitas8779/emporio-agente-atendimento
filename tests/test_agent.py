@@ -22,8 +22,8 @@ def modelo_que_consulta_o_preco(
         return ModelResponse(
             parts=[ToolCallPart("search_products", {"search_term": "Takamine GD20"})]
         )
-    resultado = mensagens[-1].parts[0].content
-    return ModelResponse(parts=[TextPart(f"Encontrei: {resultado}")])
+    result = mensagens[-1].parts[0].content
+    return ModelResponse(parts=[TextPart(f"Encontrei: {result}")])
 
 
 def test_responde_com_o_preco_vindo_do_catalogo(connection):
@@ -604,50 +604,50 @@ def chamar_ferramenta_na_data(connection, phone, today, ferramenta, argumentos, 
 
 def test_ferramenta_de_devolucao_usa_o_pedido_do_cliente_e_a_data_da_sessao(connection):
     retorno = chamar_ferramenta_na_data(
-        connection, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
-        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        connection, LETICIA, date(2026, 2, 20), "assess_return",
+        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
         mensagem="Comprei online e quero devolver o pedido 7 por arrependimento",
     )
 
-    assert retorno.content.resultado == "dentro_do_prazo"
-    assert retorno.content.regras[0].prazo_ate == "24/02/2026"
+    assert retorno.content.result == "dentro_do_prazo"
+    assert retorno.content.rules[0].deadline == "24/02/2026"
 
 
 @pytest.mark.regression
 def test_canal_que_o_cliente_nao_citou_e_ignorado_e_o_veredito_pede_o_canal(connection):
     # The model assumed "online"; the customer only gave the reason.
     retorno = chamar_ferramenta_na_data(
-        connection, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
-        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        connection, LETICIA, date(2026, 2, 20), "assess_return",
+        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
         mensagem="Quero devolver o pedido 7 por arrependimento",
     )
 
-    assert retorno.content.resultado == "faltam_dados"
+    assert retorno.content.result == "faltam_dados"
 
 
 @pytest.mark.regression
 def test_canal_diferente_do_que_o_cliente_citou_tambem_e_ignorado(connection):
     retorno = chamar_ferramenta_na_data(
-        connection, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
-        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        connection, LETICIA, date(2026, 2, 20), "assess_return",
+        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
         mensagem="Comprei presencialmente e quero devolver o pedido 7 por arrependimento",
     )
 
-    assert retorno.content.resultado == "faltam_dados"
+    assert retorno.content.result == "faltam_dados"
 
 
 def test_devolucao_de_pedido_de_outro_cliente_volta_como_nao_encontrado(connection):
     # Order 7 belongs to customer 14; the session belongs to customer 2.
     retorno = chamar_ferramenta(
-        connection, ANA, "avaliar_devolucao", {"numero_pedido": 7, "motivo": "defeito"}
+        connection, ANA, "assess_return", {"numero_pedido": 7, "reason": "defeito"}
     )
 
-    assert retorno.content.resultado == "pedido_nao_encontrado"
+    assert retorno.content.result == "pedido_nao_encontrado"
 
 
 def test_devolucao_sem_cadastro_explica_que_pedidos_exigem_telefone_cadastrado(connection):
     retorno = chamar_ferramenta(
-        connection, "(67) 90000-0000", "avaliar_devolucao", {"numero_pedido": 7, "motivo": "defeito"}
+        connection, "(67) 90000-0000", "assess_return", {"numero_pedido": 7, "reason": "defeito"}
     )
 
     assert retorno.content == SEM_CADASTRO
@@ -656,12 +656,12 @@ def test_devolucao_sem_cadastro_explica_que_pedidos_exigem_telefone_cadastrado(c
 @pytest.mark.parametrize(
     "argumentos",
     [
-        {"numero_pedido": 7, "motivo": "fiquei com dó"},
-        {"numero_pedido": 7, "motivo": "defeito", "customer_id": 14},
+        {"numero_pedido": 7, "reason": "fiquei com dó"},
+        {"numero_pedido": 7, "reason": "defeito", "customer_id": 14},
     ],
 )
 def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(connection, argumentos):
-    retorno = chamar_ferramenta(connection, ANA, "avaliar_devolucao", argumentos)
+    retorno = chamar_ferramenta(connection, ANA, "assess_return", argumentos)
 
     assert retorno.outcome == "retried"
 
@@ -670,7 +670,7 @@ def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos: dict
     def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         ultima = mensagens[-1].parts[0]
         if ultima.part_kind == "user-prompt" and ultima.content == "Quero devolver":
-            return ModelResponse(parts=[ToolCallPart("avaliar_devolucao", argumentos)])
+            return ModelResponse(parts=[ToolCallPart("assess_return", argumentos)])
         if ultima.part_kind == "tool-return":
             return ModelResponse(parts=[TextPart("ok")])
         return ModelResponse(parts=[TextPart(info.instructions or "")])
@@ -682,7 +682,7 @@ def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos: dict
 def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(connection):
     sessao = Sessao(connection, phone=LETICIA)
     modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(
-        {"numero_pedido": 7, "motivo": "arrependimento"}
+        {"numero_pedido": 7, "reason": "arrependimento"}
     )
 
     with agente.override(model=FunctionModel(modelo)):
@@ -695,9 +695,9 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
 
 
 @pytest.mark.parametrize("argumentos", [
-    {"numero_pedido": 7, "motivo": "arrependimento"},
-    {"numero_pedido": 7, "motivo": "arrependimento", "canal": "presencial"},
-    {"numero_pedido": 999, "motivo": "arrependimento"},
+    {"numero_pedido": 7, "reason": "arrependimento"},
+    {"numero_pedido": 7, "reason": "arrependimento", "channel": "presencial"},
+    {"numero_pedido": 999, "reason": "arrependimento"},
 ])
 @pytest.mark.regression
 def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(connection, argumentos):
@@ -834,7 +834,7 @@ def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(connection):
         connection,
         ANA,
         "encaminhar_para_atendente",
-        {"motivo": "reclamacao", "resumo": "Violão chegou com defeito no braço."},
+        {"reason": "reclamacao", "resumo": "Violão chegou com defeito no braço."},
     )
 
     rows = [tuple(l) for l in connection.execute("SELECT phone, reason, summary FROM handoffs")]
@@ -844,7 +844,7 @@ def test_ferramenta_registra_o_encaminhamento_do_telefone_da_sessao(connection):
 
 def test_encaminhamento_sem_telefone_valido_explica_e_nao_grava(connection):
     retorno = chamar_ferramenta(
-        connection, None, "encaminhar_para_atendente", {"motivo": "reclamacao", "resumo": "Defeito."}
+        connection, None, "encaminhar_para_atendente", {"reason": "reclamacao", "resumo": "Defeito."}
     )
 
     assert "não foi possível identificar o telefone" in retorno.content.lower()
@@ -858,7 +858,7 @@ def test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone(connection):
         connection,
         ANA,
         "encaminhar_para_atendente",
-        {"motivo": "reclamacao", "resumo": "Defeito.", "phone": "67911112222"},
+        {"reason": "reclamacao", "resumo": "Defeito.", "phone": "67911112222"},
     )
 
     assert retorno.outcome == "retried"
@@ -867,7 +867,7 @@ def test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone(connection):
 
 def test_motivo_desconhecido_e_recusado_pela_ferramenta(connection):
     retorno = chamar_ferramenta(
-        connection, ANA, "encaminhar_para_atendente", {"motivo": "fofoca", "resumo": "Defeito."}
+        connection, ANA, "encaminhar_para_atendente", {"reason": "fofoca", "resumo": "Defeito."}
     )
 
     assert retorno.outcome == "retried"
@@ -995,7 +995,7 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
     ("ferramenta", "argumentos"),
     [
         ("consultar_meus_pedidos", {"numero_pedido": 10**30}),
-        ("avaliar_devolucao", {"numero_pedido": 10**30, "motivo": "arrependimento", "canal": "online"}),
+        ("assess_return", {"numero_pedido": 10**30, "reason": "arrependimento", "channel": "online"}),
         ("registrar_interesse", {"product_id": 10**30}),
         ("search_products", {"max_price": 1e33}),
     ],
@@ -1086,23 +1086,23 @@ def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(connection):
 )
 def test_palavra_parecida_com_o_canal_nao_conta_como_canal_citado(connection, mensagem):
     retorno = chamar_ferramenta_na_data(
-        connection, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
-        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        connection, LETICIA, date(2026, 2, 20), "assess_return",
+        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
         mensagem=mensagem,
     )
 
-    assert retorno.content.resultado == "faltam_dados"
+    assert retorno.content.result == "faltam_dados"
 
 
 @pytest.mark.parametrize("mensagem", ["Comprei pelo site, quero devolver o pedido 7", "Foi ONLINE mesmo"])
 def test_canal_dito_com_clareza_continua_valendo(connection, mensagem):
     retorno = chamar_ferramenta_na_data(
-        connection, LETICIA, date(2026, 2, 20), "avaliar_devolucao",
-        {"numero_pedido": 7, "motivo": "arrependimento", "canal": "online"},
+        connection, LETICIA, date(2026, 2, 20), "assess_return",
+        {"numero_pedido": 7, "reason": "arrependimento", "channel": "online"},
         mensagem=mensagem,
     )
 
-    assert retorno.content.resultado == "dentro_do_prazo"
+    assert retorno.content.result == "dentro_do_prazo"
 
 
 @pytest.mark.regression
@@ -1249,44 +1249,44 @@ def conta_pela_ferramenta(connection, *items: tuple[str, int]):
 
 @pytest.mark.regression
 def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(connection):
-    resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 2))
+    result = conta_pela_ferramenta(connection, ("Takamine GD20", 2))
 
-    assert resultado.total == "R$ 4.398,00"
-    assert [(i.name, i.quantity, i.subtotal) for i in resultado.items] == [
+    assert result.total == "R$ 4.398,00"
+    assert [(i.name, i.quantity, i.subtotal) for i in result.items] == [
         ("Takamine GD20 Dreadnought Natural", 2, "R$ 4.398,00")
     ]
 
 
 @pytest.mark.regression
 def test_calcula_a_soma_de_dois_produtos_diferentes(connection):
-    resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
+    result = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
-    assert resultado.total == "R$ 2.798,90"
+    assert result.total == "R$ 2.798,90"
 
 
 @pytest.mark.regression
 def test_calcula_o_total_no_pix_e_a_economia(connection):
-    resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 1))
+    result = conta_pela_ferramenta(connection, ("Yamaha C40", 1))
 
-    assert resultado.pix_total == "R$ 569,91"
-    assert resultado.pix_savings == "R$ 29,99"
+    assert result.pix_total == "R$ 569,91"
+    assert result.pix_savings == "R$ 29,99"
 
 
 @pytest.mark.regression
 def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(connection):
     # PIX does not stack with the promotion: the Crafter HT-100 costs the same with PIX.
-    resultado = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+    result = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
-    assert resultado.total == "R$ 2.567,08"
-    assert resultado.pix_total == "R$ 2.537,09"
-    assert resultado.pix_savings == "R$ 29,99"
+    assert result.total == "R$ 2.567,08"
+    assert result.pix_total == "R$ 2.537,09"
+    assert result.pix_savings == "R$ 29,99"
 
 
 @pytest.mark.regression
 def test_calcula_a_diferenca_de_preco_entre_dois_produtos(connection):
-    resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
+    result = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
-    assert resultado.difference == "R$ 1.599,10"
+    assert result.difference == "R$ 1.599,10"
 
 
 @pytest.mark.regression
@@ -1362,10 +1362,10 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
     ],
 )
 def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, search_term, status_description):
-    resultado = conta_pela_ferramenta(connection, (search_term, 1))
+    result = conta_pela_ferramenta(connection, (search_term, 1))
 
-    assert resultado.warning is not None
-    assert status_description in resultado.warning
+    assert result.warning is not None
+    assert status_description in result.warning
 
 
 @pytest.mark.regression
@@ -1375,20 +1375,20 @@ def test_conta_de_produto_disponivel_nao_traz_aviso(connection):
 
 @pytest.mark.regression
 def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(connection):
-    resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 1), ("Yamaha C40", 2))
+    result = conta_pela_ferramenta(connection, ("Yamaha C40", 1), ("Yamaha C40", 2))
 
-    assert [(i.name, i.quantity, i.subtotal) for i in resultado.items] == [
+    assert [(i.name, i.quantity, i.subtotal) for i in result.items] == [
         ("Yamaha C40 Nylon Natural", 3, "R$ 1.799,70")
     ]
-    assert resultado.total == "R$ 1.799,70"
-    assert resultado.difference is None
+    assert result.total == "R$ 1.799,70"
+    assert result.difference is None
 
 
 @pytest.mark.regression
 def test_conta_com_produto_em_promocao_repassa_a_observacao_do_pix(connection):
-    resultado = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
+    result = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
-    assert resultado.pix_note == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
+    assert result.pix_note == "Crafter HT-100 Folk Aço Natural: o PIX não soma ao desconto da promoção."
 
 
 def test_conta_sem_promocao_nao_traz_observacao_do_pix(connection):
@@ -1398,10 +1398,10 @@ def test_conta_sem_promocao_nao_traz_observacao_do_pix(connection):
 @pytest.mark.regression
 def test_quantidade_acima_do_estoque_traz_aviso_na_conta(connection):
     # The Yamaha C40 has 12 units, but the stock number is not exposed.
-    resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 13))
+    result = conta_pela_ferramenta(connection, ("Yamaha C40", 13))
 
-    assert resultado.warning == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
-    assert "12" not in str(resultado)
+    assert result.warning == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
+    assert "12" not in str(result)
 
 
 @pytest.mark.regression
@@ -1439,16 +1439,16 @@ def test_frete_da_regiao_metropolitana_pela_regra_da_politica(cents, expected):
 
 @pytest.mark.regression
 def test_conta_acima_de_r_500_traz_frete_gratis(connection):
-    resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 1))
+    result = conta_pela_ferramenta(connection, ("Takamine GD20", 1))
 
-    assert resultado.shipping == "Frete grátis na região metropolitana de Campo Grande."
+    assert result.shipping == "Frete grátis na região metropolitana de Campo Grande."
 
 
 @pytest.mark.regression
 def test_conta_abaixo_de_r_500_traz_a_taxa_fixa(connection):
-    resultado = conta_pela_ferramenta(connection, ("Kalani KAL-500C", 1))
+    result = conta_pela_ferramenta(connection, ("Kalani KAL-500C", 1))
 
-    assert resultado.shipping == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
+    assert result.shipping == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
 
 
 @pytest.mark.regression

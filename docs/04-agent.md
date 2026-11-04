@@ -31,7 +31,7 @@ The agent introduces itself as a virtual assistant, does not pretend to be a per
 | Total, sum, price difference, PIX savings, or shipping for a purchase in Campo Grande | `calculate_purchase` |
 | Opening hours, address, payment, exchange, shipping, warranty, or privacy | `get_policies` |
 | Order status, tracking, or details | `consultar_meus_pedidos` |
-| Exchange, return, or defect of an order | `avaliar_devolucao` |
+| Exchange, return, or defect of an order | `assess_return` |
 | Follow an unavailable product | `registrar_interesse` |
 | Complaint or question without a safe answer | `encaminhar_para_atendente` |
 | Greeting or small talk | Answer without a tool |
@@ -64,13 +64,13 @@ A message may require more than one tool. A return request, for example, require
 | Output | Date and estimated delivery in `dd/mm/yyyy`, status description (translated in code, ADR-012), items, recorded total, payment, tracking, and estimated delivery. The original status is not given to the model |
 | Rules | Never receives `customer_id` from the model; another customer's order is treated as not found |
 
-### 4.3.1 `avaliar_devolucao`
+### 4.3.1 `assess_return`
 
 | Item | Definition |
 |---|---|
-| Input | `numero_pedido`, `motivo` (`arrependimento`, `defeito`, or `preferencia`), and `canal` (`online` or `presencial`), optional; the customer comes from the session |
-| Output | Verdict: `resultado` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados`, or `pedido_nao_encontrado`), `regras` with the final deadline of each one, `faltando`, `notices`, `data_aproximada`, `data_de_recebimento`, and `reference_date`, with dates in `dd/mm/yyyy` |
-| Rules | Deadlines calculated in code (`docs/03-data.md`, 5.4). The model passes the verdict on without recalculating. Withdrawal without a channel returns `faltam_dados`, with what to ask in `faltando`. Never receives `customer_id` |
+| Input | `numero_pedido`, `reason` (`arrependimento`, `defeito`, or `preferencia`), and `channel` (`online` or `presencial`), optional; the customer comes from the session |
+| Output | Verdict: `result` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados`, or `pedido_nao_encontrado`), `rules` with the final deadline of each one, `missing`, `notices`, `approximate_date`, `receipt_date`, and `reference_date`, with dates in `dd/mm/yyyy` |
+| Rules | Deadlines calculated in code (`docs/03-data.md`, 5.4). The model passes the verdict on without recalculating. Withdrawal without a channel returns `faltam_dados`, with what to ask in `missing`. Never receives `customer_id` |
 
 ### 4.4 `registrar_interesse`
 
@@ -84,7 +84,7 @@ A message may require more than one tool. A return request, for example, require
 
 | Item | Definition |
 |---|---|
-| Input | `motivo` (`reclamacao`, `atendente_solicitado`, or `sem_resposta_segura`) and `resumo`; the phone number comes from the session |
+| Input | `reason` (`reclamacao`, `atendente_solicitado`, or `sem_resposta_segura`) and `resumo`; the phone number comes from the session |
 | Output | Fixed text: handoff registered, already registered, empty summary, or phone number not identified. The first two state that the team replies within 24 business hours |
 | Rules | Writes to the `handoffs` table (ADR-017); writes nothing without a valid phone number or a summary; the summary is truncated at 500 characters; the model does not choose the phone number (`phone` is rejected). When the output guardrail gives up, the code itself registers a `sem_resposta_segura` handoff |
 
@@ -125,7 +125,7 @@ A message may require more than one tool. A return request, for example, require
 1. Identify the order; if the customer does not give it and has several, look up their orders.
 2. Identify the reason: withdrawal (regret), defect, or preference. If it is missing, ask.
 3. For withdrawal, ask whether the purchase was online or in person, because the order does not record the channel (DQ-17). The question stays in the history. If the customer changes the subject instead of answering, the agent follows the new subject and does not repeat the question.
-4. Call `avaliar_devolucao`, which compares the dates with the reference date and returns the verdict.
+4. Call `assess_return`, which compares the dates with the reference date and returns the verdict.
 5. Explain the result and the policy conditions, without promising approval: the exchange depends on the product analysis.
 6. After the deadline, state clearly that the deadline has passed, explain the rules that still apply (for example, the legal warranty for a defect), and offer the customer to talk to a human agent, through the store contacts or by handing off the case. The handoff is only registered if the customer accepts.
 

@@ -1,6 +1,6 @@
 import pytest
 
-from src.interests import Resultado, listar_pendentes, registrar
+from src.interests import Result, listar_pendentes, registrar
 from src.load_data import carregar_dados
 from tests.conftest import DATA_DIR
 
@@ -9,25 +9,25 @@ GIANNINI_GF_3D = 96
 
 
 def test_registra_interesse_no_giannini_gf_3d(connection):
-    resultado = registrar(connection, TELEFONE, GIANNINI_GF_3D)
+    result = registrar(connection, TELEFONE, GIANNINI_GF_3D)
 
-    assert resultado == Resultado.REGISTRADO
+    assert result == Result.REGISTRADO
     assert listar_pendentes(connection, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
 
 
 def test_produto_inexistente_nao_grava_interesse(connection):
-    resultado = registrar(connection, TELEFONE, 99999)
+    result = registrar(connection, TELEFONE, 99999)
 
-    assert resultado == Resultado.PRODUTO_INEXISTENTE
+    assert result == Result.PRODUTO_INEXISTENTE
     assert listar_pendentes(connection, TELEFONE) == []
     assert connection.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
 
 
 @pytest.mark.parametrize("phone", ["", "12345", "abc"])
 def test_telefone_invalido_nao_grava_interesse(connection, phone):
-    resultado = registrar(connection, phone, GIANNINI_GF_3D)
+    result = registrar(connection, phone, GIANNINI_GF_3D)
 
-    assert resultado == Resultado.TELEFONE_INVALIDO
+    assert result == Result.TELEFONE_INVALIDO
     assert connection.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
 
 
@@ -35,9 +35,9 @@ def test_repetir_o_pedido_nao_duplica_o_interesse(connection):
     registrar(connection, TELEFONE, GIANNINI_GF_3D)
 
     # Another formatting of the same phone number is the same customer.
-    resultado = registrar(connection, "67996547821", GIANNINI_GF_3D)
+    result = registrar(connection, "67996547821", GIANNINI_GF_3D)
 
-    assert resultado == Resultado.JA_REGISTRADO
+    assert result == Result.JA_REGISTRADO
     assert listar_pendentes(connection, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
 
 

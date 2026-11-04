@@ -62,8 +62,8 @@ def test_tabela_de_interesses_recusa_valores_invalidos(tmp_path, product, status
     connection.close()
 
 
-@pytest.mark.parametrize("motivo, resumo", [("outro", "Resumo."), ("reclamacao", "")])
-def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp_path, motivo, resumo):
+@pytest.mark.parametrize("reason, resumo", [("outro", "Resumo."), ("reclamacao", "")])
+def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp_path, reason, resumo):
     connection = connect(tmp_path / "novo.db")
     create_tables(connection)
 
@@ -71,7 +71,7 @@ def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp
         connection.execute(
             "INSERT INTO handoffs (phone, reason, summary, created_at) "
             "VALUES ('67996547821', ?, ?, '2026-03-25')",
-            (motivo, resumo),
+            (reason, resumo),
         )
     connection.close()
 

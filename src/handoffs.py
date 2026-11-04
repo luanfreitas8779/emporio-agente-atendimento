@@ -37,29 +37,29 @@ def _mesmo_assunto(anterior: str, resumo: str) -> bool:
     return bool(assunto_anterior & assunto)
 
 
-class Motivo(StrEnum):
+class Reason(StrEnum):
     RECLAMACAO = "reclamacao"
     SEM_RESPOSTA_SEGURA = "sem_resposta_segura"
     ATENDENTE_SOLICITADO = "atendente_solicitado"
 
 
-class Resultado(StrEnum):
+class Result(StrEnum):
     REGISTRADO = "registrado"
     RESUMO_INVALIDO = "resumo_invalido"
     JA_REGISTRADO = "ja_registrado"
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
-def registrar(connection: sqlite3.Connection, phone: str, motivo: Motivo, resumo: str) -> Resultado:
+def registrar(connection: sqlite3.Connection, phone: str, reason: Reason, resumo: str) -> Result:
     key = normalize_phone(phone)
     if key is None:
-        return Resultado.TELEFONE_INVALIDO
+        return Result.TELEFONE_INVALIDO
     resumo = resumo.strip()[:MAX_RESUMO].strip()
     if not resumo:
-        return Resultado.RESUMO_INVALIDO
+        return Result.RESUMO_INVALIDO
     corte = datetime.fromisoformat(agora()) - JANELA_DE_REPETICAO
     anteriores = connection.execute(
-        "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (key, motivo)
+        "SELECT summary, created_at FROM handoffs WHERE phone = ? AND reason = ?", (key, reason)
     ).fetchall()
     # The same summary is a repeat at any time; another summary only within the window and, for a
     # complaint, only if it is about the same subject.
@@ -67,15 +67,15 @@ def registrar(connection: sqlite3.Connection, phone: str, motivo: Motivo, resumo
         anterior == resumo
         or (
             datetime.fromisoformat(criado_em) >= corte
-            and (motivo != Motivo.RECLAMACAO or _mesmo_assunto(anterior, resumo))
+            and (reason != Reason.RECLAMACAO or _mesmo_assunto(anterior, resumo))
         )
         for anterior, criado_em in anteriores
     )
     if repetido:
-        return Resultado.JA_REGISTRADO
+        return Result.JA_REGISTRADO
     connection.execute(
         "INSERT INTO handoffs (phone, reason, summary, created_at) VALUES (?, ?, ?, ?)",
-        (key, motivo, resumo, agora()),
+        (key, reason, resumo, agora()),
     )
     connection.commit()
-    return Resultado.REGISTRADO
+    return Result.REGISTRADO

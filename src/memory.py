@@ -91,8 +91,8 @@ def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
     The cut starts at the first whole turn that fits the limit; a turn that
     exceeds the limit is discarded entirely.
     """
-    inicio = max(0, len(mensagens) - MAX_MENSAGENS_NO_HISTORICO)
-    for i in range(inicio, len(mensagens)):
+    start = max(0, len(mensagens) - MAX_MENSAGENS_NO_HISTORICO)
+    for i in range(start, len(mensagens)):
         if _inicia_um_turno(mensagens[i]):
             return mensagens[i:]
     return []
