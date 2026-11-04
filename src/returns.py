@@ -5,7 +5,7 @@ from enum import StrEnum
 
 from pydantic.dataclasses import dataclass as dataclass_pydantic
 
-from src.datas import formatar_data
+from src.dates import format_date
 
 PRAZO_DE_ARREPENDIMENTO_EM_DIAS = 7
 PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS = 30
@@ -118,12 +118,12 @@ def avaliar_devolucao(
         regras,
         avisos=avisos,
         data_aproximada=True,
-        data_de_recebimento=formatar_data(recebimento),
-        data_de_referencia=formatar_data(hoje),
+        data_de_recebimento=format_date(recebimento),
+        data_de_referencia=format_date(hoje),
     )
 
 
 def _regra(nome: str, inicio: date, dias: int, hoje: date) -> Regra:
     limite = inicio + timedelta(days=dias)
     resultado = Resultado.DENTRO_DO_PRAZO if hoje <= limite else Resultado.FORA_DO_PRAZO
-    return Regra(nome, resultado, formatar_data(limite))
+    return Regra(nome, resultado, format_date(limite))

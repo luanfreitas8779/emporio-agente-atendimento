@@ -32,7 +32,7 @@ from pydantic_ai.messages import (
 
 from src import calculos, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
-from src.datas import dia_da_semana, formatar_data
+from src.dates import weekday_name, format_date
 from src.phone import format_phone
 
 MAX_INTERESSES_NO_CONTEXTO = 5
@@ -420,8 +420,8 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
     fontes = [
         *das_ferramentas,
         *quantidades_da_busca(ctx.messages),
-        formatar_data(hoje),
-        formatar_data(hoje + timedelta(days=1)),
+        format_date(hoje),
+        format_date(hoje + timedelta(days=1)),
         format_phone(ctx.deps.phone or ""),
     ]
     inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente, limites_de_preco(ctx.messages))
@@ -443,7 +443,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         # Only the first name reaches the model; the last name stays in the code.
         texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
     hoje = ctx.deps.hoje
-    texto += f"\nHoje: {formatar_data(hoje)}, {dia_da_semana(hoje)}. O sistema não informa a hora atual."
+    texto += f"\nHoje: {format_date(hoje)}, {weekday_name(hoje)}. O sistema não informa a hora atual."
     pedido = ctx.deps.estado.pedido_em_analise
     if pedido is not None:
         texto += f"\nPedido em análise: {pedido}."

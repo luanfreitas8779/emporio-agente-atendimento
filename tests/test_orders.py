@@ -47,7 +47,7 @@ def test_sem_numero_lista_apenas_os_pedidos_do_cliente(conexao):
 def test_pedido_mostra_itens_data_e_pagamento(conexao):
     (pedido,) = consultar_pedidos(conexao, cliente_id=2, numero=8)
 
-    assert pedido.data == "15/02/2026"
+    assert pedido.order_date == "15/02/2026"
     assert pedido.pagamento == "débito"
     assert [(i.nome, i.quantidade) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
 

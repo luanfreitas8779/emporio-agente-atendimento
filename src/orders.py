@@ -7,7 +7,7 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass as dataclass_pydantic
 
 from src.catalog import formatar_preco
-from src.datas import formatar_data
+from src.dates import format_date
 from src.phone import normalize_phone
 
 FORMAS_DE_PAGAMENTO = {
@@ -36,7 +36,7 @@ class ItemPedido:
 @dataclass_pydantic(frozen=True)
 class Pedido:
     numero: int
-    data: str
+    order_date: str
     # The original code stays in the code only: the model receives only the status description.
     status: Annotated[str, Field(exclude=True)]
     situacao: str
@@ -100,7 +100,7 @@ def descrever_atraso(linha: sqlite3.Row, hoje: date | None) -> str | None:
     if dias <= 0:
         return None
     unidade = "dia" if dias == 1 else "dias"
-    previsao = formatar_data(linha["estimated_delivery"])
+    previsao = format_date(linha["estimated_delivery"])
     return f"A entrega estimada era {previsao} e o pedido segue como enviado: {dias} {unidade} de atraso."
 
 
@@ -122,7 +122,7 @@ def consultar_pedidos(
     return [
         Pedido(
             linha["order_id"],
-            formatar_data(linha["order_date"]),
+            format_date(linha["order_date"]),
             linha["status"],
             STATUS_DE_PEDIDO[linha["status"]],
             consultar_itens(conexao, linha["order_id"]),
@@ -130,7 +130,7 @@ def consultar_pedidos(
             formatar_preco(linha["total_cents"]),
             descrever_pagamento(linha["payment_method"]),
             linha["tracking_code"],
-            formatar_data(linha["estimated_delivery"]),
+            format_date(linha["estimated_delivery"]),
             descrever_atraso(linha, hoje),
         )
         for linha in linhas

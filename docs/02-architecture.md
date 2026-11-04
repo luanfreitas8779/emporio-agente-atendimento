@@ -152,7 +152,7 @@ Operational tables:
   2. **Rules.** Withdrawal (regret): 7 days after receipt, online purchases only (DQ-24); without the channel, the verdict asks for the channel. Defect: exchange within 30 calendar days of purchase and legal warranty within 90 days of receipt, assessed separately (DQ-23). Preference: 7 days after receipt (DQ-26). The order is looked up before any other rule: a nonexistent order or another customer's order is `pedido_nao_encontrado`, with any reason or channel, and only the customer's own order reaches the state. Pending, confirmed, or cancelled orders have no received product, and the result is `nao_se_aplica`, as is withdrawal for an in-person purchase, with a notice explaining why. If the estimated delivery has not passed yet, the verdict warns that the deadline only counts from receipt. Receipt is the estimated delivery, and the verdict always warns that it is an approximation. The result applies to the deadline: approval depends on the product analysis, and a notice says so.
   3. **Reference date.** `DATA_DE_REFERENCIA` (default 2026-03-25), read by `config.data_de_referencia()`. `Sessao` loads it into the `hoje` field, and each test sets the date it needs.
   4. **No pending question in the state.** When the verdict has something in `faltando`, the model asks the question and it stays in the history (ADR-014), which the model already receives. A field in the state would duplicate the history and could make the agent insist on the question when the customer changes the subject. The state keeps only facts (`pedido_em_analise` and `produto_em_foco`), and the tool updates the order under review. The prompt tells the agent to follow the new subject without repeating the question.
-  5. **Dates in Brazilian format.** Dates shown to the customer, in orders and verdicts, come out of `src/datas.py` as `dd/mm/yyyy` (ADR-012). The guardrail compares dates by day and still accepts the ISO format.
+  5. **Dates in Brazilian format.** Dates shown to the customer, in orders and verdicts, come out of `src/dates.py` as `dd/mm/yyyy` (ADR-012). The guardrail compares dates by day and still accepts the ISO format.
   6. **Types.** `Motivo`, `Canal`, and `Resultado` are `StrEnum`: Pydantic validates the model's arguments and the JSON keeps the text. Availability, order status, and prices remain text, because they only travel as far as the model. A `Dinheiro` (money) type was not added, because the new calculations are about dates and there is no new arithmetic on amounts.
   7. **No migration.** The schema of `conversation_state` did not change. A database with a `pergunta_pendente` column, created by an intermediate version, keeps working: the column is optional and the code does not use it.
 - **Alternatives:** letting the model compare dates, which reopens the risk of invented deadlines; always asking for the channel, which bothers customers who only want to know the deadline for a defect.
@@ -322,7 +322,7 @@ Operational tables:
 │   ├── catalog.py          # Search, availability, and prices
 │   ├── config.py           # Settings
 │   ├── database.py         # Database connection
-│   ├── datas.py            # Date formatting for the customer
+│   ├── dates.py            # Date formatting for the customer
 │   ├── guardrail.py        # Output guardrail: values and notice promises
 │   ├── handoffs.py         # Handoffs to the team
 │   ├── interests.py        # Product interests per phone number

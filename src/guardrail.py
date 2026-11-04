@@ -93,11 +93,11 @@ def valores(texto: str) -> dict[str, set]:
     # In percentages the period and the comma are decimal: "18.5%" and "18,5%" mean 18.5.
     percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(texto)}
     percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(texto)}
-    datas = set()
+    found_dates = set()
     for dia, mes, ano in PADRAO_DATA_BR.findall(texto):
-        datas.add(_data(ano, mes, dia))
+        found_dates.add(_data(ano, mes, dia))
     for ano, mes, dia in PADRAO_DATA_ISO.findall(texto):
-        datas.add(_data(ano, mes, dia))
+        found_dates.add(_data(ano, mes, dia))
     dinheiro = {numero(v) for v in PADRAO_DINHEIRO.findall(texto)}
     dinheiro |= {numero(v) for v in PADRAO_REAIS.findall(texto)}
     # "mil reais" without a number means 1.000.
@@ -107,7 +107,7 @@ def valores(texto: str) -> dict[str, set]:
     por_extenso = set()
     for dia, mes, ano in PADRAO_DATA_EXTENSO.findall(normalizado):
         if ano:
-            datas.add(_data(ano, str(MESES[mes]), dia))
+            found_dates.add(_data(ano, str(MESES[mes]), dia))
         else:
             por_extenso.add(f"{int(dia):02d}/{MESES[mes]:02d}")
     for dia, mes in PADRAO_DATA_CURTA.findall(texto):
@@ -133,7 +133,7 @@ def valores(texto: str) -> dict[str, set]:
         "phone": telefones,
         "dia_mes": por_extenso,
         "percentual": percentuais,
-        "data": datas - {None},
+        "data": found_dates - {None},
         "rastreio": set(PADRAO_RASTREIO.findall(texto)),
     }
 
@@ -173,7 +173,7 @@ def valores_nao_confirmados(
                 confirmados[tipo] |= encontrados
         # "Tem 13 Yamaha C40? E 12?": the loose number is also the quantity the customer asked for.
         confirmados["quantidade"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
-    confirmados["dia_mes"] |= {data.strftime("%d/%m") for data in confirmados["data"]}
+    confirmados["dia_mes"] |= {found_date.strftime("%d/%m") for found_date in confirmados["data"]}
     citados = valores(resposta)
     limites_citados = {numero(v) for v in PADRAO_LIMITE.findall(normalizar(resposta))}
     confirmados["dinheiro"] |= limites_citados & set(limites_da_busca or [])
