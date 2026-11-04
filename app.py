@@ -143,7 +143,7 @@ if pendente is not None:
                     "papel": "assistant",
                     "text": answer,
                     "ferramentas": [
-                        {"name": chamada.name, "argumentos": chamada.argumentos}
+                        {"name": chamada.name, "arguments": chamada.arguments}
                         for chamada in (sessao.ferramentas if sessao is not None else [])
                     ],
                 }

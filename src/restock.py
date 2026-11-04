@@ -7,21 +7,21 @@ from src.config import DATABASE_PATH
 from src.database import connect
 
 
-class ErroDeReposicao(ValueError):
+class RestockError(ValueError):
     """Restock rejected: the database was not changed."""
 
 
-def repor_estoque(connection: sqlite3.Connection, product_id: int, quantity: int) -> None:
+def restock(connection: sqlite3.Connection, product_id: int, quantity: int) -> None:
     if quantity < 1:
-        raise ErroDeReposicao("The quantity must be greater than zero.")
+        raise RestockError("The quantity must be greater than zero.")
     product = connection.execute(
         "SELECT status FROM products WHERE product_id = ?", (product_id,)
     ).fetchone()
     if product is None:
-        raise ErroDeReposicao(f"Product {product_id} does not exist.")
+        raise RestockError(f"Product {product_id} does not exist.")
     # The status takes precedence over the stock: restocking another status does not change availability.
     if product["status"] != "active":
-        raise ErroDeReposicao(f"Product {product_id} is not active; restocking would have no effect.")
+        raise RestockError(f"Product {product_id} is not active; restocking would have no effect.")
     connection.execute(
         "UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_id = ?",
         (quantity, product_id),
@@ -29,31 +29,31 @@ def repor_estoque(connection: sqlite3.Connection, product_id: int, quantity: int
     connection.commit()
 
 
-def principal(argumentos: list[str] | None = None) -> int:
-    analisador = argparse.ArgumentParser(
+def main(arguments: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
         description="Simulates a stock restock in the local database, without changing the source files."
     )
-    analisador.add_argument("product", type=int, help="product id")
-    analisador.add_argument("--quantity", type=int, default=5)
-    analisador.add_argument("--banco", default=str(DATABASE_PATH))
-    escolhidos = analisador.parse_args(argumentos)
+    parser.add_argument("product", type=int, help="product id")
+    parser.add_argument("--quantity", type=int, default=5)
+    parser.add_argument("--db", default=str(DATABASE_PATH))
+    args = parser.parse_args(arguments)
 
-    if not Path(escolhidos.banco).exists():
+    if not Path(args.db).exists():
         print(
-            f"Database not found at {escolhidos.banco}. Run: python -m src.load_data",
+            f"Database not found at {args.db}. Run: python -m src.load_data",
             file=sys.stderr,
         )
         return 1
-    connection = connect(escolhidos.banco)
+    connection = connect(args.db)
     try:
-        repor_estoque(connection, escolhidos.product, escolhidos.quantity)
-    except ErroDeReposicao as error:
+        restock(connection, args.product, args.quantity)
+    except RestockError as error:
         print(f"Restock rejected: {error}", file=sys.stderr)
         return 1
     finally:
         connection.close()
     print(
-        f"Simulated restock: +{escolhidos.quantity} units of product {escolhidos.product}. "
+        f"Simulated restock: +{args.quantity} units of product {args.product}. "
         "To return to the original state, run: python -m src.load_data"
     )
     return 0

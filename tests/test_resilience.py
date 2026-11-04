@@ -367,7 +367,7 @@ def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(connection, espera
 @pytest.mark.regression
 @pytest.mark.parametrize("error", [ValueError("dado inválido"), OSError("disco cheio")])
 def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(connection, esperas, monkeypatch, error):
-    def gravar_com_falha(*argumentos, **nomeados):
+    def gravar_com_falha(*arguments, **nomeados):
         raise error
 
     monkeypatch.setattr("src.agent.memory.save_messages", gravar_com_falha)

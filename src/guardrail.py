@@ -72,8 +72,8 @@ def promete_aviso(answer: str) -> bool:
     """
     text = normalize(answer)
     for achado in PADRAO_PROMESSA_DE_AVISO.finditer(text):
-        antes = text[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
-        if not PADRAO_NEGACAO.search(antes):
+        before = text[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
+        if not PADRAO_NEGACAO.search(before):
             return True
     return False
 

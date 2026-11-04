@@ -11,7 +11,7 @@ from src.database import connect
 from src.interests import list_pending, register
 from src.load_data import read_csv
 from src.memory import ConversationState, load_state, conversation_for_display, save_state
-from src.restock import repor_estoque
+from src.restock import restock
 from tests.conftest import DATA_DIR
 
 
@@ -48,12 +48,12 @@ def modelo_que_busca_violoes_disponiveis_ate_1000(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
-        argumentos = {
+        arguments = {
             "category": "Violões",
             "max_price": 1000,
             "only_available": True,
         }
-        return ModelResponse(parts=[ToolCallPart("search_products", argumentos)])
+        return ModelResponse(parts=[ToolCallPart("search_products", arguments)])
     products = messages[-1].parts[0].content
     return ModelResponse(parts=[TextPart(str(len(products)))])
 
@@ -99,8 +99,8 @@ def modelo_que_sugere_alternativas_ao_produto_indisponivel(
     if len(resultados) == 1:
         (giannini,) = resultados[0]
         assert giannini.availability == "indisponivel"
-        argumentos = {"category": giannini.category, "only_available": True}
-        return ModelResponse(parts=[ToolCallPart("search_products", argumentos)])
+        arguments = {"category": giannini.category, "only_available": True}
+        return ModelResponse(parts=[ToolCallPart("search_products", arguments)])
     names = [product.name for product in resultados[1]]
     return ModelResponse(parts=[TextPart("; ".join(names))])
 
@@ -136,8 +136,8 @@ def modelo_que_calcula_o_parcelamento(
     messages: list[ModelMessage], info: AgentInfo
 ) -> ModelResponse:
     if len(messages) == 1:
-        argumentos = {"section": "pagamentos", "amount": 349.90, "installments": 6}
-        return ModelResponse(parts=[ToolCallPart("get_policies", argumentos)])
+        arguments = {"section": "pagamentos", "amount": 349.90, "installments": 6}
+        return ModelResponse(parts=[ToolCallPart("get_policies", arguments)])
     return ModelResponse(parts=[TextPart(messages[-1].parts[0].content)])
 
 
@@ -165,21 +165,21 @@ def test_agente_recusa_secao_fora_da_lista_e_o_modelo_tenta_de_novo(connection):
     assert answer == "tentou de novo"
 
 
-def modelo_que_chama(ferramenta: str, argumentos: dict, capturados: list):
+def modelo_que_chama(ferramenta: str, arguments: dict, capturados: list):
     """Calls the tool once and stores the result, without depending on its text."""
 
     def modelo(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         if len(messages) == 1:
-            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+            return ModelResponse(parts=[ToolCallPart(ferramenta, arguments)])
         capturados.append(messages[-1].parts[0])
         return ModelResponse(parts=[TextPart("ok")])
 
     return modelo
 
 
-def chamar_ferramenta(connection, phone, ferramenta, argumentos):
+def chamar_ferramenta(connection, phone, ferramenta, arguments):
     capturados: list = []
-    with agente.override(model=FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))):
+    with agente.override(model=FunctionModel(modelo_que_chama(ferramenta, arguments, capturados))):
         responder("Teste", Sessao(connection, phone=phone))
     return capturados[0]
 
@@ -275,7 +275,7 @@ def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(connection):
     assert "sem cadastro" in instrucoes
 
 
-def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
+def modelo_que_envia_argumentos(ferramenta: str, arguments: dict):
     def modelo(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         pediu_correcao = any(
             getattr(part, "outcome", None) == "retried" or part.part_kind == "retry-prompt"
@@ -285,14 +285,14 @@ def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
         if pediu_correcao:
             return ModelResponse(parts=[TextPart("argumento recusado")])
         if len(messages) == 1:
-            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+            return ModelResponse(parts=[ToolCallPart(ferramenta, arguments)])
         return ModelResponse(parts=[TextPart("argumento aceito")])
 
     return modelo
 
 
 @pytest.mark.parametrize(
-    "ferramenta, argumentos",
+    "ferramenta, arguments",
     [
         ("get_policies", {"section": "pagamentos", "amount": -5}),
         ("get_policies", {"section": "pagamentos", "amount": 100, "installments": 0}),
@@ -301,10 +301,10 @@ def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
     ],
 )
 @pytest.mark.regression
-def test_ferramentas_recusam_argumentos_fora_da_faixa(connection, ferramenta, argumentos):
+def test_ferramentas_recusam_argumentos_fora_da_faixa(connection, ferramenta, arguments):
     sessao = Sessao(connection, phone="(67) 99654-7821")
 
-    with agente.override(model=FunctionModel(modelo_que_envia_argumentos(ferramenta, argumentos))):
+    with agente.override(model=FunctionModel(modelo_que_envia_argumentos(ferramenta, arguments))):
         answer = responder("Teste", sessao)
 
     assert answer == "argumento recusado"
@@ -594,9 +594,9 @@ def test_telefone_sem_conversa_exibe_lista_vazia(connection):
 LETICIA = "(67) 99789-0123"
 
 
-def chamar_ferramenta_na_data(connection, phone, today, ferramenta, argumentos, message="Teste"):
+def chamar_ferramenta_na_data(connection, phone, today, ferramenta, arguments, message="Teste"):
     capturados: list = []
-    modelo = FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))
+    modelo = FunctionModel(modelo_que_chama(ferramenta, arguments, capturados))
     with agente.override(model=modelo):
         responder(message, Sessao(connection, phone=phone, today=today))
     return capturados[0]
@@ -654,23 +654,23 @@ def test_devolucao_sem_cadastro_explica_que_pedidos_exigem_telefone_cadastrado(c
 
 
 @pytest.mark.parametrize(
-    "argumentos",
+    "arguments",
     [
         {"numero_pedido": 7, "reason": "fiquei com dó"},
         {"numero_pedido": 7, "reason": "defeito", "customer_id": 14},
     ],
 )
-def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(connection, argumentos):
-    retorno = chamar_ferramenta(connection, ANA, "assess_return", argumentos)
+def test_devolucao_recusa_motivo_desconhecido_e_cliente_como_argumento(connection, arguments):
+    retorno = chamar_ferramenta(connection, ANA, "assess_return", arguments)
 
     assert retorno.outcome == "retried"
 
 
-def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos: dict):
+def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(arguments: dict):
     def modelo(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         ultima = messages[-1].parts[0]
         if ultima.part_kind == "user-prompt" and ultima.content == "Quero devolver":
-            return ModelResponse(parts=[ToolCallPart("assess_return", argumentos)])
+            return ModelResponse(parts=[ToolCallPart("assess_return", arguments)])
         if ultima.part_kind == "tool-return":
             return ModelResponse(parts=[TextPart("ok")])
         return ModelResponse(parts=[TextPart(info.instructions or "")])
@@ -694,16 +694,16 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
     assert "Pedido em análise: 7" in instrucoes
 
 
-@pytest.mark.parametrize("argumentos", [
+@pytest.mark.parametrize("arguments", [
     {"numero_pedido": 7, "reason": "arrependimento"},
     {"numero_pedido": 7, "reason": "arrependimento", "channel": "presencial"},
     {"numero_pedido": 999, "reason": "arrependimento"},
 ])
 @pytest.mark.regression
-def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(connection, argumentos):
+def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(connection, arguments):
     # Order 7 belongs to customer 14; the session belongs to customer 2 (Ana). Order 999 does not exist.
     sessao = Sessao(connection, phone=ANA)
-    modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos)
+    modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(arguments)
 
     with agente.override(model=FunctionModel(modelo)):
         responder("Quero devolver", sessao)
@@ -771,7 +771,7 @@ def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(connect
 
 def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(connection):
     register(connection, ANA, 96)
-    repor_estoque(connection, 96, 5)
+    restock(connection, 96, 5)
 
     with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
         answer = responder("Chegou o violão?", Sessao(connection, phone=ANA))
@@ -912,7 +912,7 @@ def test_sessao_registra_as_ferramentas_usadas_no_turno_com_os_argumentos(connec
     with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
         responder("Quanto custa o Takamine GD20?", sessao)
 
-    assert [(c.name, c.argumentos) for c in sessao.ferramentas] == [
+    assert [(c.name, c.arguments) for c in sessao.ferramentas] == [
         ("search_products", {"search_term": "Takamine GD20"})
     ]
 
@@ -967,10 +967,10 @@ def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(connection):
     assert answer == "Olá, Ana!"
 
 
-def modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta: str, argumentos: dict, retornos: list):
+def modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta: str, arguments: dict, retornos: list):
     def modelo(messages, info):
         if len(messages) == 1:
-            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+            return ModelResponse(parts=[ToolCallPart(ferramenta, arguments)])
         retornos.append(messages[-1].parts[0])
         return ModelResponse(parts=[TextPart("Não consegui calcular esse valor.")])
 
@@ -992,7 +992,7 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
 
 
 @pytest.mark.parametrize(
-    ("ferramenta", "argumentos"),
+    ("ferramenta", "arguments"),
     [
         ("consultar_meus_pedidos", {"numero_pedido": 10**30}),
         ("assess_return", {"numero_pedido": 10**30, "reason": "arrependimento", "channel": "online"}),
@@ -1001,9 +1001,9 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
     ],
 )
 @pytest.mark.regression
-def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(connection, ferramenta, argumentos):
+def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(connection, ferramenta, arguments):
     retornos: list = []
-    modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta, argumentos, retornos)
+    modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta, arguments, retornos)
 
     with agente.override(model=modelo):
         answer = responder("Oi", Sessao(connection, phone=ANA))
@@ -1238,13 +1238,13 @@ def id_do_produto(connection, search_term: str) -> int:
 
 
 def conta_pela_ferramenta(connection, *items: tuple[str, int]):
-    argumentos = {
+    arguments = {
         "items": [
             {"product_id": id_do_produto(connection, search_term), "quantity": quantity}
             for search_term, quantity in items
         ]
     }
-    return chamar_ferramenta(connection, ANA, "calculate_purchase", argumentos).content
+    return chamar_ferramenta(connection, ANA, "calculate_purchase", arguments).content
 
 
 @pytest.mark.regression
@@ -1306,8 +1306,8 @@ def test_produto_inexistente_na_conta_e_recusado_sem_excecao(connection):
 def modelo_que_responde_o_total(chama_a_ferramenta: bool):
     def modelo(messages, info):
         if chama_a_ferramenta and len(messages) == 1:
-            argumentos = {"items": [{"product_id": 95, "quantity": 2}]}
-            return ModelResponse(parts=[ToolCallPart("calculate_purchase", argumentos)])
+            arguments = {"items": [{"product_id": 95, "quantity": 2}]}
+            return ModelResponse(parts=[ToolCallPart("calculate_purchase", arguments)])
         return ModelResponse(parts=[TextPart("Duas unidades ficam em R$ 4.398,00.")])
 
     return modelo

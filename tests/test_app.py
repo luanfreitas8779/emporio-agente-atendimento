@@ -90,7 +90,7 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
 @pytest.mark.regression
 def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
     # Opening the database for the session is the part that fails; the screen's initial check already passed.
-    def sessao_com_falha(*argumentos, **nomeados):
+    def sessao_com_falha(*arguments, **nomeados):
         raise OSError("disco indisponível")
 
     monkeypatch.setattr("src.agent.Sessao", sessao_com_falha)

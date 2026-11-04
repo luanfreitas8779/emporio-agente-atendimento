@@ -328,7 +328,7 @@ Each fixed bug must leave a test that reproduces it. The automated ones carry th
 | The model could hand off a case on behalf of another phone number or with an invented reason | `test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone`, `test_motivo_desconhecido_e_recusado_pela_ferramenta` |
 | A database from a previous version broke reading the state | `test_previous_database_keeps_working_without_migration` |
 | A load with an error erased the previous database | `test_load_failure_preserves_the_previous_database` |
-| The restock command created an empty database when it did not exist | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
+| The restock command created an empty database when it did not exist | `test_command_does_not_create_the_database_when_it_does_not_exist` |
 | A typo in the name ("gianini gf 3d") did not find the product (ADR-019) | `test_search_tolerates_a_missing_letter_in_the_name` |
 | Fuzzy search swapped one model code for another ("D-28E" brought the D-28) | `test_search_does_not_confuse_distinct_models_with_similar_codes` |
 | The customer saw `<system>` blocks with the model's internal reasoning | `test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico`, `test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo`, `test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo` |

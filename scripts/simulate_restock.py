@@ -1,6 +1,6 @@
 import sys
 
-from src.restock import principal
+from src.restock import main
 
 if __name__ == "__main__":
-    sys.exit(principal())
+    sys.exit(main())

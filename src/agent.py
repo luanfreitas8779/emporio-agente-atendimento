@@ -282,7 +282,7 @@ class ChamadaDeFerramenta:
     """A tool the model called in the turn, for the interface panel."""
 
     name: str
-    argumentos: dict
+    arguments: dict
 
 
 @dataclass
@@ -345,7 +345,7 @@ def _mensagens_do_turno(messages: list) -> list:
 def argumentos_da_busca(messages: list, name: str) -> list:
     """Valid values of the `nome` argument the model passed to `search_products` in this turn."""
     valores = (
-        chamada.argumentos.get(name)
+        chamada.arguments.get(name)
         for chamada in ferramentas_do_turno(_mensagens_do_turno(messages))
         if chamada.name == "search_products"
     )

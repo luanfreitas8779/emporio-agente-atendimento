@@ -11,7 +11,7 @@ from src.guardrail import promete_aviso, valores_nao_confirmados
 ANA = "(67) 99654-7821"
 
 
-def modelo_com_respostas(ferramenta, argumentos, respostas, chamadas=None):
+def modelo_com_respostas(ferramenta, arguments, respostas, chamadas=None):
     """Calls the tool (if any) and then returns the answers, one at a time."""
     restantes = iter(respostas)
 
@@ -19,14 +19,14 @@ def modelo_com_respostas(ferramenta, argumentos, respostas, chamadas=None):
         if chamadas is not None:
             chamadas.append(len(messages))
         if ferramenta and len(messages) == 1:
-            return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
+            return ModelResponse(parts=[ToolCallPart(ferramenta, arguments)])
         return ModelResponse(parts=[TextPart(next(restantes))])
 
     return modelo
 
 
-def perguntar(connection, message, ferramenta, argumentos, respostas, chamadas=None):
-    modelo = modelo_com_respostas(ferramenta, argumentos, respostas, chamadas)
+def perguntar(connection, message, ferramenta, arguments, respostas, chamadas=None):
+    modelo = modelo_com_respostas(ferramenta, arguments, respostas, chamadas)
     with agente.override(model=FunctionModel(modelo)):
         return responder(message, Sessao(connection, phone=ANA))
 
@@ -73,7 +73,7 @@ def test_preco_inventado_persistente_vira_resposta_segura(connection):
 
 
 @pytest.mark.parametrize(
-    "ferramenta, argumentos, inventado, correto",
+    "ferramenta, arguments, inventado, correto",
     [
         (
             "consultar_meus_pedidos",
@@ -96,9 +96,9 @@ def test_preco_inventado_persistente_vira_resposta_segura(connection):
     ],
 )
 def test_rastreio_data_e_percentual_inventados_sao_corrigidos(
-    connection, ferramenta, argumentos, inventado, correto
+    connection, ferramenta, arguments, inventado, correto
 ):
-    answer = perguntar(connection, "Me diga", ferramenta, argumentos, [inventado, correto])
+    answer = perguntar(connection, "Me diga", ferramenta, arguments, [inventado, correto])
 
     assert answer == correto
 

@@ -3,50 +3,50 @@ import pytest
 from src.catalog import search_products
 from src.database import connect
 from src.load_data import load_all_data
-from src.restock import ErroDeReposicao, principal, repor_estoque
+from src.restock import RestockError, main, restock
 from tests.conftest import DATA_DIR
 
 GIANNINI_GF_3D = 96
 
 
-def test_reposicao_deixa_o_giannini_gf_3d_disponivel_sem_alterar_a_origem(connection):
-    csv_antes = (DATA_DIR / "products.csv").read_bytes()
-    (antes,) = search_products(connection, "Giannini GF-3D")
-    assert antes.availability == "indisponivel"
+def test_restock_makes_the_giannini_gf_3d_available_without_changing_the_source(connection):
+    csv_before = (DATA_DIR / "products.csv").read_bytes()
+    (before,) = search_products(connection, "Giannini GF-3D")
+    assert before.availability == "indisponivel"
 
-    repor_estoque(connection, GIANNINI_GF_3D, 5)
+    restock(connection, GIANNINI_GF_3D, 5)
 
-    (depois,) = search_products(connection, "Giannini GF-3D")
-    assert depois.availability == "disponivel"
-    assert (DATA_DIR / "products.csv").read_bytes() == csv_antes
+    (after,) = search_products(connection, "Giannini GF-3D")
+    assert after.availability == "disponivel"
+    assert (DATA_DIR / "products.csv").read_bytes() == csv_before
 
 
-def test_recusa_produto_inexistente(connection):
-    with pytest.raises(ErroDeReposicao, match="does not exist"):
-        repor_estoque(connection, 99999, 5)
+def test_rejects_nonexistent_product(connection):
+    with pytest.raises(RestockError, match="does not exist"):
+        restock(connection, 99999, 5)
 
 
 @pytest.mark.parametrize("quantity", [0, -3])
-def test_recusa_quantidade_menor_que_um(connection, quantity):
-    with pytest.raises(ErroDeReposicao, match="quantity"):
-        repor_estoque(connection, GIANNINI_GF_3D, quantity)
+def test_rejects_quantity_below_one(connection, quantity):
+    with pytest.raises(RestockError, match="quantity"):
+        restock(connection, GIANNINI_GF_3D, quantity)
 
     (product,) = search_products(connection, "Giannini GF-3D")
     assert product.availability == "indisponivel"
 
 
 @pytest.mark.parametrize("product", [130, 136])  # new release and discontinued
-def test_recusa_produto_que_nao_esta_ativo(connection, product):
-    with pytest.raises(ErroDeReposicao, match="not active"):
-        repor_estoque(connection, product, 5)
+def test_rejects_product_that_is_not_active(connection, product):
+    with pytest.raises(RestockError, match="not active"):
+        restock(connection, product, 5)
 
 
-def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, capsys):
-    banco = tmp_path / "comando.db"
-    connection = connect(banco)
+def test_command_restocks_the_given_database_and_the_load_restores_the_original(tmp_path, capsys):
+    db = tmp_path / "comando.db"
+    connection = connect(db)
     load_all_data(connection, DATA_DIR)
 
-    exit_code = principal(["96", "--quantity", "3", "--banco", str(banco)])
+    exit_code = main(["96", "--quantity", "3", "--db", str(db)])
 
     assert exit_code == 0
     assert "3" in capsys.readouterr().out
@@ -57,24 +57,24 @@ def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, ca
     connection.close()
 
 
-def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
-    banco = tmp_path / "comando.db"
-    connection = connect(banco)
+def test_command_reports_the_rejection_reason_without_traceback(tmp_path, capsys):
+    db = tmp_path / "comando.db"
+    connection = connect(db)
     load_all_data(connection, DATA_DIR)
     connection.close()
 
-    exit_code = principal(["99999", "--banco", str(banco)])
+    exit_code = main(["99999", "--db", str(db)])
 
     assert exit_code == 1
     assert "does not exist" in capsys.readouterr().err
 
 
 @pytest.mark.regression
-def test_comando_nao_cria_banco_quando_ele_nao_existe(tmp_path, capsys):
-    banco = tmp_path / "ausente.db"
+def test_command_does_not_create_the_database_when_it_does_not_exist(tmp_path, capsys):
+    db = tmp_path / "ausente.db"
 
-    exit_code = principal(["96", "--banco", str(banco)])
+    exit_code = main(["96", "--db", str(db)])
 
     assert exit_code == 1
     assert "python -m src.load_data" in capsys.readouterr().err
-    assert not banco.exists()
+    assert not db.exists()
