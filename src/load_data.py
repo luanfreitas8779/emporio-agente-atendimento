@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.config import DATABASE_PATH, DATA_DIR
 from src.database import connect
-from src.orders import STATUS_DE_PEDIDO, pagamento_valido
+from src.orders import ORDER_STATUS, valid_payment
 from src.phone import normalize_phone
 
 ESQUEMA_CATALOGO = """
@@ -183,64 +183,64 @@ def carregar_catalogo(connection: sqlite3.Connection, pasta_dados: Path) -> None
     connection.commit()
 
 
-def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[str]) -> tuple:
-    identificador = cliente["customer_id"]
+def preparar_cliente(customer: dict[str, str], vistos: set[str], telefones: set[str]) -> tuple:
+    identificador = customer["customer_id"]
     rejeitar_duplicado("customer", identificador, vistos)
     try:
-        numero = int(identificador)
+        number = int(identificador)
     except ValueError as error:
         raise ErroDeCarga(f"customer {identificador}: invalid value") from error
-    phone = normalize_phone(cliente["phone"])
-    if phone is None or not cliente["name"].strip():
+    phone = normalize_phone(customer["phone"])
+    if phone is None or not customer["name"].strip():
         raise ErroDeCarga(f"customer {identificador}: invalid value")
     if phone in telefones:
         raise ErroDeCarga(f"customer {identificador}: duplicate phone number")
     telefones.add(phone)
     # E-mail and city are not loaded: the agent does not need them (privacy).
-    return (numero, cliente["name"].strip(), phone)
+    return (number, customer["name"].strip(), phone)
 
 
 def carregar_clientes(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     vistos: set[str] = set()
     telefones: set[str] = set()
     clientes = [
-        preparar_cliente(cliente, vistos, telefones)
-        for cliente in ler_csv(pasta_dados / "customers.csv")
+        preparar_cliente(customer, vistos, telefones)
+        for customer in ler_csv(pasta_dados / "customers.csv")
     ]
     connection.executescript(ESQUEMA_CLIENTES)
     connection.executemany("INSERT INTO customers (customer_id, name, phone) VALUES (?, ?, ?)", clientes)
     connection.commit()
 
 
-def preparar_pedido(pedido: dict[str, str], clientes: set[int], vistos: set[str]) -> tuple:
-    identificador = pedido["order_id"]
+def preparar_pedido(order: dict[str, str], clientes: set[int], vistos: set[str]) -> tuple:
+    identificador = order["order_id"]
     rejeitar_duplicado("order", identificador, vistos)
     try:
-        cliente = int(pedido["customer_id"])
-        total = para_centavos(pedido["total_brl"])
-        numero = int(identificador)
+        customer = int(order["customer_id"])
+        total = para_centavos(order["total_brl"])
+        number = int(identificador)
     except (ValueError, ArithmeticError) as error:
         raise ErroDeCarga(f"order {identificador}: invalid value") from error
-    if pedido["status"] not in STATUS_DE_PEDIDO or not pagamento_valido(pedido["payment_method"]):
+    if order["status"] not in ORDER_STATUS or not valid_payment(order["payment_method"]):
         raise ErroDeCarga(f"order {identificador}: invalid value")
-    if cliente not in clientes:
+    if customer not in clientes:
         raise ErroDeCarga(f"order {identificador}: nonexistent customer")
     return (
-        numero,
-        cliente,
-        pedido["order_date"],
-        pedido["status"],
+        number,
+        customer,
+        order["order_date"],
+        order["status"],
         total,
-        pedido["payment_method"],
-        pedido["tracking_code"] or None,
-        pedido["estimated_delivery"] or None,
+        order["payment_method"],
+        order["tracking_code"] or None,
+        order["estimated_delivery"] or None,
     )
 
 
-def preparar_item(item: dict[str, str], pedidos: set[int], products: set[int]) -> tuple:
+def preparar_item(item: dict[str, str], order_list: set[int], products: set[int]) -> tuple:
     identificador = item["order_id"]
     try:
-        numero, product, quantity = (
+        number, product, quantity = (
             int(identificador),
             int(item["product_id"]),
             int(item["quantity"]),
@@ -249,11 +249,11 @@ def preparar_item(item: dict[str, str], pedidos: set[int], products: set[int]) -
         raise ErroDeCarga(f"order item {identificador}: invalid value") from error
     if quantity < 1:
         raise ErroDeCarga(f"order item {identificador}: invalid value")
-    if numero not in pedidos:
+    if number not in order_list:
         raise ErroDeCarga(f"order item {identificador}: nonexistent order")
     if product not in products:
         raise ErroDeCarga(f"order item {identificador}: nonexistent product")
-    return (numero, product, quantity)
+    return (number, product, quantity)
 
 
 def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
@@ -261,11 +261,11 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
     products = {row[0] for row in connection.execute("SELECT product_id FROM products")}
     # Validation comes before the schema so that a failure does not erase the current database.
     vistos: set[str] = set()
-    pedidos = [
-        preparar_pedido(pedido, clientes, vistos)
-        for pedido in ler_csv(pasta_dados / "orders.csv")
+    order_list = [
+        preparar_pedido(order, clientes, vistos)
+        for order in ler_csv(pasta_dados / "orders.csv")
     ]
-    ids_pedidos = {pedido[0] for pedido in pedidos}
+    ids_pedidos = {order[0] for order in order_list}
     items = [
         preparar_item(item, ids_pedidos, products)
         for item in ler_csv(pasta_dados / "order_items.csv")
@@ -278,7 +278,7 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
             payment_method, tracking_code, estimated_delivery
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        pedidos,
+        order_list,
     )
     connection.executemany(
         "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)", items

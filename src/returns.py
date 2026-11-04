@@ -78,15 +78,15 @@ class Veredito:
 
 def avaliar_devolucao(
     connection: sqlite3.Connection,
-    cliente_id: int,
-    numero: int,
+    customer_id: int,
+    number: int,
     motivo: Motivo,
     canal: Canal | None,
-    hoje: date,
+    today: date,
 ) -> Veredito:
     row = connection.execute(
         "SELECT order_date, status, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
-        (numero, cliente_id),
+        (number, customer_id),
     ).fetchone()
     if row is None:
         return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
@@ -102,15 +102,15 @@ def avaliar_devolucao(
     recebimento = date.fromisoformat(row["estimated_delivery"])
     if motivo == Motivo.DEFEITO:
         regras = [
-            _regra("troca_por_defeito", compra, PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS, hoje),
-            _regra("garantia_legal", recebimento, PRAZO_DA_GARANTIA_LEGAL_EM_DIAS, hoje),
+            _regra("troca_por_defeito", compra, PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS, today),
+            _regra("garantia_legal", recebimento, PRAZO_DA_GARANTIA_LEGAL_EM_DIAS, today),
         ]
     elif motivo == Motivo.PREFERENCIA:
-        regras = [_regra("troca_por_preferencia", recebimento, PRAZO_DE_TROCA_POR_PREFERENCIA_EM_DIAS, hoje)]
+        regras = [_regra("troca_por_preferencia", recebimento, PRAZO_DE_TROCA_POR_PREFERENCIA_EM_DIAS, today)]
     else:
-        regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, hoje)]
+        regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, today)]
     notices = [AVISO_DE_APROXIMACAO, AVISO_DE_ANALISE]
-    if recebimento > hoje:
+    if recebimento > today:
         notices.insert(0, AVISO_AINDA_NAO_CHEGOU)
     dentro = any(r.resultado == Resultado.DENTRO_DO_PRAZO for r in regras)
     return Veredito(
@@ -119,11 +119,11 @@ def avaliar_devolucao(
         notices=notices,
         data_aproximada=True,
         data_de_recebimento=format_date(recebimento),
-        reference_date=format_date(hoje),
+        reference_date=format_date(today),
     )
 
 
-def _regra(name: str, inicio: date, dias: int, hoje: date) -> Regra:
-    limite = inicio + timedelta(days=dias)
-    resultado = Resultado.DENTRO_DO_PRAZO if hoje <= limite else Resultado.FORA_DO_PRAZO
+def _regra(name: str, inicio: date, days: int, today: date) -> Regra:
+    limite = inicio + timedelta(days=days)
+    resultado = Resultado.DENTRO_DO_PRAZO if today <= limite else Resultado.FORA_DO_PRAZO
     return Regra(name, resultado, format_date(limite))

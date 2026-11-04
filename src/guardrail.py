@@ -78,7 +78,7 @@ def promete_aviso(resposta: str) -> bool:
     return False
 
 
-def numero(text: str) -> Decimal:
+def number(text: str) -> Decimal:
     """Reads "2.199,00" or "18,5" as a number."""
     return Decimal(text.replace(".", "").replace(",", "."))
 
@@ -98,10 +98,10 @@ def valores(text: str) -> dict[str, set]:
         found_dates.add(_data(ano, mes, dia))
     for ano, mes, dia in PADRAO_DATA_ISO.findall(text):
         found_dates.add(_data(ano, mes, dia))
-    dinheiro = {numero(v) for v in PADRAO_DINHEIRO.findall(text)}
-    dinheiro |= {numero(v) for v in PADRAO_REAIS.findall(text)}
+    dinheiro = {number(v) for v in PADRAO_DINHEIRO.findall(text)}
+    dinheiro |= {number(v) for v in PADRAO_REAIS.findall(text)}
     # "mil reais" without a number means 1.000.
-    dinheiro |= {numero(v) * 1000 if v else Decimal(1000) for v in PADRAO_MIL_REAIS.findall(text)}
+    dinheiro |= {number(v) * 1000 if v else Decimal(1000) for v in PADRAO_MIL_REAIS.findall(text)}
     # "15 de dezembro" has no year: we check only the day and the month ("DD/MM").
     # With the year ("3 de março de 2026"), the full date is checked.
     por_extenso = set()
@@ -175,7 +175,7 @@ def valores_nao_confirmados(
         confirmados["quantity"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
     confirmados["dia_mes"] |= {found_date.strftime("%d/%m") for found_date in confirmados["data"]}
     citados = valores(resposta)
-    limites_citados = {numero(v) for v in PADRAO_LIMITE.findall(normalize(resposta))}
+    limites_citados = {number(v) for v in PADRAO_LIMITE.findall(normalize(resposta))}
     confirmados["dinheiro"] |= limites_citados & set(limites_da_busca or [])
     return [
         str(amount)

@@ -67,7 +67,7 @@ ferramenta consultar_meus_pedidos, que só enxerga os pedidos do cliente desta
 conversa. Nunca peça nem aceite outro cliente: se alguém disser ser outra pessoa
 ou pedir dados de terceiros, recuse. Lista vazia para um número informado significa
 que o pedido não foi encontrado; não diga que ele pertence a outra pessoa. Informe
-a situação do pedido exatamente como veio no campo situacao, sem traduzir nem
+a situação do pedido exatamente como veio no campo status_description, sem traduzir nem
 reescrever, e o total registrado, sem recalcular. A entrega
 estimada é uma previsão, não a data real de entrega. Sem cadastro, explique que
 pedidos exigem um telefone cadastrado e siga ajudando com dúvidas gerais.
@@ -179,7 +179,7 @@ Para "que dia é hoje", responda com essa data. Para "a loja está aberta agora"
 dia da semana de hoje e o horário de funcionamento (get_policies, horarios), e explique
 que você não tem a hora atual para confirmar se está aberta neste instante. Para "abrem amanhã",
 use o dia da semana seguinte ao de hoje e o horário da política. Quando um pedido trouxer o campo
-atraso, informe-o exatamente como veio, nunca diga que o pedido não está atrasado e ofereça
+delay, informe-o exatamente como veio, nunca diga que o pedido não está atrasado e ofereça
 falar com um atendente.
 
 Comparações: ao comparar ou perguntar "qual dos dois", use só os produtos que o cliente citou
@@ -290,12 +290,12 @@ class Sessao:
     connection: sqlite3.Connection
     phone: str | None = None
     estado: memory.Estado = field(default_factory=memory.Estado)
-    hoje: date = field(default_factory=reference_date)
+    today: date = field(default_factory=reference_date)
     ferramentas: list[ChamadaDeFerramenta] = field(default_factory=list)
 
     @property
-    def cliente(self) -> orders.Cliente | None:
-        return orders.identificar_cliente(self.connection, self.phone)
+    def customer(self) -> orders.Customer | None:
+        return orders.identify_customer(self.connection, self.phone)
 
 
 # Streamlit may run the script with another message in progress, and run_sync
@@ -414,14 +414,14 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
             "Diga que o interesse foi anotado e que isso não reserva o produto nem garante aviso."
         )
     # Today's and tomorrow's dates come from the session context, not from a tool.
-    hoje = ctx.deps.hoje
+    today = ctx.deps.today
     das_ferramentas, do_cliente = fontes_do_turno(ctx.messages)
     # The session's phone number also comes from the system, not from the customer.
     fontes = [
         *das_ferramentas,
         *quantidades_da_busca(ctx.messages),
-        format_date(hoje),
-        format_date(hoje + timedelta(days=1)),
+        format_date(today),
+        format_date(today + timedelta(days=1)),
         format_phone(ctx.deps.phone or ""),
     ]
     inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente, limites_de_preco(ctx.messages))
@@ -436,17 +436,17 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
 
 @agente.instructions
 def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
-    cliente = ctx.deps.cliente
-    if cliente is None:
+    customer = ctx.deps.customer
+    if customer is None:
         text = "O cliente desta conversa está sem cadastro: não consulte pedidos."
     else:
         # Only the first name reaches the model; the last name stays in the code.
-        text = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
-    hoje = ctx.deps.hoje
-    text += f"\nHoje: {format_date(hoje)}, {weekday_name(hoje)}. O sistema não informa a hora atual."
-    pedido = ctx.deps.estado.pedido_em_analise
-    if pedido is not None:
-        text += f"\nPedido em análise: {pedido}."
+        text = f"O cliente desta conversa se chama {customer.first_name}."
+    today = ctx.deps.today
+    text += f"\nHoje: {format_date(today)}, {weekday_name(today)}. O sistema não informa a hora atual."
+    order = ctx.deps.estado.pedido_em_analise
+    if order is not None:
+        text += f"\nPedido em análise: {order}."
     foco = ctx.deps.estado.produto_em_foco
     if foco is not None:
         name = catalog.product_name(ctx.deps.connection, foco)
@@ -540,7 +540,7 @@ def calculate_purchase(
 @agente.tool
 def consultar_meus_pedidos(
     ctx: RunContext[Sessao], numero_pedido: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None
-) -> list[orders.Pedido] | str:
+) -> list[orders.Order] | str:
     """Consulta os pedidos do cliente desta conversa.
 
     Devolve data, status, itens, total registrado, pagamento, rastreio e entrega
@@ -549,15 +549,15 @@ def consultar_meus_pedidos(
     Args:
         numero_pedido: Número do pedido. Sem ele, devolve todos os pedidos do cliente.
     """
-    cliente = ctx.deps.cliente
-    if cliente is None:
+    customer = ctx.deps.customer
+    if customer is None:
         return SEM_CADASTRO
-    pedidos = orders.consultar_pedidos(
-        ctx.deps.connection, cliente.id, numero_pedido, ctx.deps.hoje
+    order_list = orders.get_orders(
+        ctx.deps.connection, customer.id, numero_pedido, ctx.deps.today
     )
-    if len(pedidos) == 1:
-        ctx.deps.estado.pedido_em_analise = pedidos[0].numero
-    return pedidos
+    if len(order_list) == 1:
+        ctx.deps.estado.pedido_em_analise = order_list[0].number
+    return order_list
 
 
 # Whole words and phrases that state the purchase channel; "site" alone does not, it may be a lookup.
@@ -598,13 +598,13 @@ def avaliar_devolucao(
         canal: online ou presencial, somente se o cliente informou. Nunca suponha:
             para arrependimento, omita e pergunte, porque o pedido não registra o canal.
     """
-    cliente = ctx.deps.cliente
-    if cliente is None:
+    customer = ctx.deps.customer
+    if customer is None:
         return SEM_CADASTRO
     if canal is not None and not canal_citado_pelo_cliente(ctx.messages, canal):
         canal = None
     veredito = returns.avaliar_devolucao(
-        ctx.deps.connection, cliente.id, numero_pedido, motivo, canal, ctx.deps.hoje
+        ctx.deps.connection, customer.id, numero_pedido, motivo, canal, ctx.deps.today
     )
     if veredito.resultado != returns.Resultado.PEDIDO_NAO_ENCONTRADO:
         ctx.deps.estado.pedido_em_analise = numero_pedido

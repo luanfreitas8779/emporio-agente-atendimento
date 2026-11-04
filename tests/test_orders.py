@@ -2,88 +2,88 @@ from datetime import date
 
 import pytest
 
-from src.orders import consultar_pedidos, identificar_cliente
+from src.orders import get_orders, identify_customer
 
 
-def test_identifica_o_cliente_pelo_telefone_com_mascara(connection):
-    cliente = identificar_cliente(connection, "(67) 99654-7821")
+def test_identifies_the_customer_by_masked_phone(connection):
+    customer = identify_customer(connection, "(67) 99654-7821")
 
-    assert cliente is not None
-    assert cliente.id == 2
-    assert cliente.name == "Ana Carolina Ferreira"
-
-
-def test_telefone_sem_cadastro_nao_identifica_ninguem(connection):
-    assert identificar_cliente(connection, "(67) 90000-0000") is None
+    assert customer is not None
+    assert customer.id == 2
+    assert customer.name == "Ana Carolina Ferreira"
 
 
-def test_identifica_o_cliente_pelo_telefone_so_com_digitos(connection):
-    cliente = identificar_cliente(connection, "67996547821")
-
-    assert cliente is not None
-    assert cliente.id == 2
+def test_unregistered_phone_identifies_no_one(connection):
+    assert identify_customer(connection, "(67) 90000-0000") is None
 
 
-def test_cliente_2_consulta_o_pedido_8_com_status_e_rastreio(connection):
-    (pedido,) = consultar_pedidos(connection, cliente_id=2, numero=8)
+def test_identifies_the_customer_by_phone_with_digits_only(connection):
+    customer = identify_customer(connection, "67996547821")
 
-    assert pedido.numero == 8
-    assert pedido.status == "shipped"
-    assert pedido.rastreio == "BRJL5544332BR"
-    assert pedido.entrega_estimada == "28/02/2026"
+    assert customer is not None
+    assert customer.id == 2
 
 
-def test_pedido_de_outro_cliente_e_tratado_como_nao_encontrado(connection):
+def test_customer_2_looks_up_order_8_with_status_and_tracking(connection):
+    (order,) = get_orders(connection, customer_id=2, number=8)
+
+    assert order.number == 8
+    assert order.status == "shipped"
+    assert order.rastreio == "BRJL5544332BR"
+    assert order.estimated_delivery == "28/02/2026"
+
+
+def test_another_customers_order_is_treated_as_not_found(connection):
     # Order 5 belongs to customer 5.
-    assert consultar_pedidos(connection, cliente_id=2, numero=5) == []
+    assert get_orders(connection, customer_id=2, number=5) == []
 
 
-def test_sem_numero_lista_apenas_os_pedidos_do_cliente(connection):
-    pedidos = consultar_pedidos(connection, cliente_id=3)
+def test_without_number_lists_only_the_customers_orders(connection):
+    order_list = get_orders(connection, customer_id=3)
 
-    assert [p.numero for p in pedidos] == [1, 19]
-
-
-def test_pedido_mostra_itens_data_e_pagamento(connection):
-    (pedido,) = consultar_pedidos(connection, cliente_id=2, numero=8)
-
-    assert pedido.order_date == "15/02/2026"
-    assert pedido.pagamento == "débito"
-    assert [(i.name, i.quantity) for i in pedido.items] == [("Kala KA-C Concert Mogno", 1)]
+    assert [p.number for p in order_list] == [1, 19]
 
 
-def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(connection):
+def test_order_shows_items_date_and_payment(connection):
+    (order,) = get_orders(connection, customer_id=2, number=8)
+
+    assert order.order_date == "15/02/2026"
+    assert order.payment == "débito"
+    assert [(i.name, i.quantity) for i in order.items] == [("Kala KA-C Concert Mogno", 1)]
+
+
+def test_shows_the_recorded_total_even_when_it_differs_from_the_sum_of_items(connection):
     # Order 3: 2 x R$ 1.749,00 add up to R$ 3.498,00, but the recorded total is R$ 3.450,00.
-    (pedido,) = consultar_pedidos(connection, cliente_id=12, numero=3)
+    (order,) = get_orders(connection, customer_id=12, number=3)
 
-    assert pedido.total == "R$ 3.450,00"
-    assert pedido.pagamento == "cartão de crédito em 12x"
-    assert [(i.name, i.quantity) for i in pedido.items] == [
+    assert order.total == "R$ 3.450,00"
+    assert order.payment == "cartão de crédito em 12x"
+    assert [(i.name, i.quantity) for i in order.items] == [
         ("Kala KA-ABP-CTG Barítono Cedar", 2)
     ]
 
 
-def test_identifica_o_cliente_pelo_telefone_com_codigo_do_pais(connection):
+def test_identifies_the_customer_by_phone_with_country_code(connection):
     for phone in ("+55 (67) 99654-7821", "5567996547821"):
-        cliente = identificar_cliente(connection, phone)
+        customer = identify_customer(connection, phone)
 
-        assert cliente is not None
-        assert cliente.id == 2
-
-
-def test_telefone_incompleto_nao_identifica_ninguem(connection):
-    assert identificar_cliente(connection, "99654-7821") is None
-    assert identificar_cliente(connection, "") is None
+        assert customer is not None
+        assert customer.id == 2
 
 
-def test_o_cliente_informa_o_primeiro_nome(connection):
-    cliente = identificar_cliente(connection, "(67) 99654-7821")
+def test_incomplete_phone_identifies_no_one(connection):
+    assert identify_customer(connection, "99654-7821") is None
+    assert identify_customer(connection, "") is None
 
-    assert cliente.primeiro_nome == "Ana"
+
+def test_customer_gives_the_first_name(connection):
+    customer = identify_customer(connection, "(67) 99654-7821")
+
+    assert customer.first_name == "Ana"
 
 
 @pytest.mark.parametrize(
-    "cliente, numero, situacao",
+    "customer, number, status_description",
     [
         (3, 1, "entregue"),
         (6, 9, "confirmado"),
@@ -92,21 +92,21 @@ def test_o_cliente_informa_o_primeiro_nome(connection):
         (15, 17, "cancelado"),
     ],
 )
-def test_pedido_traz_a_situacao_traduzida_em_codigo(connection, cliente, numero, situacao):
-    (pedido,) = consultar_pedidos(connection, cliente_id=cliente, numero=numero)
+def test_order_includes_the_status_description_translated_in_code(connection, customer, number, status_description):
+    (order,) = get_orders(connection, customer_id=customer, number=number)
 
-    assert pedido.situacao == situacao
+    assert order.status_description == status_description
 
 
 @pytest.mark.regression
-def test_pedido_enviado_depois_da_entrega_estimada_informa_os_dias_de_atraso(connection):
+def test_shipped_order_after_the_estimated_delivery_reports_the_days_of_delay(connection):
     # Order 8: shipped, estimated delivery on 28/02/2026 (DQ-16).
-    (pedido,) = consultar_pedidos(connection, cliente_id=2, numero=8, hoje=date(2026, 3, 25))
+    (order,) = get_orders(connection, customer_id=2, number=8, today=date(2026, 3, 25))
 
-    assert pedido.atraso == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
+    assert order.delay == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
 
 
-def test_pedido_dentro_da_previsao_nao_tem_atraso(connection):
-    (pedido,) = consultar_pedidos(connection, cliente_id=2, numero=8, hoje=date(2026, 2, 28))
+def test_order_within_the_estimate_has_no_delay(connection):
+    (order,) = get_orders(connection, customer_id=2, number=8, today=date(2026, 2, 28))
 
-    assert pedido.atraso is None
+    assert order.delay is None

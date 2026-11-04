@@ -46,9 +46,9 @@ def test_comando_repoe_o_banco_indicado_e_a_carga_volta_ao_original(tmp_path, ca
     connection = connect(banco)
     carregar_dados(connection, DATA_DIR)
 
-    codigo = principal(["96", "--quantity", "3", "--banco", str(banco)])
+    exit_code = principal(["96", "--quantity", "3", "--banco", str(banco)])
 
-    assert codigo == 0
+    assert exit_code == 0
     assert "3" in capsys.readouterr().out
     assert search_products(connection, "Giannini GF-3D")[0].availability == "disponivel"
 
@@ -63,9 +63,9 @@ def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
     carregar_dados(connection, DATA_DIR)
     connection.close()
 
-    codigo = principal(["99999", "--banco", str(banco)])
+    exit_code = principal(["99999", "--banco", str(banco)])
 
-    assert codigo == 1
+    assert exit_code == 1
     assert "does not exist" in capsys.readouterr().err
 
 
@@ -73,8 +73,8 @@ def test_comando_informa_o_motivo_da_recusa_sem_traceback(tmp_path, capsys):
 def test_comando_nao_cria_banco_quando_ele_nao_existe(tmp_path, capsys):
     banco = tmp_path / "ausente.db"
 
-    codigo = principal(["96", "--banco", str(banco)])
+    exit_code = principal(["96", "--banco", str(banco)])
 
-    assert codigo == 1
+    assert exit_code == 1
     assert "python -m src.load_data" in capsys.readouterr().err
     assert not banco.exists()

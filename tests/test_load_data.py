@@ -10,7 +10,7 @@ from src.load_data import (
     carregar_dados,
     carregar_pedidos,
 )
-from src.orders import consultar_pedidos, identificar_cliente
+from src.orders import get_orders, identify_customer
 from tests.conftest import DATA_DIR
 
 
@@ -72,16 +72,16 @@ def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tm
 def test_recarregar_todos_os_dados_nao_duplica_pedidos(connection):
     carregar_dados(connection, DATA_DIR)
 
-    assert len(consultar_pedidos(connection, cliente_id=3)) == 2
+    assert len(get_orders(connection, customer_id=3)) == 2
 
 
-def escrever_pedidos(pasta, cliente, pedido, item):
+def escrever_pedidos(pasta, customer, order, item):
     (pasta / "customers.csv").write_text(
-        f"customer_id,name,phone,email,city\n{cliente}\n", encoding="utf-8"
+        f"customer_id,name,phone,email,city\n{customer}\n", encoding="utf-8"
     )
     (pasta / "orders.csv").write_text(
         "order_id,customer_id,order_date,status,total_brl,payment_method,"
-        f"tracking_code,estimated_delivery,notes\n{pedido}\n",
+        f"tracking_code,estimated_delivery,notes\n{order}\n",
         encoding="utf-8",
     )
     (pasta / "order_items.csv").write_text(
@@ -89,8 +89,8 @@ def escrever_pedidos(pasta, cliente, pedido, item):
     )
 
 
-def carregar_pedidos_de(pasta, cliente, pedido, item):
-    escrever_pedidos(pasta, cliente, pedido, item)
+def carregar_pedidos_de(pasta, customer, order, item):
+    escrever_pedidos(pasta, customer, order, item)
     connection = connect(pasta / "teste.db")
     carregar_catalogo(connection, DATA_DIR)
     carregar_clientes(connection, pasta)
@@ -200,7 +200,7 @@ def carregar_clientes_de(pasta, *clientes):
     connection = connect(pasta / "teste.db")
     try:
         carregar_clientes(connection, pasta)
-        return identificar_cliente(connection, "(67) 90000-0001")
+        return identify_customer(connection, "(67) 90000-0001")
     finally:
         connection.close()
 
@@ -238,16 +238,16 @@ def test_interrompe_a_carga_quando_dois_clientes_tem_o_mesmo_telefone(tmp_path):
 
 
 def test_telefone_com_codigo_do_pais_e_gravado_sem_o_codigo(tmp_path):
-    cliente = carregar_clientes_de(
+    customer = carregar_clientes_de(
         tmp_path, "1,Um,+55 (67) 90000-0001,a@exemplo.com,Campo Grande"
     )
 
-    assert cliente is not None
-    assert cliente.name == "Um"
+    assert customer is not None
+    assert customer.name == "Um"
 
 
 @pytest.mark.parametrize(
-    "pedido",
+    "order",
     [
         "1,1,2026-01-01,perdido,100,pix,,,",
         "1,1,2026-01-01,delivered,100,cheque,,,",
@@ -257,17 +257,17 @@ def test_telefone_com_codigo_do_pais_e_gravado_sem_o_codigo(tmp_path):
     ],
 )
 @pytest.mark.regression
-def test_interrompe_a_carga_quando_o_pedido_tem_dado_invalido(tmp_path, pedido):
+def test_interrompe_a_carga_quando_o_pedido_tem_dado_invalido(tmp_path, order):
     with pytest.raises(ErroDeCarga, match="order 1"):
-        carregar_pedidos_de(tmp_path, CLIENTE, pedido, "1,1,93")
+        carregar_pedidos_de(tmp_path, CLIENTE, order, "1,1,93")
 
 
 @pytest.mark.regression
 def test_interrompe_a_carga_quando_o_id_do_pedido_esta_duplicado(tmp_path):
-    pedido = "1,1,2026-01-01,delivered,100,pix,,,"
+    order = "1,1,2026-01-01,delivered,100,pix,,,"
 
     with pytest.raises(ErroDeCarga, match="order 1: duplicate id"):
-        carregar_pedidos_de(tmp_path, CLIENTE, f"{pedido}\n{pedido}", "1,1,93")
+        carregar_pedidos_de(tmp_path, CLIENTE, f"{order}\n{order}", "1,1,93")
 
 
 @pytest.mark.regression

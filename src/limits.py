@@ -46,10 +46,10 @@ def e_limite_diario(error: ModelAPIError) -> bool:
 def espera_indicada(error: ModelAPIError) -> float | None:
     """Seconds of the `retryDelay` ("27s") in the error body, or None if missing or unreadable."""
     for detalhe in _detalhes(error.body):
-        atraso = detalhe.get("retryDelay")
-        if isinstance(atraso, str) and atraso.endswith("s"):
+        delay = detalhe.get("retryDelay")
+        if isinstance(delay, str) and delay.endswith("s"):
             try:
-                return float(atraso[:-1])
+                return float(delay[:-1])
             except ValueError:
                 return None
     return None

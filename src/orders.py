@@ -10,7 +10,7 @@ from src.catalog import format_price
 from src.dates import format_date
 from src.phone import normalize_phone
 
-FORMAS_DE_PAGAMENTO = {
+PAYMENT_METHODS = {
     "pix": "PIX",
     "debit": "débito",
     "boleto": "boleto",
@@ -18,50 +18,50 @@ FORMAS_DE_PAGAMENTO = {
 
 
 @dataclass(frozen=True)
-class Cliente:
+class Customer:
     id: int
     name: str
 
     @property
-    def primeiro_nome(self) -> str:
+    def first_name(self) -> str:
         return self.name.split()[0]
 
 
 @dataclass(frozen=True)
-class ItemPedido:
+class OrderItem:
     name: str
     quantity: int
 
 
 @dataclass_pydantic(frozen=True)
-class Pedido:
-    numero: int
+class Order:
+    number: int
     order_date: str
     # The original code stays in the code only: the model receives only the status description.
     status: Annotated[str, Field(exclude=True)]
-    situacao: str
-    items: list[ItemPedido]
+    status_description: str
+    items: list[OrderItem]
     total: str
-    pagamento: str
+    payment: str
     rastreio: str | None
-    entrega_estimada: str | None
+    estimated_delivery: str | None
     # Calculated in code; only present for an order shipped after the estimate (DQ-16).
-    atraso: str | None = None
+    delay: str | None = None
 
 
-def identificar_cliente(connection: sqlite3.Connection, phone: str | None) -> Cliente | None:
+def identify_customer(connection: sqlite3.Connection, phone: str | None) -> Customer | None:
     digits = normalize_phone(phone or "")
     if digits is None:
         return None
     row = connection.execute(
         "SELECT customer_id, name FROM customers WHERE phone = ?", (digits,)
     ).fetchone()
-    return Cliente(row["customer_id"], row["name"]) if row else None
+    return Customer(row["customer_id"], row["name"]) if row else None
 
 
-PARCELAS_NO_CREDITO = {f"credit_{n}x": n for n in range(1, 13)}
+CREDIT_INSTALLMENTS = {f"credit_{n}x": n for n in range(1, 13)}
 # Fixed, literal translation (ADR-012): it adds no meaning that the data does not have.
-STATUS_DE_PEDIDO = {
+ORDER_STATUS = {
     "pending": "pendente",
     "confirmed": "confirmado",
     "shipped": "enviado",
@@ -70,17 +70,17 @@ STATUS_DE_PEDIDO = {
 }
 
 
-def pagamento_valido(codigo: str) -> bool:
-    return codigo in FORMAS_DE_PAGAMENTO or codigo in PARCELAS_NO_CREDITO
+def valid_payment(payment_code: str) -> bool:
+    return payment_code in PAYMENT_METHODS or payment_code in CREDIT_INSTALLMENTS
 
 
-def descrever_pagamento(codigo: str) -> str:
-    if codigo in PARCELAS_NO_CREDITO:
-        return f"cartão de crédito em {PARCELAS_NO_CREDITO[codigo]}x"
-    return FORMAS_DE_PAGAMENTO[codigo]
+def describe_payment(payment_code: str) -> str:
+    if payment_code in CREDIT_INSTALLMENTS:
+        return f"cartão de crédito em {CREDIT_INSTALLMENTS[payment_code]}x"
+    return PAYMENT_METHODS[payment_code]
 
 
-def consultar_itens(connection: sqlite3.Connection, numero: int) -> list[ItemPedido]:
+def get_items(connection: sqlite3.Connection, number: int) -> list[OrderItem]:
     rows = connection.execute(
         """
         SELECT p.name, i.quantity
@@ -88,28 +88,28 @@ def consultar_itens(connection: sqlite3.Connection, numero: int) -> list[ItemPed
         WHERE i.order_id = ?
         ORDER BY p.name
         """,
-        (numero,),
+        (number,),
     ).fetchall()
-    return [ItemPedido(row["name"], row["quantity"]) for row in rows]
+    return [OrderItem(row["name"], row["quantity"]) for row in rows]
 
 
-def descrever_atraso(row: sqlite3.Row, hoje: date | None) -> str | None:
-    if hoje is None or row["status"] != "shipped" or not row["estimated_delivery"]:
+def describe_delay(row: sqlite3.Row, today: date | None) -> str | None:
+    if today is None or row["status"] != "shipped" or not row["estimated_delivery"]:
         return None
-    dias = (hoje - date.fromisoformat(row["estimated_delivery"])).days
-    if dias <= 0:
+    days = (today - date.fromisoformat(row["estimated_delivery"])).days
+    if days <= 0:
         return None
-    unidade = "dia" if dias == 1 else "dias"
-    previsao = format_date(row["estimated_delivery"])
-    return f"A entrega estimada era {previsao} e o pedido segue como enviado: {dias} {unidade} de atraso."
+    unit = "dia" if days == 1 else "dias"
+    estimate = format_date(row["estimated_delivery"])
+    return f"A entrega estimada era {estimate} e o pedido segue como enviado: {days} {unit} de atraso."
 
 
-def consultar_pedidos(
+def get_orders(
     connection: sqlite3.Connection,
-    cliente_id: int,
-    numero: int | None = None,
-    hoje: date | None = None,
-) -> list[Pedido]:
+    customer_id: int,
+    number: int | None = None,
+    today: date | None = None,
+) -> list[Order]:
     rows = connection.execute(
         """
         SELECT *
@@ -117,21 +117,21 @@ def consultar_pedidos(
         WHERE customer_id = ? AND (? IS NULL OR order_id = ?)
         ORDER BY order_id
         """,
-        (cliente_id, numero, numero),
+        (customer_id, number, number),
     ).fetchall()
     return [
-        Pedido(
+        Order(
             row["order_id"],
             format_date(row["order_date"]),
             row["status"],
-            STATUS_DE_PEDIDO[row["status"]],
-            consultar_itens(connection, row["order_id"]),
+            ORDER_STATUS[row["status"]],
+            get_items(connection, row["order_id"]),
             # The recorded total prevails over the sum of the items (DQ-11 and DQ-12).
             format_price(row["total_cents"]),
-            descrever_pagamento(row["payment_method"]),
+            describe_payment(row["payment_method"]),
             row["tracking_code"],
             format_date(row["estimated_delivery"]),
-            descrever_atraso(row, hoje),
+            describe_delay(row, today),
         )
         for row in rows
     ]

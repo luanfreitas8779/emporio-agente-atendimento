@@ -190,9 +190,9 @@ ANA = "(67) 99654-7821"
 def test_cliente_identificado_consulta_o_status_e_o_rastreio_do_pedido_8(connection):
     retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {"numero_pedido": 8})
 
-    (pedido,) = retorno.content
-    assert pedido.status == "shipped"
-    assert pedido.rastreio == "BRJL5544332BR"
+    (order,) = retorno.content
+    assert order.status == "shipped"
+    assert order.rastreio == "BRJL5544332BR"
 
 
 def test_telefone_sem_cadastro_recebe_a_explicacao_de_que_nao_ha_pedidos(connection):
@@ -252,17 +252,17 @@ def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(connection):
         instrucoes = responder("Oi!", sessao)
 
     # The source of the values is the CSV, not the code under test.
-    for cliente in ler_csv(DATA_DIR / "customers.csv"):
-        assert cliente["email"] not in instrucoes
-        assert cliente["phone"] not in instrucoes
+    for customer in ler_csv(DATA_DIR / "customers.csv"):
+        assert customer["email"] not in instrucoes
+        assert customer["phone"] not in instrucoes
 
 
 def test_retorno_dos_pedidos_nao_expoe_email_nem_cidade(connection):
     retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {})
 
     text = repr(retorno.content)
-    for cliente in ler_csv(DATA_DIR / "customers.csv"):
-        assert cliente["email"] not in text
+    for customer in ler_csv(DATA_DIR / "customers.csv"):
+        assert customer["email"] not in text
     assert "Campo Grande" not in text
 
 
@@ -594,11 +594,11 @@ def test_telefone_sem_conversa_exibe_lista_vazia(connection):
 LETICIA = "(67) 99789-0123"
 
 
-def chamar_ferramenta_na_data(connection, phone, hoje, ferramenta, argumentos, mensagem="Teste"):
+def chamar_ferramenta_na_data(connection, phone, today, ferramenta, argumentos, mensagem="Teste"):
     capturados: list = []
     modelo = FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))
     with agente.override(model=modelo):
-        responder(mensagem, Sessao(connection, phone=phone, hoje=hoje))
+        responder(mensagem, Sessao(connection, phone=phone, today=today))
     return capturados[0]
 
 
@@ -1118,7 +1118,7 @@ def test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativ
 
 @pytest.mark.regression
 def test_instrucoes_trazem_a_data_de_hoje_com_o_dia_da_semana(connection):
-    sessao = Sessao(connection, phone=ANA, hoje=date(2026, 3, 25))
+    sessao = Sessao(connection, phone=ANA, today=date(2026, 3, 25))
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Que dia é hoje?", sessao)
@@ -1132,7 +1132,7 @@ def test_resposta_pode_citar_a_data_de_hoje_da_sessao(connection):
         return ModelResponse(parts=[TextPart("Hoje é quarta-feira, 25/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Que dia é hoje?", Sessao(connection, phone=ANA, hoje=date(2026, 3, 25)))
+        resposta = responder("Que dia é hoje?", Sessao(connection, phone=ANA, today=date(2026, 3, 25)))
 
     assert resposta == "Hoje é quarta-feira, 25/03/2026."
 
@@ -1142,7 +1142,7 @@ def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(connection):
         return ModelResponse(parts=[TextPart("O pedido chega em 30/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Quando chega?", Sessao(connection, phone=ANA, hoje=date(2026, 3, 25)))
+        resposta = responder("Quando chega?", Sessao(connection, phone=ANA, today=date(2026, 3, 25)))
 
     assert resposta == RESPOSTA_SEGURA
 
@@ -1153,8 +1153,8 @@ def test_ferramenta_de_pedidos_informa_o_atraso_com_a_data_da_sessao(connection)
         connection, ANA, date(2026, 3, 25), "consultar_meus_pedidos", {"numero_pedido": 8}
     )
 
-    (pedido,) = retorno.content
-    assert pedido.atraso == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
+    (order,) = retorno.content
+    assert order.delay == "A entrega estimada era 28/02/2026 e o pedido segue como enviado: 25 dias de atraso."
 
 
 def modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa(
@@ -1187,12 +1187,12 @@ def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(con
     sessao = Sessao(connection, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        for numero in range(1, 17):
-            responder(f"P{numero}", sessao)
+        for number in range(1, 17):
+            responder(f"P{number}", sessao)
         resposta = responder("P17", sessao)
 
     # Each simple turn has 2 messages: 15 turns fit in 30, and P1 does not.
-    assert resposta == " | ".join(f"P{numero}" for numero in range(2, 18))
+    assert resposta == " | ".join(f"P{number}" for number in range(2, 18))
 
 
 @pytest.mark.regression
@@ -1201,7 +1201,7 @@ def test_resposta_pode_citar_a_data_de_amanha_da_sessao(connection):
         return ModelResponse(parts=[TextPart("Amanhã é quinta-feira, 26/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Vocês abrem amanhã?", Sessao(connection, phone=ANA, hoje=date(2026, 3, 25)))
+        resposta = responder("Vocês abrem amanhã?", Sessao(connection, phone=ANA, today=date(2026, 3, 25)))
 
     assert resposta == "Amanhã é quinta-feira, 26/03/2026."
 
@@ -1354,18 +1354,18 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    ("search_term", "situacao"),
+    ("search_term", "status_description"),
     [
         ("Giannini GF-3D", "sem estoque"),
         ("Ibanez Bass 2X", "fora de catálogo"),
         ("Kala KA-ABP-CTG", "lançamento"),
     ],
 )
-def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, search_term, situacao):
+def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, search_term, status_description):
     resultado = conta_pela_ferramenta(connection, (search_term, 1))
 
     assert resultado.warning is not None
-    assert situacao in resultado.warning
+    assert status_description in resultado.warning
 
 
 @pytest.mark.regression

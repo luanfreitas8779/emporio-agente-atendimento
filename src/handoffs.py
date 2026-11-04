@@ -31,9 +31,9 @@ def _mesmo_assunto(anterior: str, resumo: str) -> bool:
     orders cited in both, share a subject word."""
     assunto_anterior, assunto = _assunto(anterior), _assunto(resumo)
     pedidos_anterior = {p for p in assunto_anterior if p.isdigit()}
-    pedidos = {p for p in assunto if p.isdigit()}
-    if pedidos_anterior and pedidos:
-        return bool(pedidos_anterior & pedidos)
+    order_list = {p for p in assunto if p.isdigit()}
+    if pedidos_anterior and order_list:
+        return bool(pedidos_anterior & order_list)
     return bool(assunto_anterior & assunto)
 
 
