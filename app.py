@@ -18,7 +18,7 @@ SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar
 ROTULOS_DAS_FERRAMENTAS = {
     "search_products": "Consulta ao catálogo",
     "get_policies": "Consulta às políticas da loja",
-    "calcular_compra": "Cálculo da compra",
+    "calculate_purchase": "Cálculo da compra",
     "consultar_meus_pedidos": "Consulta aos seus pedidos",
     "avaliar_devolucao": "Avaliação de devolução",
     "registrar_interesse": "Registro de interesse no produto",
@@ -27,7 +27,7 @@ ROTULOS_DAS_FERRAMENTAS = {
 
 
 # Lookups that answer the same with or without a registered phone number.
-FERRAMENTAS_SEM_CADASTRO = frozenset({"search_products", "get_policies", "calcular_compra"})
+FERRAMENTAS_SEM_CADASTRO = frozenset({"search_products", "get_policies", "calculate_purchase"})
 
 
 def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None:

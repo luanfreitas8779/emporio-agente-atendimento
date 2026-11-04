@@ -28,7 +28,7 @@ The agent introduces itself as a virtual assistant, does not pretend to be a per
 | Intent | Action |
 |---|---|
 | Product, price, stock, or promotion | `search_products` |
-| Total, sum, price difference, PIX savings, or shipping for a purchase in Campo Grande | `calcular_compra` |
+| Total, sum, price difference, PIX savings, or shipping for a purchase in Campo Grande | `calculate_purchase` |
 | Opening hours, address, payment, exchange, shipping, warranty, or privacy | `get_policies` |
 | Order status, tracking, or details | `consultar_meus_pedidos` |
 | Exchange, return, or defect of an order | `avaliar_devolucao` |
@@ -69,7 +69,7 @@ A message may require more than one tool. A return request, for example, require
 | Item | Definition |
 |---|---|
 | Input | `numero_pedido`, `motivo` (`arrependimento`, `defeito`, or `preferencia`), and `canal` (`online` or `presencial`), optional; the customer comes from the session |
-| Output | Verdict: `resultado` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados`, or `pedido_nao_encontrado`), `regras` with the final deadline of each one, `faltando`, `avisos`, `data_aproximada`, `data_de_recebimento`, and `reference_date`, with dates in `dd/mm/yyyy` |
+| Output | Verdict: `resultado` (`dentro_do_prazo`, `fora_do_prazo`, `nao_se_aplica`, `faltam_dados`, or `pedido_nao_encontrado`), `regras` with the final deadline of each one, `faltando`, `notices`, `data_aproximada`, `data_de_recebimento`, and `reference_date`, with dates in `dd/mm/yyyy` |
 | Rules | Deadlines calculated in code (`docs/03-data.md`, 5.4). The model passes the verdict on without recalculating. Withdrawal without a channel returns `faltam_dados`, with what to ask in `faltando`. Never receives `customer_id` |
 
 ### 4.4 `registrar_interesse`

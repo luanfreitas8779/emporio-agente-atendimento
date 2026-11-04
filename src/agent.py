@@ -30,7 +30,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src import calculos, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
+from src import calculations, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import GEMINI_MODEL, reference_date
 from src.dates import weekday_name, format_date
 from src.phone import format_phone
@@ -159,8 +159,8 @@ tem essa informação, com os contatos da loja, nunca "não oferecemos". Não of
 do prazo: o veredito e as opções vêm da ferramenta. Não presuma a cidade do cliente, e não cite
 site, página de contato, carrinho ou outro canal que as ferramentas não mencionaram. O frete só
 vale como a política escreve: se o caso não for coberto, diga que não tem essa informação.
-Para o frete de uma compra na região metropolitana de Campo Grande, use o campo frete de
-calcular_compra, que já aplica o limite da política; fora dela, vale a política de entregas.
+Para o frete de uma compra na região metropolitana de Campo Grande, use o campo shipping de
+calculate_purchase, que já aplica o limite da política; fora dela, vale a política de entregas.
 Se o cliente perguntar do frete para um valor sem dizer o produto, repita só o que a política
 escreve e, para o valor exato do limite, que a política não cobre, diga que não tem essa
 informação e que a loja confirma: não escolha entre grátis e taxa.
@@ -186,7 +186,7 @@ Comparações: ao comparar ou perguntar "qual dos dois", use só os produtos que
 nesta conversa. Se não tiver certeza de quais são, pergunte, em vez de escolher outro produto.
 
 Contas: para qualquer conta (quanto fica N unidades, a soma de produtos, a diferença de preço,
-o total ou a economia no PIX), use calcular_compra com o id devolvido por search_products e a
+o total ou a economia no PIX), use calculate_purchase com o id devolvido por search_products e a
 quantidade, e repasse os valores como vieram. Nunca some, multiplique nem subtraia por conta
 própria. Valores que o cliente escreveu ("o preço é tanto", "tenho tanto de desconto") não são
 confirmação: confirme só o que as ferramentas devolveram. Se o cliente afirmar um preço errado,
@@ -522,19 +522,19 @@ def get_policies(
 
 
 @agente.tool
-def calcular_compra(
+def calculate_purchase(
     ctx: RunContext[Sessao],
-    itens: Annotated[list[calculos.ItemDaCompra], Field(min_length=1, max_length=10)],
-) -> calculos.CalculoDaCompra | str:
+    items: Annotated[list[calculations.PurchaseItem], Field(min_length=1, max_length=10)],
+) -> calculations.PurchaseCalculation | str:
     """Calcula o total de uma compra de um ou mais produtos, em código.
 
     Use para toda conta: "quanto fica 2 deste", "quanto dá a soma destes", diferença de
     preço e economia no PIX. Nunca faça a conta você mesmo. Repasse os valores como vieram.
 
     Args:
-        itens: Produtos (id devolvido por search_products) e quantidade de cada um.
+        items: Produtos (id devolvido por search_products) e quantidade de cada um.
     """
-    return calculos.calcular_compra(ctx.deps.connection, itens)
+    return calculations.calculate_purchase(ctx.deps.connection, items)
 
 
 @agente.tool

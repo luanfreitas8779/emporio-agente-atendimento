@@ -5,7 +5,7 @@ import pytest
 from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from src import calculos, catalog
+from src import calculations, catalog
 from src.agent import RESPOSTA_SEGURA, SEM_CADASTRO, Sessao, agente, responder
 from src.database import connect
 from src.interests import listar_pendentes, registrar
@@ -1237,14 +1237,14 @@ def id_do_produto(connection, search_term: str) -> int:
     return product.id
 
 
-def conta_pela_ferramenta(connection, *itens: tuple[str, int]):
+def conta_pela_ferramenta(connection, *items: tuple[str, int]):
     argumentos = {
-        "itens": [
+        "items": [
             {"product_id": id_do_produto(connection, search_term), "quantity": quantity}
-            for search_term, quantity in itens
+            for search_term, quantity in items
         ]
     }
-    return chamar_ferramenta(connection, ANA, "calcular_compra", argumentos).content
+    return chamar_ferramenta(connection, ANA, "calculate_purchase", argumentos).content
 
 
 @pytest.mark.regression
@@ -1252,7 +1252,7 @@ def test_calcula_o_total_de_varias_unidades_do_mesmo_produto(connection):
     resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 2))
 
     assert resultado.total == "R$ 4.398,00"
-    assert [(i.name, i.quantity, i.subtotal) for i in resultado.itens] == [
+    assert [(i.name, i.quantity, i.subtotal) for i in resultado.items] == [
         ("Takamine GD20 Dreadnought Natural", 2, "R$ 4.398,00")
     ]
 
@@ -1268,8 +1268,8 @@ def test_calcula_a_soma_de_dois_produtos_diferentes(connection):
 def test_calcula_o_total_no_pix_e_a_economia(connection):
     resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 1))
 
-    assert resultado.total_no_pix == "R$ 569,91"
-    assert resultado.economia_no_pix == "R$ 29,99"
+    assert resultado.pix_total == "R$ 569,91"
+    assert resultado.pix_savings == "R$ 29,99"
 
 
 @pytest.mark.regression
@@ -1278,26 +1278,26 @@ def test_produto_em_promocao_entra_sem_desconto_de_pix_no_total(connection):
     resultado = conta_pela_ferramenta(connection, ("Crafter HT-100", 1), ("Yamaha C40", 1))
 
     assert resultado.total == "R$ 2.567,08"
-    assert resultado.total_no_pix == "R$ 2.537,09"
-    assert resultado.economia_no_pix == "R$ 29,99"
+    assert resultado.pix_total == "R$ 2.537,09"
+    assert resultado.pix_savings == "R$ 29,99"
 
 
 @pytest.mark.regression
 def test_calcula_a_diferenca_de_preco_entre_dois_produtos(connection):
     resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 1), ("Yamaha C40", 1))
 
-    assert resultado.diferenca == "R$ 1.599,10"
+    assert resultado.difference == "R$ 1.599,10"
 
 
 @pytest.mark.regression
 def test_diferenca_so_existe_para_exatamente_dois_itens(connection):
-    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).diferenca is None
+    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).difference is None
 
 
 @pytest.mark.regression
 def test_produto_inexistente_na_conta_e_recusado_sem_excecao(connection):
     retorno = chamar_ferramenta(
-        connection, ANA, "calcular_compra", {"itens": [{"product_id": 999999, "quantity": 1}]}
+        connection, ANA, "calculate_purchase", {"items": [{"product_id": 999999, "quantity": 1}]}
     )
 
     assert retorno.content == "Produto 999999 não encontrado: nenhuma conta foi feita."
@@ -1306,8 +1306,8 @@ def test_produto_inexistente_na_conta_e_recusado_sem_excecao(connection):
 def modelo_que_responde_o_total(chama_a_ferramenta: bool):
     def modelo(mensagens, info):
         if chama_a_ferramenta and len(mensagens) == 1:
-            argumentos = {"itens": [{"product_id": 95, "quantity": 2}]}
-            return ModelResponse(parts=[ToolCallPart("calcular_compra", argumentos)])
+            argumentos = {"items": [{"product_id": 95, "quantity": 2}]}
+            return ModelResponse(parts=[ToolCallPart("calculate_purchase", argumentos)])
         return ModelResponse(parts=[TextPart("Duas unidades ficam em R$ 4.398,00.")])
 
     return modelo
@@ -1364,24 +1364,24 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(connection):
 def test_conta_de_produto_que_nao_pode_ser_vendido_traz_aviso(connection, search_term, situacao):
     resultado = conta_pela_ferramenta(connection, (search_term, 1))
 
-    assert resultado.aviso is not None
-    assert situacao in resultado.aviso
+    assert resultado.warning is not None
+    assert situacao in resultado.warning
 
 
 @pytest.mark.regression
 def test_conta_de_produto_disponivel_nao_traz_aviso(connection):
-    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).aviso is None
+    assert conta_pela_ferramenta(connection, ("Yamaha C40", 1)).warning is None
 
 
 @pytest.mark.regression
 def test_mesmo_produto_repetido_na_conta_vira_uma_linha_com_a_quantidade_somada(connection):
     resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 1), ("Yamaha C40", 2))
 
-    assert [(i.name, i.quantity, i.subtotal) for i in resultado.itens] == [
+    assert [(i.name, i.quantity, i.subtotal) for i in resultado.items] == [
         ("Yamaha C40 Nylon Natural", 3, "R$ 1.799,70")
     ]
     assert resultado.total == "R$ 1.799,70"
-    assert resultado.diferenca is None
+    assert resultado.difference is None
 
 
 @pytest.mark.regression
@@ -1400,7 +1400,7 @@ def test_quantidade_acima_do_estoque_traz_aviso_na_conta(connection):
     # The Yamaha C40 has 12 units, but the stock number is not exposed.
     resultado = conta_pela_ferramenta(connection, ("Yamaha C40", 13))
 
-    assert resultado.aviso == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
+    assert resultado.warning == "Yamaha C40 Nylon Natural: o estoque não cobre 13 unidades."
     assert "12" not in str(resultado)
 
 
@@ -1434,21 +1434,21 @@ def test_pergunta_geral_de_pagamento_sem_produto_em_foco_traz_so_a_politica(conn
     ],
 )
 def test_frete_da_regiao_metropolitana_pela_regra_da_politica(cents, expected):
-    assert calculos.frete_na_regiao_metropolitana(cents) == expected
+    assert calculations.metro_area_shipping(cents) == expected
 
 
 @pytest.mark.regression
 def test_conta_acima_de_r_500_traz_frete_gratis(connection):
     resultado = conta_pela_ferramenta(connection, ("Takamine GD20", 1))
 
-    assert resultado.frete == "Frete grátis na região metropolitana de Campo Grande."
+    assert resultado.shipping == "Frete grátis na região metropolitana de Campo Grande."
 
 
 @pytest.mark.regression
 def test_conta_abaixo_de_r_500_traz_a_taxa_fixa(connection):
     resultado = conta_pela_ferramenta(connection, ("Kalani KAL-500C", 1))
 
-    assert resultado.frete == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
+    assert resultado.shipping == "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."
 
 
 @pytest.mark.regression

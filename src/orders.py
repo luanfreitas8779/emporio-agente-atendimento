@@ -40,7 +40,7 @@ class Pedido:
     # The original code stays in the code only: the model receives only the status description.
     status: Annotated[str, Field(exclude=True)]
     situacao: str
-    itens: list[ItemPedido]
+    items: list[ItemPedido]
     total: str
     pagamento: str
     rastreio: str | None

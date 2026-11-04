@@ -70,7 +70,7 @@ class Veredito:
     regras: list[Regra]
     # What the model must ask the customer before there is a verdict.
     faltando: list[str] = field(default_factory=list)
-    avisos: list[str] = field(default_factory=list)
+    notices: list[str] = field(default_factory=list)
     data_aproximada: bool = False
     data_de_recebimento: str | None = None
     reference_date: str | None = None
@@ -91,12 +91,12 @@ def avaliar_devolucao(
     if row is None:
         return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
     if row["status"] in SEM_ENTREGA:
-        return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[SEM_ENTREGA[row["status"]]])
+        return Veredito(Resultado.NAO_SE_APLICA, [], notices=[SEM_ENTREGA[row["status"]]])
     # The channel only matters after confirming that the order exists and belongs to the customer.
     if motivo == Motivo.ARREPENDIMENTO and canal is None:
         return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
-        return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[AVISO_SEM_ARREPENDIMENTO_PRESENCIAL])
+        return Veredito(Resultado.NAO_SE_APLICA, [], notices=[AVISO_SEM_ARREPENDIMENTO_PRESENCIAL])
     compra = date.fromisoformat(row["order_date"])
     # Without an actual delivery date in the data (DQ-17), receipt is the estimated delivery.
     recebimento = date.fromisoformat(row["estimated_delivery"])
@@ -109,14 +109,14 @@ def avaliar_devolucao(
         regras = [_regra("troca_por_preferencia", recebimento, PRAZO_DE_TROCA_POR_PREFERENCIA_EM_DIAS, hoje)]
     else:
         regras = [_regra("arrependimento", recebimento, PRAZO_DE_ARREPENDIMENTO_EM_DIAS, hoje)]
-    avisos = [AVISO_DE_APROXIMACAO, AVISO_DE_ANALISE]
+    notices = [AVISO_DE_APROXIMACAO, AVISO_DE_ANALISE]
     if recebimento > hoje:
-        avisos.insert(0, AVISO_AINDA_NAO_CHEGOU)
+        notices.insert(0, AVISO_AINDA_NAO_CHEGOU)
     dentro = any(r.resultado == Resultado.DENTRO_DO_PRAZO for r in regras)
     return Veredito(
         Resultado.DENTRO_DO_PRAZO if dentro else Resultado.FORA_DO_PRAZO,
         regras,
-        avisos=avisos,
+        notices=notices,
         data_aproximada=True,
         data_de_recebimento=format_date(recebimento),
         reference_date=format_date(hoje),

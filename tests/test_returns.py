@@ -40,7 +40,7 @@ def test_compra_presencial_nao_usa_a_regra_de_arrependimento_online(connection):
 
     assert veredito.resultado == "nao_se_aplica"
     assert veredito.regras == []
-    assert any("compras online" in aviso for aviso in veredito.avisos)
+    assert any("compras online" in warning for warning in veredito.notices)
 
 
 def test_arrependimento_sem_canal_pede_o_canal_de_compra(connection):
@@ -79,14 +79,14 @@ def test_pedido_de_outro_cliente_nao_e_avaliado(connection):
 
 
 @pytest.mark.parametrize(
-    "cliente, numero, aviso",
+    "cliente, numero, warning",
     [
         (8, 13, "ainda não foi enviado"),
         (6, 9, "ainda não foi enviado"),
         (15, 17, "foi cancelado"),
     ],
 )
-def test_pedido_sem_entrega_nao_tem_o_que_devolver(connection, cliente, numero, aviso):
+def test_pedido_sem_entrega_nao_tem_o_que_devolver(connection, cliente, numero, warning):
     veredito = avaliar_devolucao(
         connection, cliente_id=cliente, numero=numero, motivo="defeito", canal=None,
         hoje=date(2026, 3, 25),
@@ -94,7 +94,7 @@ def test_pedido_sem_entrega_nao_tem_o_que_devolver(connection, cliente, numero, 
 
     assert veredito.resultado == "nao_se_aplica"
     assert veredito.regras == []
-    assert any(aviso in a for a in veredito.avisos)
+    assert any(warning in a for a in veredito.notices)
 
 
 def test_troca_por_preferencia_vale_7_dias_a_partir_do_recebimento(connection):
@@ -117,8 +117,8 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
 
     assert veredito.data_aproximada is True
     assert veredito.data_de_recebimento == "17/02/2026"
-    assert any("entrega estimada" in a for a in veredito.avisos)
-    assert any("análise do produto" in a for a in veredito.avisos)
+    assert any("entrega estimada" in a for a in veredito.notices)
+    assert any("análise do produto" in a for a in veredito.notices)
     assert veredito.reference_date == "20/02/2026"
 
 
@@ -146,7 +146,7 @@ def test_pedido_enviado_com_entrega_estimada_futura_avisa_que_o_prazo_conta_do_r
     )
 
     assert veredito.resultado == "dentro_do_prazo"
-    assert any("ainda não chegou" in aviso for aviso in veredito.avisos)
+    assert any("ainda não chegou" in warning for warning in veredito.notices)
 
 
 def test_pedido_cuja_entrega_estimada_ja_passou_nao_recebe_o_aviso_de_pedido_a_caminho(connection):
@@ -156,4 +156,4 @@ def test_pedido_cuja_entrega_estimada_ja_passou_nao_recebe_o_aviso_de_pedido_a_c
     )
 
     assert veredito.resultado == "fora_do_prazo"
-    assert not any("ainda não chegou" in aviso for aviso in veredito.avisos)
+    assert not any("ainda não chegou" in warning for warning in veredito.notices)

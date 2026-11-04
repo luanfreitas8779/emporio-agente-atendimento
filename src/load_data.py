@@ -266,7 +266,7 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
         for pedido in ler_csv(pasta_dados / "orders.csv")
     ]
     ids_pedidos = {pedido[0] for pedido in pedidos}
-    itens = [
+    items = [
         preparar_item(item, ids_pedidos, products)
         for item in ler_csv(pasta_dados / "order_items.csv")
     ]
@@ -281,7 +281,7 @@ def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
         pedidos,
     )
     connection.executemany(
-        "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)", itens
+        "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)", items
     )
     connection.commit()
 
