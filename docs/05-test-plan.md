@@ -142,13 +142,13 @@ The inputs and expected answers are in Portuguese, the language the agent speaks
 | TC-461 | `Quanto fica 2 Giannini GF-3D?`, `Tem 13 Yamaha C40? E 12?` | `2 unidades`, `13 unidades`, and `12 unidades` pass; `R$ 13,00` is still blocked | ADR-013 |
 | TC-462 | Product without a promotion | `pix_percent` contains `5%` and the answer may cite it; with a promotion, it is null | ADR-013 |
 | TC-463 | `50 por cento`, `6 vezes`, `6 x`, `Restam 3 no estoque`, `15/12`, `7 horas` | Blocked without a source; they pass when the source contains the value | ADR-013 |
-| TC-464 | `Te mando message`, `Te notifico`, `Avisarei`, `Não se preocupe, te warning` | Blocked; `Não posso te avisar` passes | ADR-021 |
+| TC-464 | `Te mando mensagem`, `Te notifico`, `Avisarei`, `Não se preocupe, te aviso` | Blocked; `Não posso te avisar` passes | ADR-021 |
 | TC-465 | `<SYSTEM>`, `< system >`, `<thinking>`, `<thought>`, `<reasoning>` in the text | The block disappears from the answer and from the history | ADR-013 |
 | TC-466 | Answer ending in `:` | Receives a correction request | ADR-013 |
 | TC-452 | Purchase of R$ 2.199,00, of R$ 479,00, and exact amount of R$ 500,00 | `calculate_purchase` returns free shipping, a flat fee of R$ 35,00 and, for the exact amount, that the policy does not define it and that it should be confirmed with the store | ADR-013 |
 | TC-453 | Answer with a time the policy does not contain (`10h`) | The guardrail blocks it; `9h às 18h` and `09:00` pass | ADR-013 |
 | TC-454 | Answer with an invented phone number or the store's number without the area code | The invented one is blocked; the policy's numbers pass with or without the area code; the session's number passes | ADR-013 |
-| TC-455 | Answer with `3 unidades`, `4x`, or `6 installments` | Only the numbers from the calculation or the tool, and what the customer asked for, pass | ADR-013 |
+| TC-455 | Answer with `3 unidades`, `4x`, or `6 parcelas` | Only the numbers from the calculation or the tool, and what the customer asked for, pass | ADR-013 |
 | TC-456 | `semana que vem` or `próximo mês` ("next week", "next month") in the answer | Blocked, unless the tool or the customer used the expression | ADR-013 |
 | TC-457 | Phone number entered after a catalog or policy question | The question is not asked again; an order question is | ADR-020 |
 | TC-458 | Product specifications | Arrive with names and values in Portuguese (`tampo`, `cordas: aço`, `eletrônica: sim`) | ADR-012 |
