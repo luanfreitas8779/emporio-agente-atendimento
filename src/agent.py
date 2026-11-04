@@ -270,7 +270,7 @@ RESPOSTA_SEGURA_SEM_REGISTRO = (
     "Não consegui confirmar essa informação com segurança agora. Pode reformular a pergunta?"
 )
 
-RESPOSTA_SEGURA = (
+SAFE_ANSWER = (
     "Não consegui confirmar essa informação com segurança agora. "
     f"Registrei o seu caso para a nossa equipe. {PRAZO_DE_RETORNO} "
     "Se preferir, pode reformular a pergunta."
@@ -286,7 +286,7 @@ class ChamadaDeFerramenta:
 
 
 @dataclass
-class Sessao:
+class Session:
     connection: sqlite3.Connection
     phone: str | None = None
     state: memory.ConversationState = field(default_factory=memory.ConversationState)
@@ -308,9 +308,9 @@ VALOR_MAXIMO = 1_000_000
 # Order and product numbers larger than this do not exist and overflow SQLite's integer.
 NUMERO_MAXIMO = 2**31 - 1
 
-agente = Agent(
+agent = Agent(
     f"google:{GEMINI_MODEL}",
-    deps_type=Sessao,
+    deps_type=Session,
     instructions=INSTRUCOES,
     # A call without an answer cannot freeze the chat: timeout per attempt and per request.
     model_settings={"timeout": 20, "request_timeout": 40},
@@ -344,12 +344,12 @@ def _mensagens_do_turno(messages: list) -> list:
 
 def argumentos_da_busca(messages: list, name: str) -> list:
     """Valid values of the `nome` argument the model passed to `search_products` in this turn."""
-    valores = (
+    values = (
         chamada.arguments.get(name)
         for chamada in ferramentas_do_turno(_mensagens_do_turno(messages))
         if chamada.name == "search_products"
     )
-    return [v for v in valores if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0]
+    return [v for v in values if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0]
 
 
 def limites_de_preco(messages: list) -> list[Decimal]:
@@ -395,8 +395,8 @@ def limpar_texto_das_respostas(messages: list) -> None:
                     part.content = sem_bloco_interno(part.content)
 
 
-@agente.output_validator
-def confirmar_valores(ctx: RunContext[Sessao], answer: str) -> str:
+@agent.output_validator
+def confirmar_valores(ctx: RunContext[Session], answer: str) -> str:
     # The model's internal reasoning is not for the customer.
     answer = sem_bloco_interno(answer)
     if not answer or TAG_INTERNA.search(answer):
@@ -408,7 +408,7 @@ def confirmar_valores(ctx: RunContext[Sessao], answer: str) -> str:
             "pela ferramenta ou reescreva sem anunciar a lista."
         )
     # Only what came from the tools or from the customer passes (ADR-013).
-    if guardrail.promete_aviso(answer):
+    if guardrail.promises_notice(answer):
         raise ModelRetry(
             "A resposta promete avisar o cliente, mas o sistema não envia avisos. "
             "Diga que o interesse foi anotado e que isso não reserva o produto nem garante aviso."
@@ -417,14 +417,14 @@ def confirmar_valores(ctx: RunContext[Sessao], answer: str) -> str:
     today = ctx.deps.today
     das_ferramentas, do_cliente = fontes_do_turno(ctx.messages)
     # The session's phone number also comes from the system, not from the customer.
-    fontes = [
+    sources = [
         *das_ferramentas,
         *quantidades_da_busca(ctx.messages),
         format_date(today),
         format_date(today + timedelta(days=1)),
         format_phone(ctx.deps.phone or ""),
     ]
-    inventados = guardrail.valores_nao_confirmados(answer, fontes, do_cliente, limites_de_preco(ctx.messages))
+    inventados = guardrail.unconfirmed_values(answer, sources, do_cliente, limites_de_preco(ctx.messages))
     if inventados:
         raise ModelRetry(
             "A resposta cita valores que não vieram das ferramentas: "
@@ -434,8 +434,8 @@ def confirmar_valores(ctx: RunContext[Sessao], answer: str) -> str:
     return answer
 
 
-@agente.instructions
-def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
+@agent.instructions
+def contexto_do_cliente(ctx: RunContext[Session]) -> str:
     customer = ctx.deps.customer
     if customer is None:
         text = "O cliente desta conversa está sem cadastro: não consulte pedidos."
@@ -462,9 +462,9 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     return text
 
 
-@agente.tool
+@agent.tool
 def search_products(
-    ctx: RunContext[Sessao],
+    ctx: RunContext[Session],
     search_term: str | None = None,
     category: str | None = None,
     max_price: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
@@ -492,9 +492,9 @@ def search_products(
     return products
 
 
-@agente.tool
+@agent.tool
 def get_policies(
-    ctx: RunContext[Sessao],
+    ctx: RunContext[Session],
     section: Literal[*policies.SECTIONS],
     amount: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
     installments: Annotated[int | None, Field(ge=1)] = None,
@@ -521,9 +521,9 @@ def get_policies(
     return policies.get_policies(section, amount, installments)
 
 
-@agente.tool
+@agent.tool
 def calculate_purchase(
-    ctx: RunContext[Sessao],
+    ctx: RunContext[Session],
     items: Annotated[list[calculations.PurchaseItem], Field(min_length=1, max_length=10)],
 ) -> calculations.PurchaseCalculation | str:
     """Calcula o total de uma compra de um ou mais produtos, em código.
@@ -537,9 +537,9 @@ def calculate_purchase(
     return calculations.calculate_purchase(ctx.deps.connection, items)
 
 
-@agente.tool
+@agent.tool
 def consultar_meus_pedidos(
-    ctx: RunContext[Sessao], numero_pedido: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None
+    ctx: RunContext[Session], numero_pedido: Annotated[int | None, Field(ge=1, le=NUMERO_MAXIMO)] = None
 ) -> list[orders.Order] | str:
     """Consulta os pedidos do cliente desta conversa.
 
@@ -580,9 +580,9 @@ def canal_citado_pelo_cliente(messages: list, channel: returns.Channel) -> bool:
     return any(PADRAO_DO_CANAL[channel].search(fala) for fala in falas)
 
 
-@agente.tool
+@agent.tool
 def assess_return(
-    ctx: RunContext[Sessao],
+    ctx: RunContext[Session],
     numero_pedido: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)],
     reason: returns.Reason,
     channel: returns.Channel | None = None,
@@ -611,8 +611,8 @@ def assess_return(
     return verdict
 
 
-@agente.tool
-def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)]) -> str:
+@agent.tool
+def registrar_interesse(ctx: RunContext[Session], product_id: Annotated[int, Field(ge=1, le=NUMERO_MAXIMO)]) -> str:
     """Registra o interesse do cliente em um produto, para retomar o assunto depois.
 
     Use quando o cliente quiser acompanhar um produto indisponível. Não reserva o
@@ -627,9 +627,9 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     return MENSAGENS_DE_INTERESSE[result]
 
 
-@agente.tool
+@agent.tool
 def encaminhar_para_atendente(
-    ctx: RunContext[Sessao], reason: handoffs.Reason, summary: str
+    ctx: RunContext[Session], reason: handoffs.Reason, summary: str
 ) -> str:
     """Registra o caso para a equipe da loja, que retorna ao cliente em até 24 horas úteis.
 
@@ -653,7 +653,7 @@ ESPERA_MAXIMA = 15
 _aguardar = time.sleep
 
 
-def _executar(message: str, sessao: Sessao, historico: list):
+def _executar(message: str, sessao: Session, historico: list):
     """Runs the agent and retries when the provider refuses due to the rate limit."""
     estado_inicial = replace(sessao.state)
     for espera in (*ESPERAS_ENTRE_TENTATIVAS, None):
@@ -662,7 +662,7 @@ def _executar(message: str, sessao: Sessao, historico: list):
         # The copied context keeps the tests' simulated model in the other thread.
         contexto = contextvars.copy_context()
         execucao = _executor.submit(
-            contexto.run, agente.run_sync, message, deps=sessao, message_history=historico
+            contexto.run, agent.run_sync, message, deps=sessao, message_history=historico
         )
         try:
             return execucao.result()
@@ -674,7 +674,7 @@ def _executar(message: str, sessao: Sessao, historico: list):
             _aguardar(min(indicada, ESPERA_MAXIMA) if indicada else espera)
 
 
-def _responder_sem_modelo(message: str, sessao: Sessao, text: str) -> str:
+def _responder_sem_modelo(message: str, sessao: Session, text: str) -> str:
     """Stores the customer's message and the text sent to them, without the failed attempt."""
     try:
         memory.save_messages(
@@ -691,7 +691,7 @@ def _responder_sem_modelo(message: str, sessao: Sessao, text: str) -> str:
     return text
 
 
-def responder(message: str, sessao: Sessao) -> str:
+def respond(message: str, sessao: Session) -> str:
     sessao.ferramentas = []
     try:
         historico = memory.load_history(sessao.connection, sessao.phone)
@@ -730,8 +730,8 @@ def responder(message: str, sessao: Sessao) -> str:
             result = None
         # The text only claims the registration when it exists.
         answer = {
-            handoffs.Result.REGISTERED: RESPOSTA_SEGURA,
-            handoffs.Result.ALREADY_REGISTERED: RESPOSTA_SEGURA,
+            handoffs.Result.REGISTERED: SAFE_ANSWER,
+            handoffs.Result.ALREADY_REGISTERED: SAFE_ANSWER,
             handoffs.Result.INVALID_PHONE: RESPOSTA_SEGURA_SEM_TELEFONE,
             handoffs.Result.INVALID_SUMMARY: RESPOSTA_SEGURA_SEM_REGISTRO,
             None: RESPOSTA_SEGURA_SEM_REGISTRO,

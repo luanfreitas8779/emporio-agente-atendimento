@@ -8,7 +8,7 @@ from pydantic_ai.models.function import FunctionModel
 from streamlit.testing.v1 import AppTest
 
 import src.database
-from src.agent import MENSAGEM_DE_ERRO_TECNICO, ChamadaDeFerramenta, agente
+from src.agent import MENSAGEM_DE_ERRO_TECNICO, ChamadaDeFerramenta, agent
 
 APP = str(Path(__file__).parent.parent / "app.py")
 
@@ -16,8 +16,8 @@ APP = str(Path(__file__).parent.parent / "app.py")
 @pytest.fixture
 def tela(connection, tmp_path, monkeypatch):
     monkeypatch.setattr("src.config.DATABASE_PATH", tmp_path / "teste.db")
-    modelo = FunctionModel(lambda messages, info: ModelResponse(parts=[TextPart("Olá!")]))
-    monkeypatch.setattr(agente, "model", modelo)
+    model = FunctionModel(lambda messages, info: ModelResponse(parts=[TextPart("Olá!")]))
+    monkeypatch.setattr(agent, "model", model)
     return AppTest.from_file(APP, default_timeout=30).run()
 
 
@@ -30,7 +30,7 @@ def test_pergunta_fica_pendente_enquanto_o_tom_responde(tela, monkeypatch):
         durante.append(st.session_state.get("pendente")["pergunta"])
         return "Olá!"
 
-    monkeypatch.setattr("src.agent.responder", responder_observando)
+    monkeypatch.setattr("src.agent.respond", responder_observando)
 
     tela.chat_input[0].set_value("Oi").run()
 
@@ -55,7 +55,7 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
         phones.append(sessao.phone)
         return "Olá!"
 
-    monkeypatch.setattr("src.agent.responder", responder_observando)
+    monkeypatch.setattr("src.agent.respond", responder_observando)
 
     tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
@@ -64,7 +64,7 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
 
 
 def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypatch):
-    monkeypatch.setattr("src.agent.responder", lambda message, sessao: "Resposta da Ana")
+    monkeypatch.setattr("src.agent.respond", lambda message, sessao: "Resposta da Ana")
 
     tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
@@ -77,7 +77,7 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
     def responder_com_falha(message, sessao):
         raise RuntimeError("falha em /caminho/interno")
 
-    monkeypatch.setattr("src.agent.responder", responder_com_falha)
+    monkeypatch.setattr("src.agent.respond", responder_com_falha)
 
     tela.chat_input[0].set_value("Oi").run()
 
@@ -93,7 +93,7 @@ def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkey
     def sessao_com_falha(*arguments, **nomeados):
         raise OSError("disco indisponível")
 
-    monkeypatch.setattr("src.agent.Sessao", sessao_com_falha)
+    monkeypatch.setattr("src.agent.Session", sessao_com_falha)
     tela.session_state["pendente"] = {"pergunta": "Oi", "phone": ""}
 
     tela.run()
@@ -144,18 +144,18 @@ def test_informar_o_telefone_depois_da_primeira_pergunta_preserva_a_conversa(tel
 
 @pytest.mark.regression
 def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone_novo(tela, monkeypatch):
-    chamadas: list = []
+    calls: list = []
 
     def responder_observando(message, sessao):
-        chamadas.append((message, sessao.phone))
+        calls.append((message, sessao.phone))
         return "Olá!"
 
-    monkeypatch.setattr("src.agent.responder", responder_observando)
+    monkeypatch.setattr("src.agent.respond", responder_observando)
     tela.chat_input[0].set_value("Cadê meu pedido?").run()
 
     tela.sidebar.text_input[0].set_value(ANA).run()
 
-    assert chamadas == [("Cadê meu pedido?", ""), ("Cadê meu pedido?", ANA)]
+    assert calls == [("Cadê meu pedido?", ""), ("Cadê meu pedido?", ANA)]
     assert [m["papel"] for m in tela.session_state["messages"]] == ["user", "assistant", "assistant"]
     assert tela.session_state["pendente"] is None
 
@@ -221,7 +221,7 @@ def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(
         ]
         return "Olá!"
 
-    monkeypatch.setattr("src.agent.responder", responder_com_ferramentas)
+    monkeypatch.setattr("src.agent.respond", responder_com_ferramentas)
 
     tela.chat_input[0].set_value("Oi").run()
 
@@ -248,34 +248,34 @@ def test_com_telefone_invalido_so_o_aviso_aparece_sem_a_dica_do_menu_lateral(tel
 
 @pytest.mark.regression
 def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, monkeypatch):
-    chamadas: list = []
+    calls: list = []
 
     def responder_com_catalogo(message, sessao):
-        chamadas.append(sessao.phone)
+        calls.append(sessao.phone)
         sessao.ferramentas = [ChamadaDeFerramenta("search_products", {"search_term": "violão"})]
         return "Custa R$ 100,00."
 
-    monkeypatch.setattr("src.agent.responder", responder_com_catalogo)
+    monkeypatch.setattr("src.agent.respond", responder_com_catalogo)
     tela.chat_input[0].set_value("Quanto custa o violão?").run()
 
     tela.sidebar.text_input[0].set_value(ANA).run()
 
-    assert chamadas == [""]
+    assert calls == [""]
     assert [m["papel"] for m in tela.session_state["messages"]] == ["user", "assistant"]
 
 
 @pytest.mark.regression
 def test_pergunta_que_dependia_do_cadastro_e_refeita_com_o_telefone(tela, monkeypatch):
-    chamadas: list = []
+    calls: list = []
 
     def responder_com_pedidos(message, sessao):
-        chamadas.append(sessao.phone)
+        calls.append(sessao.phone)
         sessao.ferramentas = [ChamadaDeFerramenta("consultar_meus_pedidos", {})]
         return "Telefone sem cadastro."
 
-    monkeypatch.setattr("src.agent.responder", responder_com_pedidos)
+    monkeypatch.setattr("src.agent.respond", responder_com_pedidos)
     tela.chat_input[0].set_value("Cadê meu pedido?").run()
 
     tela.sidebar.text_input[0].set_value(ANA).run()
 
-    assert chamadas == ["", ANA]
+    assert calls == ["", ANA]

@@ -3,7 +3,7 @@ import sqlite3
 
 import streamlit as st
 
-from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
+from src.agent import MENSAGEM_DE_ERRO_TECNICO, Session, respond
 from src.config import DATABASE_PATH
 from src.database import connect
 from src.load_data import database_loaded
@@ -128,9 +128,9 @@ if pendente is not None:
     sessao = None
     try:
         try:
-            sessao = Sessao(connect(DATABASE_PATH), pendente["phone"])
+            sessao = Session(connect(DATABASE_PATH), pendente["phone"])
             with st.spinner("O Tom está digitando..."):
-                answer = responder(pendente["pergunta"], sessao)
+                answer = respond(pendente["pergunta"], sessao)
         except Exception:
             # Without this the traceback would reach the customer and the field would stay locked (ADR-020).
             logging.getLogger(__name__).exception("Failed to answer on the screen")
