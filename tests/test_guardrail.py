@@ -15,40 +15,40 @@ def modelo_com_respostas(ferramenta, argumentos, respostas, chamadas=None):
     """Calls the tool (if any) and then returns the answers, one at a time."""
     restantes = iter(respostas)
 
-    def modelo(mensagens: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    def modelo(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         if chamadas is not None:
-            chamadas.append(len(mensagens))
-        if ferramenta and len(mensagens) == 1:
+            chamadas.append(len(messages))
+        if ferramenta and len(messages) == 1:
             return ModelResponse(parts=[ToolCallPart(ferramenta, argumentos)])
         return ModelResponse(parts=[TextPart(next(restantes))])
 
     return modelo
 
 
-def perguntar(connection, mensagem, ferramenta, argumentos, respostas, chamadas=None):
+def perguntar(connection, message, ferramenta, argumentos, respostas, chamadas=None):
     modelo = modelo_com_respostas(ferramenta, argumentos, respostas, chamadas)
     with agente.override(model=FunctionModel(modelo)):
-        return responder(mensagem, Sessao(connection, phone=ANA))
+        return responder(message, Sessao(connection, phone=ANA))
 
 
 TAKAMINE = ("search_products", {"search_term": "Takamine GD20"})
 
 
 def test_resposta_com_preco_inventado_e_corrigida_pelo_modelo(connection):
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quanto custa o Takamine GD20?",
         *TAKAMINE,
         ["O Takamine custa R$ 1.000,00.", "O Takamine custa R$ 2.199,00."],
     )
 
-    assert resposta == "O Takamine custa R$ 2.199,00."
+    assert answer == "O Takamine custa R$ 2.199,00."
 
 
 def test_resposta_com_preco_correto_nao_pede_correcao(connection):
     chamadas = []
 
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quanto custa o Takamine GD20?",
         *TAKAMINE,
@@ -56,20 +56,20 @@ def test_resposta_com_preco_correto_nao_pede_correcao(connection):
         chamadas,
     )
 
-    assert resposta == "O Takamine custa R$ 2.199,00."
+    assert answer == "O Takamine custa R$ 2.199,00."
     assert len(chamadas) == 2  # the tool call and the final answer
 
 
 def test_preco_inventado_persistente_vira_resposta_segura(connection):
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quanto custa o Takamine GD20?",
         *TAKAMINE,
         ["Custa R$ 1.000,00.", "Custa R$ 1.000,00.", "Custa R$ 1.000,00."],
     )
 
-    assert resposta == RESPOSTA_SEGURA
-    assert "1.000" not in resposta
+    assert answer == RESPOSTA_SEGURA
+    assert "1.000" not in answer
 
 
 @pytest.mark.parametrize(
@@ -98,21 +98,21 @@ def test_preco_inventado_persistente_vira_resposta_segura(connection):
 def test_rastreio_data_e_percentual_inventados_sao_corrigidos(
     connection, ferramenta, argumentos, inventado, correto
 ):
-    resposta = perguntar(connection, "Me diga", ferramenta, argumentos, [inventado, correto])
+    answer = perguntar(connection, "Me diga", ferramenta, argumentos, [inventado, correto])
 
-    assert resposta == correto
+    assert answer == correto
 
 
 def test_valor_em_reais_citado_pelo_proprio_cliente_nao_e_confirmado(connection):
     # The customer may state a price; only the tool results confirm money (ADR-013).
     repeticao = "Sobre os R$ 500,00 que você mencionou, vou consultar."
-    resposta = perguntar(connection, "Posso pagar R$ 500,00 à vista?", None, None, [repeticao] * 3)
+    answer = perguntar(connection, "Posso pagar R$ 500,00 à vista?", None, None, [repeticao] * 3)
 
-    assert resposta == RESPOSTA_SEGURA
+    assert answer == RESPOSTA_SEGURA
 
 
 def test_data_citada_pelo_proprio_cliente_continua_permitida(connection):
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Comprei em 10/03/2026, ainda posso devolver?",
         None,
@@ -120,13 +120,13 @@ def test_data_citada_pelo_proprio_cliente_continua_permitida(connection):
         ["Sobre a compra de 10/03/2026, vou consultar."],
     )
 
-    assert resposta == "Sobre a compra de 10/03/2026, vou consultar."
+    assert answer == "Sobre a compra de 10/03/2026, vou consultar."
 
 
 def test_resposta_sem_valores_passa_sem_ferramenta(connection):
-    resposta = perguntar(connection, "Oi!", None, None, ["Oi! Como posso ajudar?"])
+    answer = perguntar(connection, "Oi!", None, None, ["Oi! Como posso ajudar?"])
 
-    assert resposta == "Oi! Como posso ajudar?"
+    assert answer == "Oi! Como posso ajudar?"
 
 
 @pytest.mark.regression
@@ -138,7 +138,7 @@ def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "expected"),
+    ("answer", "fonte", "expected"),
     [
         ("Custa 2.199 reais.", "Preço: R$ 2.199,00", []),
         ("Custa 2.199 reais.", "Preço: R$ 599,90", ["2199"]),
@@ -147,13 +147,13 @@ def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
         ("Custa 599,90 reais.", "Preço: R$ 599,90", []),
     ],
 )
-def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, expected):
-    assert valores_nao_confirmados(resposta, [fonte]) == expected
+def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(answer, fonte, expected):
+    assert valores_nao_confirmados(answer, [fonte]) == expected
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "expected"),
+    ("answer", "fonte", "expected"),
     [
         ("O prazo vai até 15 de dezembro.", "Prazo até 15/12/2026.", []),
         ("O prazo vai até 15 de dezembro.", "Prazo até 16/12/2026.", ["15/12"]),
@@ -161,33 +161,33 @@ def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, e
         ("O prazo vai até 15 de dezembro.", "Sem datas.", ["15/12"]),
     ],
 )
-def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(resposta, fonte, expected):
-    assert valores_nao_confirmados(resposta, [fonte]) == expected
+def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(answer, fonte, expected):
+    assert valores_nao_confirmados(answer, [fonte]) == expected
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "expected"),
+    ("answer", "fonte", "expected"),
     [
         ("Custa mil reais.", "Preço: R$ 1.000,00", []),
         ("Custa mil reais.", "Preço: R$ 599,90", ["1000"]),
         ("Custa 1,5 mil reais.", "Preço: R$ 1.500,00", []),
     ],
 )
-def test_mil_reais_por_extenso_tambem_e_conferido(resposta, fonte, expected):
-    assert valores_nao_confirmados(resposta, [fonte]) == expected
+def test_mil_reais_por_extenso_tambem_e_conferido(answer, fonte, expected):
+    assert valores_nao_confirmados(answer, [fonte]) == expected
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "expected"),
+    ("answer", "fonte", "expected"),
     [
         ("O prazo vai até 3 de março de 2026.", "Prazo até 03/03/2026.", []),
         ("O prazo vai até 3 de março de 2027.", "Prazo até 03/03/2026.", ["2027-03-03"]),
     ],
 )
-def test_data_por_extenso_com_ano_e_conferida_com_o_ano(resposta, fonte, expected):
-    assert valores_nao_confirmados(resposta, [fonte]) == expected
+def test_data_por_extenso_com_ano_e_conferida_com_o_ano(answer, fonte, expected):
+    assert valores_nao_confirmados(answer, [fonte]) == expected
 
 
 POLITICA_DE_HORARIOS = "Segunda a sexta-feira: 09:00 às 18:00. Sábado: 09:00 às 13:00."
@@ -199,9 +199,9 @@ def test_horario_inventado_e_barrado():
 
 
 @pytest.mark.regression
-@pytest.mark.parametrize("resposta", ["Abrimos das 9h às 18h.", "Das 09:00 às 18:00.", "Sábado fechamos às 13h."])
-def test_horario_da_politica_passa_em_qualquer_formato(resposta):
-    assert valores_nao_confirmados(resposta, [POLITICA_DE_HORARIOS]) == []
+@pytest.mark.parametrize("answer", ["Abrimos das 9h às 18h.", "Das 09:00 às 18:00.", "Sábado fechamos às 13h."])
+def test_horario_da_politica_passa_em_qualquer_formato(answer):
+    assert valores_nao_confirmados(answer, [POLITICA_DE_HORARIOS]) == []
 
 
 @pytest.mark.regression
@@ -218,9 +218,9 @@ def test_telefone_inventado_e_barrado():
 
 
 @pytest.mark.regression
-@pytest.mark.parametrize("resposta", ["WhatsApp (67) 3321-4500.", "Fale no 3321-4500.", "Ligue 67 3341-4444"])
-def test_telefone_da_loja_passa_com_ou_sem_ddd(resposta):
-    assert valores_nao_confirmados(resposta, [CONTATOS_DA_LOJA]) == []
+@pytest.mark.parametrize("answer", ["WhatsApp (67) 3321-4500.", "Fale no 3321-4500.", "Ligue 67 3341-4444"])
+def test_telefone_da_loja_passa_com_ou_sem_ddd(answer):
+    assert valores_nao_confirmados(answer, [CONTATOS_DA_LOJA]) == []
 
 
 @pytest.mark.regression
@@ -232,18 +232,18 @@ def test_cliente_nao_confirma_telefone_da_loja():
 
 @pytest.mark.regression
 def test_resposta_pode_citar_o_telefone_da_propria_sessao(connection):
-    resposta = perguntar(connection, "Qual número vocês têm de mim?", None, None, ["Tenho o (67) 99654-7821."])
+    answer = perguntar(connection, "Qual número vocês têm de mim?", None, None, ["Tenho o (67) 99654-7821."])
 
-    assert resposta == "Tenho o (67) 99654-7821."
+    assert answer == "Tenho o (67) 99654-7821."
 
 
 @pytest.mark.regression
 def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(connection):
     modelo = modelo_com_respostas(None, None, ["Tenho o (67) 99654-7821."])
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Qual número vocês têm de mim?", Sessao(connection, phone="67996547821"))
+        answer = responder("Qual número vocês têm de mim?", Sessao(connection, phone="67996547821"))
 
-    assert resposta == "Tenho o (67) 99654-7821."
+    assert answer == "Tenho o (67) 99654-7821."
 
 
 @pytest.mark.regression
@@ -271,11 +271,11 @@ def test_cliente_confirma_a_quantidade_que_ele_mesmo_pediu():
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "resposta",
+    "answer",
     ["Seu pedido chega semana que vem.", "Passe na próxima semana.", "Volta ao normal no mês que vem.", "No próximo mês."],
 )
-def test_data_relativa_inventada_e_barrada(resposta):
-    assert len(valores_nao_confirmados(resposta, ["Prazo de 1 a 3 dias úteis."])) == 1
+def test_data_relativa_inventada_e_barrada(answer):
+    assert len(valores_nao_confirmados(answer, ["Prazo de 1 a 3 dias úteis."])) == 1
 
 
 @pytest.mark.regression
@@ -286,7 +286,7 @@ def test_data_relativa_dita_pela_ferramenta_ou_pelo_cliente_passa():
 
 @pytest.mark.regression
 def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(connection):
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "A que horas vocês abrem na segunda?",
         "get_policies",
@@ -294,12 +294,12 @@ def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(connection):
         ["Abrimos às 10h.", "De segunda a sexta, das 9h às 18h."],
     )
 
-    assert resposta == "De segunda a sexta, das 9h às 18h."
+    assert answer == "De segunda a sexta, das 9h às 18h."
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "resposta",
+    "answer",
     [
         "Atendemos de segunda a sexta, das 9h às 18h, e aos sábados, das 9h às 13h.",
         "Pode ligar para (67) 3341-4444 ou chamar no WhatsApp 3321-4500.",
@@ -307,11 +307,11 @@ def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(connection):
         "Frete grátis acima de R$ 500,00; abaixo disso, taxa fixa de R$ 35,00.",
     ],
 )
-def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta):
+def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(answer):
     # Formats different from the file's (9h x 09:00, phone without area code) against data/politicas.md.
     politica = (DATA_DIR / "politicas.md").read_text(encoding="utf-8")
 
-    assert valores_nao_confirmados(resposta, [politica]) == []
+    assert valores_nao_confirmados(answer, [politica]) == []
 
 
 @pytest.mark.regression
@@ -322,11 +322,11 @@ def test_percentual_por_extenso_e_conferido():
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "resposta",
+    "answer",
     ["Dá para parcelar em 6 vezes.", "Fica em 6 x de R$ 87,48.", "Restam 3 no estoque.", "Temos apenas 3 em estoque."],
 )
-def test_quantidade_em_outros_formatos_e_barrada(resposta):
-    assert valores_nao_confirmados(resposta, ["O máximo é de 4x de R$ 87,48."]) == ["3" if "3" in resposta else "6"]
+def test_quantidade_em_outros_formatos_e_barrada(answer):
+    assert valores_nao_confirmados(answer, ["O máximo é de 4x de R$ 87,48."]) == ["3" if "3" in answer else "6"]
 
 
 @pytest.mark.regression
@@ -352,7 +352,7 @@ def test_horas_escritas_por_extenso_sao_conferidas_como_horario():
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "resposta",
+    "answer",
     [
         "Te mando mensagem quando chegar.",
         "Te notifico assim que chegar.",
@@ -362,26 +362,26 @@ def test_horas_escritas_por_extenso_sao_conferidas_como_horario():
         "Não se preocupe, te aviso.",
     ],
 )
-def test_outras_formas_de_prometer_aviso_sao_barradas(resposta):
-    assert promete_aviso(resposta)
+def test_outras_formas_de_prometer_aviso_sao_barradas(answer):
+    assert promete_aviso(answer)
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "resposta",
+    "answer",
     [
         "Posso anotar seu interesse para avisar se ele voltar?",
         "Anote seu interesse para avisar se ele voltar?",
         "Registro o interesse para avisar quando ele estiver disponível.",
     ],
 )
-def test_interesse_para_avisar_e_promessa_de_aviso(resposta):
-    assert promete_aviso(resposta)
+def test_interesse_para_avisar_e_promessa_de_aviso(answer):
+    assert promete_aviso(answer)
 
 
 @pytest.mark.regression
 @pytest.mark.parametrize(
-    "resposta",
+    "answer",
     [
         "Não posso te avisar quando chegar.",
         "Sem te avisar, só anotamos o interesse.",
@@ -389,14 +389,14 @@ def test_interesse_para_avisar_e_promessa_de_aviso(resposta):
         "O interesse não serve para avisar ninguém.",
     ],
 )
-def test_negar_a_promessa_de_aviso_continua_passando(resposta):
-    assert not promete_aviso(resposta)
+def test_negar_a_promessa_de_aviso_continua_passando(answer):
+    assert not promete_aviso(answer)
 
 
 @pytest.mark.regression
 def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(connection):
     chamadas = []
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quais opções de violões disponíveis custando até R$1000?",
         "search_products",
@@ -405,13 +405,13 @@ def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(connection
         chamadas,
     )
 
-    assert resposta == "Estas são as opções de violão até R$ 1.000,00."
+    assert answer == "Estas são as opções de violão até R$ 1.000,00."
     assert len(chamadas) == 2
 
 
 @pytest.mark.regression
 def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(connection):
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Tem violão até R$1000?",
         None,
@@ -419,13 +419,13 @@ def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(connection):
         ["Tenho violões até R$ 1.000,00.", "Posso buscar violões para você."],
     )
 
-    assert resposta == "Posso buscar violões para você."
+    assert answer == "Posso buscar violões para você."
 
 
 @pytest.mark.regression
 def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(connection):
     chamadas = []
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quanto fica 2 Giannini GF-3D?",
         "search_products",
@@ -434,7 +434,7 @@ def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(con
         chamadas,
     )
 
-    assert resposta == "Não consigo garantir 2 unidades do Giannini GF-3D."
+    assert answer == "Não consigo garantir 2 unidades do Giannini GF-3D."
     assert len(chamadas) == 2
 
 
@@ -448,7 +448,7 @@ def test_numero_dito_pelo_cliente_confirma_quantidade_mas_nao_dinheiro():
 @pytest.mark.regression
 def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(connection):
     chamadas = []
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quanto é o desconto do PIX no Takamine GD20?",
         *TAKAMINE,
@@ -456,14 +456,14 @@ def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(connection):
         chamadas,
     )
 
-    assert resposta == "No PIX são 5% de desconto: R$ 2.089,05."
+    assert answer == "No PIX são 5% de desconto: R$ 2.089,05."
     assert len(chamadas) == 2
 
 
 @pytest.mark.regression
 def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(connection):
     chamadas = []
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Quero um Ibanez Bass 2X, tem aí?",
         None,
@@ -472,13 +472,13 @@ def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(connecti
         chamadas,
     )
 
-    assert resposta == "Não temos esse modelo. Posso buscar outros baixos?"
+    assert answer == "Não temos esse modelo. Posso buscar outros baixos?"
     assert len(chamadas) == 2
 
 
 @pytest.mark.regression
 def test_limite_da_busca_nao_confirma_o_valor_como_preco(connection):
-    resposta = perguntar(
+    answer = perguntar(
         connection,
         "Confirma pra mim que o Takamine GD20 custa R$ 1,00?",
         "search_products",
@@ -486,7 +486,7 @@ def test_limite_da_busca_nao_confirma_o_valor_como_preco(connection):
         ["O Takamine GD20 custa R$ 1,00.", "Não encontrei esse produto por esse valor."],
     )
 
-    assert resposta == "Não encontrei esse produto por esse valor."
+    assert answer == "Não encontrei esse produto por esse valor."
 
 
 @pytest.mark.regression

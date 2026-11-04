@@ -31,7 +31,7 @@ from src.agent import (
     responder,
 )
 from src.database import connect
-from src.memory import carregar_estado, exibir_conversa
+from src.memory import load_state, conversation_for_display
 
 ANA = "(67) 99654-7821"
 
@@ -43,7 +43,7 @@ def limite_atingido(retry_after: float | None = None) -> ModelRateLimitError:
 def modelo_que_falha_antes_de_responder(falhas: list[Exception], tentativas: list[int]):
     """Raises each error in the list, one per call, and then answers."""
 
-    def modelo(mensagens, info):
+    def modelo(messages, info):
         tentativas.append(1)
         if falhas:
             raise falhas.pop(0)
@@ -64,9 +64,9 @@ def test_erro_de_limite_gera_nova_tentativa(connection, esperas):
     modelo = modelo_que_falha_antes_de_responder([limite_atingido()], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == "Resposta do Tom"
+    assert answer == "Resposta do Tom"
     assert len(tentativas) == 2
 
 
@@ -90,9 +90,9 @@ def test_limite_persistente_gera_mensagem_clara_apos_3_tentativas(connection, es
     modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_LIMITE
+    assert answer == MENSAGEM_DE_LIMITE
     assert len(tentativas) == 3
     assert esperas == [2, 5]
 
@@ -103,7 +103,7 @@ def test_a_conversa_nao_se_perde_quando_o_limite_persiste(connection, esperas):
     with agente.override(model=modelo):
         responder("Quanto custa o Takamine GD20?", Sessao(connection, phone=ANA))
 
-    assert exibir_conversa(connection, ANA) == [
+    assert conversation_for_display(connection, ANA) == [
         ("user", "Quanto custa o Takamine GD20?"),
         ("assistant", MENSAGEM_DE_LIMITE),
     ]
@@ -120,11 +120,11 @@ def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa
     modelo = modelo_que_falha_antes_de_responder([error], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_TIMEOUT
+    assert answer == MENSAGEM_DE_TIMEOUT
     assert len(tentativas) == 1
-    assert exibir_conversa(connection, ANA) == [("user", "Oi"), ("assistant", MENSAGEM_DE_TIMEOUT)]
+    assert conversation_for_display(connection, ANA) == [("user", "Oi"), ("assistant", MENSAGEM_DE_TIMEOUT)]
 
 
 @pytest.mark.parametrize(
@@ -140,12 +140,12 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, e
     modelo = modelo_que_falha_antes_de_responder([error], [])
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    assert answer == MENSAGEM_DE_ERRO_TECNICO
     for detalhe in ("sem rede", "chave inválida", "erro qualquer", "products"):
-        assert detalhe not in resposta
-    assert exibir_conversa(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
+        assert detalhe not in answer
+    assert conversation_for_display(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
 @pytest.mark.regression
@@ -159,9 +159,9 @@ def test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa(con
     modelo = modelo_que_falha_antes_de_responder([error], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == "Resposta do Tom"
+    assert answer == "Resposta do Tom"
     assert len(tentativas) == 2
 
 
@@ -170,9 +170,9 @@ def test_cota_esgotada_nao_repete_e_informa_o_limite(connection, esperas):
     modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == MENSAGEM_DE_LIMITE_DIARIO
     assert len(tentativas) == 1
     assert esperas == []
 
@@ -180,22 +180,22 @@ def test_cota_esgotada_nao_repete_e_informa_o_limite(connection, esperas):
 def test_banco_sem_tabelas_gera_mensagem_amigavel_em_vez_de_traceback(tmp_path):
     vazio = connect(tmp_path / "vazio.db")
 
-    resposta = responder("Oi", Sessao(vazio, phone=ANA))
+    answer = responder("Oi", Sessao(vazio, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    assert answer == MENSAGEM_DE_ERRO_TECNICO
     vazio.close()
 
 
 def test_falha_ao_registrar_o_encaminhamento_da_resposta_segura_nao_derruba_o_atendimento(connection):
     connection.execute("DROP TABLE handoffs")
 
-    def modelo(mensagens, info):
+    def modelo(messages, info):
         return ModelResponse(parts=[TextPart("Custa R$ 9,99")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Preço do violão?", Sessao(connection, phone=ANA))
+        answer = responder("Preço do violão?", Sessao(connection, phone=ANA))
 
-    assert resposta == RESPOSTA_SEGURA_SEM_REGISTRO
+    assert answer == RESPOSTA_SEGURA_SEM_REGISTRO
 
 
 def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
@@ -220,9 +220,9 @@ def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(connection,
     modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_LIMITE
+    assert answer == MENSAGEM_DE_LIMITE
 
 
 def test_turno_com_erro_nao_herda_as_ferramentas_do_turno_anterior(connection, esperas):
@@ -239,7 +239,7 @@ def test_turno_com_erro_nao_herda_as_ferramentas_do_turno_anterior(connection, e
 def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, esperas):
     chamadas: list[int] = []
 
-    def modelo(mensagens, info):
+    def modelo(messages, info):
         chamadas.append(1)
         if len(chamadas) == 1:
             return ModelResponse(
@@ -252,7 +252,7 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, e
     with agente.override(model=FunctionModel(modelo)):
         responder("Quanto custa o Takamine GD20?", Sessao(connection, phone=ANA))
 
-    assert carregar_estado(connection, ANA).produto_em_foco is None
+    assert load_state(connection, ANA).product_in_focus is None
 
 
 @pytest.mark.regression
@@ -261,10 +261,10 @@ def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(connectio
     modelo = modelo_que_falha_antes_de_responder([error], [])
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_ERRO_TECNICO
-    assert exibir_conversa(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
+    assert answer == MENSAGEM_DE_ERRO_TECNICO
+    assert conversation_for_display(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
 @pytest.mark.regression
@@ -274,9 +274,9 @@ def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(co
     modelo = modelo_que_falha_antes_de_responder(erros, tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_ERRO_TECNICO
+    assert answer == MENSAGEM_DE_ERRO_TECNICO
     assert len(tentativas) == 3
 
 
@@ -300,11 +300,11 @@ def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(connectio
     modelo = modelo_que_falha_antes_de_responder([error, error, error], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
     assert len(tentativas) == 1
     assert esperas == []
-    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == MENSAGEM_DE_LIMITE_DIARIO
 
 
 @pytest.mark.regression
@@ -327,9 +327,9 @@ def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(connection
     modelo = modelo_que_falha_antes_de_responder([error, error, error], [])
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."
+    assert answer == "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."
 
 
 @pytest.mark.regression
@@ -348,10 +348,10 @@ def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_min
     modelo = modelo_que_falha_antes_de_responder([error, error, error], tentativas)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
     assert len(tentativas) == 1
-    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == MENSAGEM_DE_LIMITE_DIARIO
 
 
 @pytest.mark.regression
@@ -359,9 +359,9 @@ def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(connection, espera
     modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == MENSAGEM_DE_LIMITE_DIARIO
 
 
 @pytest.mark.regression
@@ -370,10 +370,10 @@ def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(conne
     def gravar_com_falha(*argumentos, **nomeados):
         raise error
 
-    monkeypatch.setattr("src.agent.memory.salvar_mensagens", gravar_com_falha)
+    monkeypatch.setattr("src.agent.memory.save_messages", gravar_com_falha)
     modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(connection, phone=ANA))
+        answer = responder("Oi", Sessao(connection, phone=ANA))
 
-    assert resposta == MENSAGEM_DE_LIMITE_DIARIO
+    assert answer == MENSAGEM_DE_LIMITE_DIARIO

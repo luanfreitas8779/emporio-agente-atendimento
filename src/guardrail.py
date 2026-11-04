@@ -65,12 +65,12 @@ JANELA_DA_NEGACAO = 25
 PADRAO_NEGACAO = re.compile(r"\b(?:nao|sem)\b[^.,;:!?]*$")
 
 
-def promete_aviso(resposta: str) -> bool:
+def promete_aviso(answer: str) -> bool:
     """Says whether the answer promises to notify the customer, not counting when it denies the promise.
 
     The team's reply after a handoff ("entraremos em contato") is not a notice promise.
     """
-    text = normalize(resposta)
+    text = normalize(answer)
     for achado in PADRAO_PROMESSA_DE_AVISO.finditer(text):
         antes = text[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
         if not PADRAO_NEGACAO.search(antes):
@@ -152,7 +152,7 @@ TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "phone"
 
 
 def valores_nao_confirmados(
-    resposta: str,
+    answer: str,
     fontes: list[str],
     fontes_do_cliente: list[str] | None = None,
     limites_da_busca: list[Decimal] | None = None,
@@ -174,8 +174,8 @@ def valores_nao_confirmados(
         # "Tem 13 Yamaha C40? E 12?": the loose number is also the quantity the customer asked for.
         confirmados["quantity"] |= {int(n) for n in PADRAO_NUMERO_SOLTO.findall(fonte)}
     confirmados["dia_mes"] |= {found_date.strftime("%d/%m") for found_date in confirmados["data"]}
-    citados = valores(resposta)
-    limites_citados = {number(v) for v in PADRAO_LIMITE.findall(normalize(resposta))}
+    citados = valores(answer)
+    limites_citados = {number(v) for v in PADRAO_LIMITE.findall(normalize(answer))}
     confirmados["dinheiro"] |= limites_citados & set(limites_da_busca or [])
     return [
         str(amount)

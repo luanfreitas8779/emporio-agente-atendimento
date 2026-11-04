@@ -7,7 +7,7 @@ from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
 from src.config import DATABASE_PATH
 from src.database import connect
 from src.load_data import banco_carregado
-from src.memory import exibir_conversa
+from src.memory import conversation_for_display
 from src.phone import normalize_phone
 
 
@@ -67,8 +67,8 @@ if not _carregado:
     st.error("O banco de dados ainda não foi preparado. Execute `python -m src.load_data` e reinicie o app.")
     st.stop()
 
-if "mensagens" not in st.session_state:
-    st.session_state.mensagens = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # The phone number identifies the session. Typing it does not prove identity (ADR-009).
 # The key keeps the same field across runs; changing the value on each run recreated it empty.
@@ -82,13 +82,13 @@ if st.session_state.phone.strip() and telefone_da_conversa is None:
     st.sidebar.warning("Telefone inválido. Informe o DDD e o número, por exemplo (67) 99999-9999.")
 if st.session_state.get("conversa_de") != telefone_da_conversa:
     # Whoever chatted before entering the phone number keeps seeing what was said (QA-15).
-    sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.mensagens
+    sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.messages
     st.session_state.conversa_de = telefone_da_conversa
     connection = connect(DATABASE_PATH)
     try:
-        st.session_state.mensagens = [
+        st.session_state.messages = [
             {"papel": papel, "text": text}
-            for papel, text in exibir_conversa(connection, st.session_state.phone)
+            for papel, text in conversation_for_display(connection, st.session_state.phone)
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         connection.close()
@@ -109,18 +109,18 @@ if not st.session_state.phone.strip():
     st.caption("Para consultar seus pedidos, informe o telefone cadastrado no menu lateral (ícone no canto superior esquerdo).")
 
 # The greeting belongs only to the screen: it is not stored in the history or sent to the model.
-if not st.session_state.mensagens:
+if not st.session_state.messages:
     exibir("assistant", SAUDACAO)
 
-for mensagem in st.session_state.mensagens:
-    exibir(mensagem["papel"], mensagem["text"], mensagem.get("ferramentas"))
+for message in st.session_state.messages:
+    exibir(message["papel"], message["text"], message.get("ferramentas"))
 
 # A new message during the answer interrupts the run and leaves the previous one unanswered.
 # That is why the field is locked while there is a pending question (ADR-020). The question
 # keeps the phone number of whoever sent it, which does not change if the sidebar field changes.
 pendente = st.session_state.get("pendente")
 if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
-    st.session_state.mensagens.append({"papel": "user", "text": pergunta})
+    st.session_state.messages.append({"papel": "user", "text": pergunta})
     st.session_state.pendente = {"pergunta": pergunta, "phone": st.session_state.phone}
     st.rerun()
 
@@ -130,18 +130,18 @@ if pendente is not None:
         try:
             sessao = Sessao(connect(DATABASE_PATH), pendente["phone"])
             with st.spinner("O Tom está digitando..."):
-                resposta = responder(pendente["pergunta"], sessao)
+                answer = responder(pendente["pergunta"], sessao)
         except Exception:
             # Without this the traceback would reach the customer and the field would stay locked (ADR-020).
             logging.getLogger(__name__).exception("Failed to answer on the screen")
-            resposta = MENSAGEM_DE_ERRO_TECNICO
+            answer = MENSAGEM_DE_ERRO_TECNICO
         # If the screen's phone number changed, the answer was already stored for whoever asked and
         # must not appear in another number's conversation.
         if normalize_phone(pendente["phone"]) == st.session_state.get("conversa_de"):
-            st.session_state.mensagens.append(
+            st.session_state.messages.append(
                 {
                     "papel": "assistant",
-                    "text": resposta,
+                    "text": answer,
                     "ferramentas": [
                         {"name": chamada.name, "argumentos": chamada.argumentos}
                         for chamada in (sessao.ferramentas if sessao is not None else [])

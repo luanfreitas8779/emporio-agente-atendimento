@@ -142,7 +142,7 @@ The inputs and expected answers are in Portuguese, the language the agent speaks
 | TC-461 | `Quanto fica 2 Giannini GF-3D?`, `Tem 13 Yamaha C40? E 12?` | `2 unidades`, `13 unidades`, and `12 unidades` pass; `R$ 13,00` is still blocked | ADR-013 |
 | TC-462 | Product without a promotion | `pix_percent` contains `5%` and the answer may cite it; with a promotion, it is null | ADR-013 |
 | TC-463 | `50 por cento`, `6 vezes`, `6 x`, `Restam 3 no estoque`, `15/12`, `7 horas` | Blocked without a source; they pass when the source contains the value | ADR-013 |
-| TC-464 | `Te mando mensagem`, `Te notifico`, `Avisarei`, `Não se preocupe, te warning` | Blocked; `Não posso te avisar` passes | ADR-021 |
+| TC-464 | `Te mando message`, `Te notifico`, `Avisarei`, `Não se preocupe, te warning` | Blocked; `Não posso te avisar` passes | ADR-021 |
 | TC-465 | `<SYSTEM>`, `< system >`, `<thinking>`, `<thought>`, `<reasoning>` in the text | The block disappears from the answer and from the history | ADR-013 |
 | TC-466 | Answer ending in `:` | Receives a correction request | ADR-013 |
 | TC-452 | Purchase of R$ 2.199,00, of R$ 479,00, and exact amount of R$ 500,00 | `calculate_purchase` returns free shipping, a flat fee of R$ 35,00 and, for the exact amount, that the policy does not define it and that it should be confirmed with the store | ADR-013 |
@@ -235,7 +235,7 @@ Status after issues #3 to #16 and the QA retests. The items below remain open or
 | No indexes in the load | The load stores `specs` as JSON, but creates no indexes | Accepted for the catalog volume (65 products); create indexes when integrating with the store's systems |
 | Size of `load_data.py` | The module brings together schema, validation, and load of six tables | Split schema and validation if it goes past about 400 lines |
 | Sum of installments | The installment amount is rounded individually and may differ from the total by a few cents | Accepted: this is the usual credit card behavior; the text does not promise an exact sum |
-| Simulated models in the tests | The fake models depend on the position of the messages (`len(mensagens) == 1`) | Review if the library changes the message structure in a version update |
+| Simulated models in the tests | The fake models depend on the position of the messages (`len(messages) == 1`) | Review if the library changes the message structure in a version update |
 | Order under review | The order under review only changes with a single order found; for products, a search with several results or none clears the focus (ADR-016) | Reconsider the order under review if validation shows confusion |
 | Prompt leak without markup | The filter removes `<system>`, `<thinking>`, `<thought>`, and `<reasoning>` blocks (QA-30). Internal instructions quoted in plain text are not detected | Evaluate with the real Gemini model and handle in the prompt review (issue #13) |
 | `installments` without a cap in the tool | The tool accepts any positive integer, and the policy answers that it exceeds 12x; there is no calculation with the amount | Accepted |
@@ -326,7 +326,7 @@ Each fixed bug must leave a test that reproduces it. The automated ones carry th
 | Another customer's order became the order under review or received a channel question | `test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise`, `test_another_customers_order_comes_back_as_not_found_for_regret_with_any_channel` |
 | The model could change the customer or the phone number through an argument | `test_mensagem_nao_consegue_trocar_o_cliente_consultado`, `test_mensagem_nao_consegue_registrar_interesse_em_outro_telefone` |
 | The model could hand off a case on behalf of another phone number or with an invented reason | `test_mensagem_nao_consegue_encaminhar_em_nome_de_outro_telefone`, `test_motivo_desconhecido_e_recusado_pela_ferramenta` |
-| A database from a previous version broke reading the state | `test_banco_anterior_continua_funcionando_sem_migracao` |
+| A database from a previous version broke reading the state | `test_previous_database_keeps_working_without_migration` |
 | A load with an error erased the previous database | `test_falha_na_carga_preserva_o_banco_anterior` |
 | The restock command created an empty database when it did not exist | `test_comando_nao_cria_banco_quando_ele_nao_existe` |
 | A typo in the name ("gianini gf 3d") did not find the product (ADR-019) | `test_search_tolerates_a_missing_letter_in_the_name` |
@@ -334,7 +334,7 @@ Each fixed bug must leave a test that reproduces it. The automated ones carry th
 | The customer saw `<system>` blocks with the model's internal reasoning | `test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico`, `test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo`, `test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo` |
 | An exception outside the expected list showed a traceback and locked the field | `test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa`, `test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceback`, `test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica` |
 | A huge amount or number overflowed the calculation or SQLite | `test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento`, `test_numero_fora_da_faixa_e_recusado_pela_ferramenta` |
-| A database without the memory tables brought down every message | `test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo`, `test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_traceback` |
+| A database without the memory tables brought down every message | `test_new_database_already_stores_the_conversation_without_a_setup_step`, `test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_traceback` |
 | Tom gave a specification from memory, such as the Takamine GD20's back in mahogany | `test_exposes_the_product_registered_specifications` |
 | The Bass 3X strings field, which the record contradicts, reached the model | `test_does_not_expose_the_bass_3x_string_count_because_the_record_conflicts` |
 | Tom invented the stock when asked for a quantity | `test_reports_whether_stock_meets_the_quantity_without_revealing_the_number`, `test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida` |
