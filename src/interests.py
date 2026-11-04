@@ -32,7 +32,7 @@ def listar_pendentes(connection: sqlite3.Connection, phone: str) -> list[str]:
     chave = normalize_phone(phone)
     if chave is None:
         return []
-    linhas = connection.execute(
+    rows = connection.execute(
         """
         SELECT p.name FROM product_interests i
         JOIN products p ON p.product_id = i.product_id
@@ -40,4 +40,4 @@ def listar_pendentes(connection: sqlite3.Connection, phone: str) -> list[str]:
         """,
         (chave,),
     ).fetchall()
-    return [linha["name"] for linha in linhas]
+    return [row["name"] for row in rows]

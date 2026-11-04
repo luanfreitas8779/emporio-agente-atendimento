@@ -59,7 +59,7 @@ class Resultado(StrEnum):
 
 @dataclass_pydantic(frozen=True)
 class Regra:
-    nome: str
+    name: str
     resultado: Resultado
     prazo_ate: str
 
@@ -84,22 +84,22 @@ def avaliar_devolucao(
     canal: Canal | None,
     hoje: date,
 ) -> Veredito:
-    linha = connection.execute(
+    row = connection.execute(
         "SELECT order_date, status, estimated_delivery FROM orders WHERE order_id = ? AND customer_id = ?",
         (numero, cliente_id),
     ).fetchone()
-    if linha is None:
+    if row is None:
         return Veredito(Resultado.PEDIDO_NAO_ENCONTRADO, [])
-    if linha["status"] in SEM_ENTREGA:
-        return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[SEM_ENTREGA[linha["status"]]])
+    if row["status"] in SEM_ENTREGA:
+        return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[SEM_ENTREGA[row["status"]]])
     # The channel only matters after confirming that the order exists and belongs to the customer.
     if motivo == Motivo.ARREPENDIMENTO and canal is None:
         return Veredito(Resultado.FALTAM_DADOS, [], ["canal_de_compra"])
     if motivo == Motivo.ARREPENDIMENTO and canal == Canal.PRESENCIAL:
         return Veredito(Resultado.NAO_SE_APLICA, [], avisos=[AVISO_SEM_ARREPENDIMENTO_PRESENCIAL])
-    compra = date.fromisoformat(linha["order_date"])
+    compra = date.fromisoformat(row["order_date"])
     # Without an actual delivery date in the data (DQ-17), receipt is the estimated delivery.
-    recebimento = date.fromisoformat(linha["estimated_delivery"])
+    recebimento = date.fromisoformat(row["estimated_delivery"])
     if motivo == Motivo.DEFEITO:
         regras = [
             _regra("troca_por_defeito", compra, PRAZO_DE_TROCA_POR_DEFEITO_EM_DIAS, hoje),
@@ -123,7 +123,7 @@ def avaliar_devolucao(
     )
 
 
-def _regra(nome: str, inicio: date, dias: int, hoje: date) -> Regra:
+def _regra(name: str, inicio: date, dias: int, hoje: date) -> Regra:
     limite = inicio + timedelta(days=dias)
     resultado = Resultado.DENTRO_DO_PRAZO if hoje <= limite else Resultado.FORA_DO_PRAZO
-    return Regra(nome, resultado, format_date(limite))
+    return Regra(name, resultado, format_date(limite))

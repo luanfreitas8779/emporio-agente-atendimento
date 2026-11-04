@@ -10,8 +10,8 @@ RESUMO = "Cliente relata que o violão chegou com defeito no braço."
 
 def encaminhamentos(connection):
     return [
-        tuple(linha)
-        for linha in connection.execute("SELECT phone, reason, summary FROM handoffs ORDER BY id")
+        tuple(row)
+        for row in connection.execute("SELECT phone, reason, summary FROM handoffs ORDER BY id")
     ]
 
 
@@ -83,7 +83,7 @@ def relogio(monkeypatch):
     return Relogio()
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_mesmo_motivo_do_mesmo_cliente_na_janela_nao_gera_outro_registro_com_resumo_diferente(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.ATENDENTE_SOLICITADO, "Cliente quer falar com humano sobre o pedido 7.")
@@ -95,7 +95,7 @@ def test_mesmo_motivo_do_mesmo_cliente_na_janela_nao_gera_outro_registro_com_res
     assert len(encaminhamentos(connection)) == 1
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_depois_da_janela_o_mesmo_motivo_gera_novo_registro(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.RECLAMACAO, "Violão chegou com defeito.")
@@ -107,7 +107,7 @@ def test_depois_da_janela_o_mesmo_motivo_gera_novo_registro(connection, relogio)
     assert len(encaminhamentos(connection)) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_reclamacao_sobre_outro_assunto_na_janela_gera_novo_registro(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.RECLAMACAO, "Cliente reclama que o pedido 8 atrasou.")
@@ -121,7 +121,7 @@ def test_reclamacao_sobre_outro_assunto_na_janela_gera_novo_registro(connection,
     assert len(encaminhamentos(connection)) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_reclamacao_sobre_outro_pedido_na_janela_gera_novo_registro(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.RECLAMACAO, "Cliente insatisfeita: o pedido 8 chegou atrasado.")
@@ -133,7 +133,7 @@ def test_reclamacao_sobre_outro_pedido_na_janela_gera_novo_registro(connection, 
     assert len(encaminhamentos(connection)) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_reclamacao_reescrita_sobre_o_mesmo_pedido_na_janela_nao_gera_outro_registro(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.RECLAMACAO, "Cliente insatisfeita: o pedido 8 atrasou.")
@@ -145,7 +145,7 @@ def test_reclamacao_reescrita_sobre_o_mesmo_pedido_na_janela_nao_gera_outro_regi
     assert len(encaminhamentos(connection)) == 1
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_atendente_solicitado_com_resumos_sem_relacao_na_janela_continua_um_registro(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.ATENDENTE_SOLICITADO, "Cliente quer falar com um atendente.")
@@ -157,7 +157,7 @@ def test_atendente_solicitado_com_resumos_sem_relacao_na_janela_continua_um_regi
     assert len(encaminhamentos(connection)) == 1
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_verbo_de_reclamacao_em_comum_nao_faz_dois_assuntos_virarem_um(connection, relogio):
     relogio.em(0)
     registrar(connection, TELEFONE, Motivo.RECLAMACAO, "Cliente reclama que o pedido 8 atrasou.")

@@ -34,8 +34,8 @@ def registrar_limite(error: ModelAPIError, path: Path | None = None) -> None:
         "cota": violacao.get("quotaId"),
         "limite": violacao.get("quotaValue"),
     }
-    with path.open("a", encoding="utf-8") as arquivo:
-        arquivo.write(json.dumps(evento, ensure_ascii=False) + "\n")
+    with path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(evento, ensure_ascii=False) + "\n")
 
 
 def e_limite_diario(error: ModelAPIError) -> bool:

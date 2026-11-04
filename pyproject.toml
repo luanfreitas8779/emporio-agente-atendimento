@@ -7,4 +7,4 @@ requires-python = ">=3.12"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["regressao: reproduz um bug já corrigido (ver docs/05-test-plan.md, seção 9)"]
+markers = ["regression: reproduces an already fixed bug (see docs/05-test-plan.md, section 9)"]

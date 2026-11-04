@@ -29,7 +29,7 @@ The agent introduces itself as a virtual assistant, does not pretend to be a per
 |---|---|
 | Product, price, stock, or promotion | `buscar_produtos` |
 | Total, sum, price difference, PIX savings, or shipping for a purchase in Campo Grande | `calcular_compra` |
-| Opening hours, address, payment, exchange, shipping, warranty, or privacy | `consultar_politicas` |
+| Opening hours, address, payment, exchange, shipping, warranty, or privacy | `get_policies` |
 | Order status, tracking, or details | `consultar_meus_pedidos` |
 | Exchange, return, or defect of an order | `avaliar_devolucao` |
 | Follow an unavailable product | `registrar_interesse` |
@@ -48,12 +48,12 @@ A message may require more than one tool. A return request, for example, require
 | Output | Id, name, category, original price, active promotion discount, final price, PIX price, and availability (`disponivel`, `indisponivel`, `fora_de_catalogo`, or `lancamento`) |
 | Rules | Accepts partial matches, ignoring case and accents. The category also accepts one typo in words with 5 or more letters, like the search term, but only when the exact search finds nothing; the other filters do not change. The maximum price considers the final price. The PIX price is null for products with an active promotion. Availability and prices are calculated in code |
 
-### 4.2 `consultar_politicas`
+### 4.2 `get_policies`
 
 | Item | Definition |
 |---|---|
-| Input | `secao`: `sobre_a_loja`, `horarios`, `pagamentos`, `trocas_e_devolucoes`, `entregas`, `promocoes`, `atendimento`, `garantia`, or `privacidade`. In the `pagamentos` section, it also accepts optional `valor` and `parcelas` |
-| Output | Text of the reviewed section. With `valor`, the `pagamentos` section includes the maximum interest-free installments and whether the requested `parcelas` meet the minimum installment, calculated in code |
+| Input | `section`: `sobre_a_loja`, `horarios`, `pagamentos`, `trocas_e_devolucoes`, `entregas`, `promocoes`, `atendimento`, `garantia`, or `privacidade`. In the `pagamentos` section, it also accepts optional `amount` and `installments` |
+| Output | Text of the reviewed section. With `amount`, the `pagamentos` section includes the maximum interest-free installments and whether the requested `installments` meet the minimum installment, calculated in code |
 | Rules | Does not create missing rules and hands off ambiguous cases. Sections outside the list are rejected |
 
 ### 4.3 `consultar_meus_pedidos`

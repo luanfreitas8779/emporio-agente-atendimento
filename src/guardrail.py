@@ -178,7 +178,7 @@ def valores_nao_confirmados(
     limites_citados = {numero(v) for v in PADRAO_LIMITE.findall(normalizar(resposta))}
     confirmados["dinheiro"] |= limites_citados & set(limites_da_busca or [])
     return [
-        str(valor)
+        str(amount)
         for tipo, encontrados in citados.items()
-        for valor in sorted(encontrados - confirmados[tipo], key=str)
+        for amount in sorted(encontrados - confirmados[tipo], key=str)
     ]

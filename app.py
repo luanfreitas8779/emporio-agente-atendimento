@@ -17,7 +17,7 @@ SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar
 # Tool names and arguments are internal: the customer only sees what was looked up.
 ROTULOS_DAS_FERRAMENTAS = {
     "buscar_produtos": "Consulta ao catálogo",
-    "consultar_politicas": "Consulta às políticas da loja",
+    "get_policies": "Consulta às políticas da loja",
     "calcular_compra": "Cálculo da compra",
     "consultar_meus_pedidos": "Consulta aos seus pedidos",
     "avaliar_devolucao": "Avaliação de devolução",
@@ -27,7 +27,7 @@ ROTULOS_DAS_FERRAMENTAS = {
 
 
 # Lookups that answer the same with or without a registered phone number.
-FERRAMENTAS_SEM_CADASTRO = frozenset({"buscar_produtos", "consultar_politicas", "calcular_compra"})
+FERRAMENTAS_SEM_CADASTRO = frozenset({"buscar_produtos", "get_policies", "calcular_compra"})
 
 
 def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None:
@@ -43,7 +43,7 @@ def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None
             with st.expander("Como o Tom chegou a essa resposta"):
                 if ferramentas:
                     for chamada in ferramentas:
-                        st.caption(ROTULOS_DAS_FERRAMENTAS.get(chamada["nome"], "Consulta interna"))
+                        st.caption(ROTULOS_DAS_FERRAMENTAS.get(chamada["name"], "Consulta interna"))
                 else:
                     st.caption("Nenhuma ferramenta.")
 
@@ -95,7 +95,7 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
     # The last question asked without a phone number is answered again, now with the phone number,
     # unless the answer only used lookups that do not depend on the customer record.
     perguntas = [m["text"] for m in sem_telefone if m["papel"] == "user"]
-    usadas = {c["nome"] for m in sem_telefone[-1:] for c in m.get("ferramentas") or []}
+    usadas = {c["name"] for m in sem_telefone[-1:] for c in m.get("ferramentas") or []}
     if (
         telefone_da_conversa
         and perguntas
@@ -143,7 +143,7 @@ if pendente is not None:
                     "papel": "assistant",
                     "text": resposta,
                     "ferramentas": [
-                        {"nome": chamada.nome, "argumentos": chamada.argumentos}
+                        {"name": chamada.name, "argumentos": chamada.argumentos}
                         for chamada in (sessao.ferramentas if sessao is not None else [])
                     ],
                 }

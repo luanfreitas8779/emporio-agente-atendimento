@@ -2,12 +2,12 @@ from functools import cache
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
-from src.catalog import formatar_preco
+from src.catalog import format_price
 from src.config import DATA_DIR
 
-ARQUIVO_POLITICAS = DATA_DIR / "politicas.md"
+POLICIES_FILE = DATA_DIR / "politicas.md"
 
-SECOES = (
+SECTIONS = (
     "sobre_a_loja",
     "horarios",
     "pagamentos",
@@ -19,69 +19,69 @@ SECOES = (
     "privacidade",
 )
 
-MAXIMO_DE_PARCELAS = 12
+MAX_INSTALLMENTS = 12
 
 
 @cache
-def ler_secoes(arquivo: Path) -> dict[str, str]:
-    secoes: dict[str, list[str]] = {}
-    atual = None
-    for linha in arquivo.read_text(encoding="utf-8").splitlines():
-        if linha.startswith("## "):
-            atual = linha[3:].strip()
-            secoes[atual] = []
-        elif atual is not None:
-            secoes[atual].append(linha)
-    return {nome: "\n".join(linhas).strip() for nome, linhas in secoes.items()}
+def read_sections(file: Path) -> dict[str, str]:
+    sections: dict[str, list[str]] = {}
+    current = None
+    for row in file.read_text(encoding="utf-8").splitlines():
+        if row.startswith("## "):
+            current = row[3:].strip()
+            sections[current] = []
+        elif current is not None:
+            sections[current].append(row)
+    return {name: "\n".join(rows).strip() for name, rows in sections.items()}
 
 
-def parcela_minima_em_centavos(parcelas: int) -> int:
-    if parcelas <= 3:
+def minimum_installment_cents(installments: int) -> int:
+    if installments <= 3:
         return 5000
-    if parcelas <= 6:
+    if installments <= 6:
         return 8000
     return 10000
 
 
-def atende_parcela_minima(valor_em_centavos: int, parcelas: int) -> bool:
-    return valor_em_centavos >= parcela_minima_em_centavos(parcelas) * parcelas
+def meets_minimum_installment(amount_in_cents: int, installments: int) -> bool:
+    return amount_in_cents >= minimum_installment_cents(installments) * installments
 
 
-def valor_da_parcela(valor_em_centavos: int, parcelas: int) -> str:
-    centavos = (Decimal(valor_em_centavos) / parcelas).quantize(Decimal(1), ROUND_HALF_UP)
-    return formatar_preco(int(centavos))
+def installment_amount(amount_in_cents: int, installments: int) -> str:
+    cents = (Decimal(amount_in_cents) / installments).quantize(Decimal(1), ROUND_HALF_UP)
+    return format_price(int(cents))
 
 
-def descrever_parcelamento(valor: float, parcelas: int | None) -> str:
-    if valor <= 0 or (parcelas is not None and parcelas < 1):
+def describe_installments(amount: float, installments: int | None) -> str:
+    if amount <= 0 or (installments is not None and installments < 1):
         raise ValueError("The amount and the number of installments must be positive.")
-    centavos = int((Decimal(str(valor)) * 100).quantize(Decimal(1), ROUND_HALF_UP))
-    maximo = max(
-        (n for n in range(1, MAXIMO_DE_PARCELAS + 1) if n == 1 or atende_parcela_minima(centavos, n)),
+    cents = int((Decimal(str(amount)) * 100).quantize(Decimal(1), ROUND_HALF_UP))
+    maximum = max(
+        (n for n in range(1, MAX_INSTALLMENTS + 1) if n == 1 or meets_minimum_installment(cents, n)),
     )
-    linhas = [
-        f"Para {formatar_preco(centavos)}, o parcelamento sem juros tem "
-        f"máximo de {maximo}x de {valor_da_parcela(centavos, maximo)}."
+    rows = [
+        f"Para {format_price(cents)}, o parcelamento sem juros tem "
+        f"máximo de {maximum}x de {installment_amount(cents, maximum)}."
     ]
-    if parcelas is not None:
-        if parcelas > MAXIMO_DE_PARCELAS:
-            linhas.append(
-                f"{parcelas}x não é possível: o parcelamento vai até {MAXIMO_DE_PARCELAS}x."
+    if installments is not None:
+        if installments > MAX_INSTALLMENTS:
+            rows.append(
+                f"{installments}x não é possível: o parcelamento vai até {MAX_INSTALLMENTS}x."
             )
-        elif parcelas == 1 or atende_parcela_minima(centavos, parcelas):
-            linhas.append(f"{parcelas}x atende à parcela mínima.")
+        elif installments == 1 or meets_minimum_installment(cents, installments):
+            rows.append(f"{installments}x atende à parcela mínima.")
         else:
-            minima = formatar_preco(parcela_minima_em_centavos(parcelas))
-            linhas.append(f"{parcelas}x não atende à parcela mínima de {minima}.")
-    return "\n".join(linhas)
+            minimum = format_price(minimum_installment_cents(installments))
+            rows.append(f"{installments}x não atende à parcela mínima de {minimum}.")
+    return "\n".join(rows)
 
 
-def consultar_politicas(
-    secao: str, valor: float | None = None, parcelas: int | None = None
+def get_policies(
+    section: str, amount: float | None = None, installments: int | None = None
 ) -> str:
-    if secao not in SECOES:
-        raise ValueError(f"Unknown section: {secao}. Use one of {', '.join(SECOES)}.")
-    text = ler_secoes(ARQUIVO_POLITICAS)[secao]
-    if secao == "pagamentos" and valor is not None:
-        text += "\n\nCálculo para esta compra:\n" + descrever_parcelamento(valor, parcelas)
+    if section not in SECTIONS:
+        raise ValueError(f"Unknown section: {section}. Use one of {', '.join(SECTIONS)}.")
+    text = read_sections(POLICIES_FILE)[section]
+    if section == "pagamentos" and amount is not None:
+        text += "\n\nCálculo para esta compra:\n" + describe_installments(amount, installments)
     return text

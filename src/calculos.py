@@ -20,7 +20,7 @@ class ItemDaCompra:
 
 @dataclass_pydantic(frozen=True)
 class LinhaDaCompra:
-    nome: str
+    name: str
     quantidade: int
     preco_unitario: str
     subtotal: str
@@ -51,9 +51,9 @@ def frete_na_regiao_metropolitana(total: int) -> str:
     if total > LIMITE_DO_FRETE_GRATIS:
         return "Frete grátis na região metropolitana de Campo Grande."
     if total < LIMITE_DO_FRETE_GRATIS:
-        return f"Taxa fixa de {catalog.formatar_preco(TAXA_DO_FRETE_FIXO)} na região metropolitana de Campo Grande."
+        return f"Taxa fixa de {catalog.format_price(TAXA_DO_FRETE_FIXO)} na região metropolitana de Campo Grande."
     return (
-        f"A política não define o frete para um pedido de exatamente {catalog.formatar_preco(LIMITE_DO_FRETE_GRATIS)}: "
+        f"A política não define o frete para um pedido de exatamente {catalog.format_price(LIMITE_DO_FRETE_GRATIS)}: "
         "confirme com a loja."
     )
 
@@ -80,7 +80,7 @@ def calcular_compra(
             return f"Produto {product_id} não encontrado: nenhuma conta foi feita."
         produtos[product_id] = produto
 
-    linhas = []
+    rows = []
     subtotais = []
     avisos = []
     observacoes_do_pix = []
@@ -93,25 +93,25 @@ def calcular_compra(
         total += subtotal
         total_no_pix += produto.preco_no_pix * quantidade
         if produto.disponibilidade in AVISO_DA_DISPONIBILIDADE:
-            avisos.append(f"{produto.nome}: {AVISO_DA_DISPONIBILIDADE[produto.disponibilidade]}")
+            avisos.append(f"{produto.name}: {AVISO_DA_DISPONIBILIDADE[produto.disponibilidade]}")
         elif produto.estoque < quantidade:
-            avisos.append(f"{produto.nome}: o estoque não cobre {quantidade} unidades.")
+            avisos.append(f"{produto.name}: o estoque não cobre {quantidade} unidades.")
         if produto.em_promocao:
-            observacoes_do_pix.append(f"{produto.nome}: o PIX não soma ao desconto da promoção.")
-        linhas.append(
+            observacoes_do_pix.append(f"{produto.name}: o PIX não soma ao desconto da promoção.")
+        rows.append(
             LinhaDaCompra(
-                produto.nome,
+                produto.name,
                 quantidade,
-                catalog.formatar_preco(produto.preco_final),
-                catalog.formatar_preco(subtotal),
+                catalog.format_price(produto.preco_final),
+                catalog.format_price(subtotal),
             )
         )
     return CalculoDaCompra(
-        linhas,
-        catalog.formatar_preco(total),
-        catalog.formatar_preco(total_no_pix),
-        catalog.formatar_preco(total - total_no_pix),
-        catalog.formatar_preco(abs(subtotais[0] - subtotais[1])) if len(subtotais) == 2 else None,
+        rows,
+        catalog.format_price(total),
+        catalog.format_price(total_no_pix),
+        catalog.format_price(total - total_no_pix),
+        catalog.format_price(abs(subtotais[0] - subtotais[1])) if len(subtotais) == 2 else None,
         " ".join(avisos) or None,
         " ".join(observacoes_do_pix) or None,
         frete_na_regiao_metropolitana(total),

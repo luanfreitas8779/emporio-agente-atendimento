@@ -31,7 +31,7 @@ INSERT INTO conversation_state VALUES ('67996547821', 8, 96, '2026-03-01T00:00:0
 
 
 @pytest.mark.parametrize("esquema", [ESQUEMA_COM_COLUNA_ANTIGA, ESQUEMA_SEM_COLUNA])
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_banco_anterior_continua_funcionando_sem_migracao(tmp_path, esquema):
     anterior = sqlite3.connect(tmp_path / "antigo.db")
     anterior.executescript(esquema)
@@ -76,7 +76,7 @@ def test_tabela_de_encaminhamentos_recusa_motivo_desconhecido_e_resumo_vazio(tmp
     connection.close()
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_banco_novo_ja_guarda_a_conversa_sem_etapa_de_preparo(tmp_path):
     connection = connect(tmp_path / "novo.db")
 

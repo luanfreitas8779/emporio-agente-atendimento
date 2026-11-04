@@ -31,7 +31,7 @@ def test_recarregar_recria_o_catalogo_sem_duplicar_produtos(connection):
     assert len(buscar_produtos(connection, termo="Takamine GD20")) == 1
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_produto_aponta_para_categoria_inexistente(tmp_path):
     escrever_catalogo(tmp_path, '10,100,Guitarra Teste,99,Descricao,1,active,{},2024-01-01')
     connection = connect(tmp_path / "teste.db")
@@ -42,7 +42,7 @@ def test_interrompe_a_carga_quando_o_produto_aponta_para_categoria_inexistente(t
     connection.close()
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
     escrever_catalogo(tmp_path, '10,abc,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
     connection = connect(tmp_path / "teste.db")
@@ -53,7 +53,7 @@ def test_interrompe_a_carga_quando_o_preco_e_invalido(tmp_path):
     connection.close()
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tmp_path):
     escrever_catalogo(tmp_path, '10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01')
     (tmp_path / "promotions.csv").write_text(
@@ -103,7 +103,7 @@ def carregar_pedidos_de(pasta, cliente, pedido, item):
 CLIENTE = "1,Cliente Teste,(67) 90000-0001,teste@exemplo.com,Campo Grande"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_path):
     with pytest.raises(ErroDeCarga, match="order 1"):
         carregar_pedidos_de(
@@ -111,7 +111,7 @@ def test_interrompe_a_carga_quando_o_pedido_aponta_para_cliente_inexistente(tmp_
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_path):
     with pytest.raises(ErroDeCarga, match="order item 1"):
         carregar_pedidos_de(
@@ -119,7 +119,7 @@ def test_interrompe_a_carga_quando_o_item_aponta_para_produto_inexistente(tmp_pa
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_path):
     with pytest.raises(ErroDeCarga, match="order item 7"):
         carregar_pedidos_de(
@@ -127,7 +127,7 @@ def test_interrompe_a_carga_quando_o_item_aponta_para_pedido_inexistente(tmp_pat
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_total_do_pedido_e_invalido(tmp_path):
     with pytest.raises(ErroDeCarga, match="order 1"):
         carregar_pedidos_de(
@@ -147,7 +147,7 @@ def carregar_produtos_de(pasta, produtos):
         connection.close()
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
     with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_produtos_de(
@@ -155,15 +155,15 @@ def test_interrompe_a_carga_quando_o_status_do_produto_e_invalido(tmp_path):
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_id_do_produto_esta_duplicado(tmp_path):
-    linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
+    row = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
 
     with pytest.raises(ErroDeCarga, match="product 10: duplicate id"):
-        carregar_produtos_de(tmp_path, f"{linha}\n{linha}")
+        carregar_produtos_de(tmp_path, f"{row}\n{row}")
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
     with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_produtos_de(
@@ -171,7 +171,7 @@ def test_interrompe_a_carga_quando_o_preco_tem_mais_de_duas_casas(tmp_path):
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
     with pytest.raises(ErroDeCarga, match="product 10"):
         carregar_produtos_de(
@@ -179,10 +179,10 @@ def test_interrompe_a_carga_quando_o_estoque_e_negativo(tmp_path):
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_falha_na_carga_preserva_o_banco_anterior(connection, tmp_path):
-    linha = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
-    escrever_catalogo(tmp_path, f"{linha}\n{linha}")
+    row = "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01"
+    escrever_catalogo(tmp_path, f"{row}\n{row}")
     (tmp_path / "promotions.csv").write_text(
         "promotion_id,product_id,discount_percent,description,is_active\n", encoding="utf-8"
     )
@@ -205,19 +205,19 @@ def carregar_clientes_de(pasta, *clientes):
         connection.close()
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_telefone_do_cliente_e_invalido(tmp_path):
     with pytest.raises(ErroDeCarga, match="customer 1"):
         carregar_clientes_de(tmp_path, "1,Cliente Teste,12345,t@exemplo.com,Campo Grande")
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_nome_do_cliente_esta_vazio(tmp_path):
     with pytest.raises(ErroDeCarga, match="customer 1"):
         carregar_clientes_de(tmp_path, "1, ,(67) 90000-0001,t@exemplo.com,Campo Grande")
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_id_do_cliente_esta_duplicado(tmp_path):
     with pytest.raises(ErroDeCarga, match="customer 1: duplicate id"):
         carregar_clientes_de(
@@ -227,7 +227,7 @@ def test_interrompe_a_carga_quando_o_id_do_cliente_esta_duplicado(tmp_path):
         )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_dois_clientes_tem_o_mesmo_telefone(tmp_path):
     with pytest.raises(ErroDeCarga, match="customer 2: duplicate phone number"):
         carregar_clientes_de(
@@ -243,7 +243,7 @@ def test_telefone_com_codigo_do_pais_e_gravado_sem_o_codigo(tmp_path):
     )
 
     assert cliente is not None
-    assert cliente.nome == "Um"
+    assert cliente.name == "Um"
 
 
 @pytest.mark.parametrize(
@@ -256,13 +256,13 @@ def test_telefone_com_codigo_do_pais_e_gravado_sem_o_codigo(tmp_path):
         "1,1,2026-01-01,delivered,100.005,pix,,,",
     ],
 )
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_pedido_tem_dado_invalido(tmp_path, pedido):
     with pytest.raises(ErroDeCarga, match="order 1"):
         carregar_pedidos_de(tmp_path, CLIENTE, pedido, "1,1,93")
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_o_id_do_pedido_esta_duplicado(tmp_path):
     pedido = "1,1,2026-01-01,delivered,100,pix,,,"
 
@@ -270,7 +270,7 @@ def test_interrompe_a_carga_quando_o_id_do_pedido_esta_duplicado(tmp_path):
         carregar_pedidos_de(tmp_path, CLIENTE, f"{pedido}\n{pedido}", "1,1,93")
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_a_quantidade_do_item_nao_e_positiva(tmp_path):
     with pytest.raises(ErroDeCarga, match="order item 1"):
         carregar_pedidos_de(
@@ -279,7 +279,7 @@ def test_interrompe_a_carga_quando_a_quantidade_do_item_nao_e_positiva(tmp_path)
 
 
 @pytest.mark.parametrize("promocao", ["1,10,101,Oferta,1", "1,10,-5,Oferta,1", "1,10,10,Oferta,2"])
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_interrompe_a_carga_quando_a_promocao_tem_dado_invalido(tmp_path, promocao):
     escrever_catalogo(tmp_path, "10,100,Guitarra Teste,1,Descricao,1,active,{},2024-01-01")
     (tmp_path / "promotions.csv").write_text(
@@ -305,7 +305,7 @@ def test_banco_com_os_dados_carregados_esta_pronto(connection):
     assert banco_carregado(connection)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_banco_carregado_antes_das_especificacoes_pede_nova_carga(connection):
     connection.executescript("ALTER TABLE products DROP COLUMN specs;")
 

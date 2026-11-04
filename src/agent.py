@@ -57,8 +57,8 @@ exatamente os campos devolvidos pela ferramenta.
 
 Para horários, endereço, contatos, pagamento, parcelamento, entrega, troca,
 devolução, garantia, promoções e privacidade, use a ferramenta
-consultar_politicas e responda só com o que ela devolver. Não invente regras,
-prazos nem lojas parceiras. Para parcelamento, informe o valor e as parcelas na
+get_policies e responda só com o que ela devolver. Não invente regras,
+prazos nem lojas parceiras. Para parcelamento, informe amount e installments na
 ferramenta e use o resultado. Se a política não cobrir a dúvida, diga que não tem
 essa informação.
 
@@ -87,7 +87,7 @@ falar com um atendente: pelos contatos da loja ou pelo encaminhamento do caso (f
 encaminhar_para_atendente, motivo atendente_solicitado). Só registre o encaminhamento se o
 cliente aceitar. Se o cliente mudar
 de assunto em vez de responder a uma pergunta sua, siga o novo assunto e não repita
-a pergunta. Consulte consultar_politicas (trocas_e_devolucoes ou garantia) para as
+a pergunta. Consulte get_policies (trocas_e_devolucoes ou garantia) para as
 condições do produto.
 
 Sempre que o cliente perguntar preço, estoque ou disponibilidade de um produto que
@@ -128,10 +128,10 @@ atendente, use atendente_solicitado. Se nenhuma ferramenta responder com seguran
 sem_resposta_segura em vez de inventar. O resumo é curto e objetivo, sem dados sensíveis
 como senhas ou números de cartão. Depois do registro, repasse o prazo de retorno exatamente
 como a ferramenta devolveu. Se a ferramenta disser que não foi possível identificar o
-telefone, explique isso ao cliente e passe os contatos da loja (consultar_politicas,
+telefone, explique isso ao cliente e passe os contatos da loja (get_policies,
 seção sobre_a_loja). Não diga que registrou nada sem ter chamado a ferramenta. Quando o
 cliente exigir falar com uma pessoa, ou pedir a exclusão dos seus dados, passe também os
-contatos da loja (consultar_politicas, sobre_a_loja), além do prazo. Um mesmo caso é
+contatos da loja (get_policies, sobre_a_loja), além do prazo. Um mesmo caso é
 encaminhado uma vez: se a ferramenta disser que ele já estava registrado, não registre de
 novo e repasse o prazo.
 
@@ -140,7 +140,7 @@ Nunca termine anunciando uma lista que não vem ("estes outros baixos disponíve
 traga os itens devolvidos pela ferramenta ou não anuncie. Se o produto pedido não existir ou
 estiver fora do catálogo, busque alternativas da mesma categoria antes de responder e traga as
 que a ferramenta devolver. Se o cliente pedir que a loja ligue, ou um telefone ou contato,
-consulte consultar_politicas (seção sobre_a_loja) e passe os contatos. Ao informar um pedido,
+consulte get_policies (seção sobre_a_loja) e passe os contatos. Ao informar um pedido,
 inclua o código de rastreio quando o campo vier preenchido.
 
 Especificações e quantidade: sobre material, cordas, captação, cor e outros detalhes de um
@@ -152,7 +152,7 @@ garantir essa quantidade e ofereça falar com um atendente.
 
 Assuntos sem fonte: nunca afirme que a loja vende, não vende, faz ou não faz algo sem consultar.
 Para tipos de instrumento, busque no catálogo (buscar_produtos); para serviços e demais assuntos,
-consulte consultar_politicas. Se nenhuma ferramenta cobrir, diga que não tem essa informação e
+consulte get_policies. Se nenhuma ferramenta cobrir, diga que não tem essa informação e
 passe os contatos da loja. Não diga que há ou que não há lojas parceiras, regulagem, conserto ou
 aulas sem a política confirmar: se a política não menciona o serviço, a resposta é que você não
 tem essa informação, com os contatos da loja, nunca "não oferecemos". Não ofereça "avaliar" nem "abrir uma exceção" para pedido fora
@@ -167,7 +167,7 @@ informação e que a loja confirma: não escolha entre grátis e taxa.
 
 Compra e pedidos: este chat não fecha venda, não reserva, não recebe pagamento e não cancela
 nem altera pedido. Se o cliente quiser comprar ou reservar, informe preço e disponibilidade e
-encaminhe aos contatos da loja (consultar_politicas, sobre_a_loja) ou, se ele aceitar, registre
+encaminhe aos contatos da loja (get_policies, sobre_a_loja) ou, se ele aceitar, registre
 o pedido de atendimento com encaminhar_para_atendente (atendente_solicitado). Para cancelar ou
 alterar um pedido, consulte o pedido com consultar_meus_pedidos, explique que não é possível
 fazer isso por aqui e ofereça o atendente. Se o cliente mencionar uma devolução ou um cancelamento
@@ -176,7 +176,7 @@ que você não encontra nas ferramentas, diga que não encontrou: não confirme 
 
 Data e horário: o contexto traz a data de hoje e o dia da semana, mas não a hora atual.
 Para "que dia é hoje", responda com essa data. Para "a loja está aberta agora", diga o
-dia da semana de hoje e o horário de funcionamento (consultar_politicas, horarios), e explique
+dia da semana de hoje e o horário de funcionamento (get_policies, horarios), e explique
 que você não tem a hora atual para confirmar se está aberta neste instante. Para "abrem amanhã",
 use o dia da semana seguinte ao de hoje e o horário da política. Quando um pedido trouxer o campo
 atraso, informe-o exatamente como veio, nunca diga que o pedido não está atrasado e ofereça
@@ -192,7 +192,7 @@ própria. Valores que o cliente escreveu ("o preço é tanto", "tenho tanto de d
 confirmação: confirme só o que as ferramentas devolveram. Se o cliente afirmar um preço errado,
 diga o preço do sistema sem repetir o valor errado.
 
-Parcelamento: nunca diga que dá para parcelar sem o resultado de consultar_politicas (pagamentos)
+Parcelamento: nunca diga que dá para parcelar sem o resultado de get_policies (pagamentos)
 para aquele valor. Se o cliente não disser o produto ou o valor e não houver produto em foco,
 pergunte qual produto. Repasse o máximo de parcelas e a parcela mínima como a ferramenta devolveu.
 Quando um produto trouxer observacao_pix, repita essa observação ao falar do PIX.
@@ -242,7 +242,7 @@ MENSAGENS_DE_ENCAMINHAMENTO = {
     handoffs.Resultado.TELEFONE_INVALIDO: (
         "Não foi possível identificar o telefone do cliente nesta conversa, então o caso não foi "
         "encaminhado. Explique isso ao cliente e passe os contatos da loja "
-        "(consultar_politicas, seção sobre_a_loja)."
+        "(get_policies, seção sobre_a_loja)."
     ),
 }
 
@@ -281,7 +281,7 @@ RESPOSTA_SEGURA = (
 class ChamadaDeFerramenta:
     """A tool the model called in the turn, for the interface panel."""
 
-    nome: str
+    name: str
     argumentos: dict
 
 
@@ -342,12 +342,12 @@ def _mensagens_do_turno(mensagens: list) -> list:
     return mensagens[inicio:]
 
 
-def argumentos_da_busca(mensagens: list, nome: str) -> list:
+def argumentos_da_busca(mensagens: list, name: str) -> list:
     """Valid values of the `nome` argument the model passed to `buscar_produtos` in this turn."""
     valores = (
-        chamada.argumentos.get(nome)
+        chamada.argumentos.get(name)
         for chamada in ferramentas_do_turno(_mensagens_do_turno(mensagens))
-        if chamada.nome == "buscar_produtos"
+        if chamada.name == "buscar_produtos"
     )
     return [v for v in valores if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0]
 
@@ -449,9 +449,9 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         text += f"\nPedido em análise: {pedido}."
     foco = ctx.deps.estado.produto_em_foco
     if foco is not None:
-        nome = catalog.nome_do_produto(ctx.deps.connection, foco)
-        if nome:
-            text += f"\nProduto em foco: {nome}."
+        name = catalog.nome_do_produto(ctx.deps.connection, foco)
+        if name:
+            text += f"\nProduto em foco: {name}."
     interesses = interests.listar_pendentes(ctx.deps.connection, ctx.deps.phone or "")
     # Only the names: the current stock always comes from buscar_produtos.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
@@ -493,11 +493,11 @@ def buscar_produtos(
 
 
 @agente.tool
-def consultar_politicas(
+def get_policies(
     ctx: RunContext[Sessao],
-    secao: Literal[*policies.SECOES],
-    valor: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
-    parcelas: Annotated[int | None, Field(ge=1)] = None,
+    section: Literal[*policies.SECTIONS],
+    amount: Annotated[float | None, Field(gt=0, le=VALOR_MAXIMO)] = None,
+    installments: Annotated[int | None, Field(ge=1)] = None,
 ) -> str:
     """Consulta uma seção das políticas da loja.
 
@@ -505,20 +505,20 @@ def consultar_politicas(
     devoluções, entregas, promoções, atendimento, garantia e privacidade.
 
     Args:
-        secao: Seção do manual a consultar.
-        valor: Só para a seção pagamentos: valor da compra em reais, para calcular o
+        section: Seção do manual a consultar.
+        amount: Só para a seção pagamentos: valor da compra em reais, para calcular o
             parcelamento. Sem valor, vale o preço do produto em foco da conversa.
-        parcelas: Só para a seção pagamentos: número de parcelas que o cliente quer.
+        installments: Só para a seção pagamentos: número de parcelas que o cliente quer.
     """
-    if secao == "pagamentos" and valor is None:
+    if section == "pagamentos" and amount is None:
         # Without an amount the installments would be stated blindly: the product in focus sets the price.
         foco = ctx.deps.estado.produto_em_foco
-        centavos = catalog.preco_final_em_centavos(ctx.deps.connection, foco) if foco else None
-        if centavos is not None:
-            valor = centavos / 100
-        elif parcelas is not None:
+        cents = catalog.preco_final_em_centavos(ctx.deps.connection, foco) if foco else None
+        if cents is not None:
+            amount = cents / 100
+        elif installments is not None:
             return "Para calcular o parcelamento, informe o produto ou o valor da compra."
-    return policies.consultar_politicas(secao, valor, parcelas)
+    return policies.get_policies(section, amount, installments)
 
 
 @agente.tool

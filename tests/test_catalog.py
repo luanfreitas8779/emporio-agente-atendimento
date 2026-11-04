@@ -7,7 +7,7 @@ def test_informa_o_preco_do_takamine_gd20(connection):
     produtos = buscar_produtos(connection, termo="Takamine GD20")
 
     assert len(produtos) == 1
-    assert produtos[0].nome == "Takamine GD20 Dreadnought Natural"
+    assert produtos[0].name == "Takamine GD20 Dreadnought Natural"
     assert produtos[0].categoria == "Violões"
     assert produtos[0].preco == "R$ 2.199,00"
 
@@ -73,7 +73,7 @@ def test_limita_a_busca_pelo_preco_maximo(connection):
 
 def test_preco_maximo_considera_o_preco_final_da_promocao(connection):
     # The Ohana CK-20 costs R$ 549,00, but has a 20% discount: R$ 439,20.
-    nomes = [p.nome for p in buscar_produtos(connection, categoria="ukuleles", preco_maximo=450)]
+    nomes = [p.name for p in buscar_produtos(connection, categoria="ukuleles", preco_maximo=450)]
 
     assert "Ohana CK-20 Concert Natural" in nomes
 
@@ -94,13 +94,13 @@ def test_somente_promocao_devolve_so_produtos_com_promocao_ativa(connection):
 
     assert len(produtos) == 4
     assert all(produto.desconto_percentual for produto in produtos)
-    assert "Crafter CE-15" not in " ".join(produto.nome for produto in produtos)
+    assert "Crafter CE-15" not in " ".join(produto.name for produto in produtos)
 
 
 def test_somente_promocao_combina_com_a_categoria(connection):
     produtos = buscar_produtos(connection, categoria="ukuleles", somente_promocao=True)
 
-    assert [produto.nome for produto in produtos] == [
+    assert [produto.name for produto in produtos] == [
         "Kalani KAL-700T Tenor Natural",
         "Ohana CK-20 Concert Natural",
     ]
@@ -114,7 +114,7 @@ def test_categoria_com_erro_de_digitacao_acha_o_ukulele_em_promocao_ate_400(conn
         connection, categoria="Ukelele", preco_maximo=400, somente_promocao=True
     )
 
-    assert [produto.nome for produto in produtos] == ["Kalani KAL-700T Tenor Natural"]
+    assert [produto.name for produto in produtos] == ["Kalani KAL-700T Tenor Natural"]
     assert produtos[0].preco == "R$ 359,00"
     assert produtos[0].desconto_percentual == 10
     assert produtos[0].preco_final == "R$ 323,10"
@@ -125,7 +125,7 @@ def test_categoria_no_plural_com_erro_de_digitacao_acha_o_mesmo_ukulele(connecti
         connection, categoria="Ukeleles", preco_maximo=400, somente_promocao=True
     )
 
-    assert [produto.nome for produto in produtos] == ["Kalani KAL-700T Tenor Natural"]
+    assert [produto.name for produto in produtos] == ["Kalani KAL-700T Tenor Natural"]
 
 
 @pytest.mark.parametrize(
@@ -168,7 +168,7 @@ def test_categoria_sem_produtos_nao_retorna_resultados(connection):
     assert buscar_produtos(connection, categoria="Instrumentos de Sopro") == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(connection):
     # 4.35 * 100 is 434.99999999999994 in floating point.
     connection.execute(
@@ -177,10 +177,10 @@ def test_preco_maximo_igual_ao_preco_do_produto_inclui_o_produto(connection):
 
     produtos = buscar_produtos(connection, termo="Produto Limite", preco_maximo=4.35)
 
-    assert [p.nome for p in produtos] == ["Produto Limite"]
+    assert [p.name for p in produtos] == ["Produto Limite"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_categoria_no_singular_encontra_a_categoria_no_plural(connection):
     plural = buscar_produtos(connection, categoria="Violões")
 
@@ -189,7 +189,7 @@ def test_categoria_no_singular_encontra_a_categoria_no_plural(connection):
         assert buscar_produtos(connection, categoria=singular) == plural
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_categorias_no_singular_de_outros_plurais(connection):
     assert buscar_produtos(connection, categoria="guitarra") == buscar_produtos(
         connection, categoria="Guitarras"
@@ -206,12 +206,12 @@ def test_categoria_inexistente_nao_encontra_produtos(connection):
     assert buscar_produtos(connection, categoria="saxofone") == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_busca_tolera_letra_a_menos_no_nome(connection):
     # Issue #7 validation: "gianini gf 3d" did not find the Giannini GF-3D.
     (produto,) = buscar_produtos(connection, termo="gianini gf 3d")
 
-    assert produto.nome == "Giannini GF-3D Dreadnought Sunburst"
+    assert produto.name == "Giannini GF-3D Dreadnought Sunburst"
 
 
 @pytest.mark.parametrize(
@@ -222,7 +222,7 @@ def test_busca_nao_confunde_modelos_distintos_com_codigo_parecido(connection, te
     assert buscar_produtos(connection, termo=termo) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_expoe_as_especificacoes_cadastradas_do_produto(connection):
     produto = buscar_produtos(connection, termo="Takamine GD20")[0]
 
@@ -230,7 +230,7 @@ def test_expoe_as_especificacoes_cadastradas_do_produto(connection):
     assert produto.especificacoes["braço"] == "Mogno"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_especificacoes_chegam_com_nomes_e_valores_em_portugues(connection):
     produto = buscar_produtos(connection, termo="Taylor 110e")[0]
 
@@ -245,7 +245,7 @@ def test_especificacoes_chegam_com_nomes_e_valores_em_portugues(connection):
     }
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_bateria_traz_ferragens_incluidas_em_portugues(connection):
     produto = buscar_produtos(connection, termo="Yamaha Kit 1")[0]
 
@@ -253,7 +253,7 @@ def test_bateria_traz_ferragens_incluidas_em_portugues(connection):
     assert produto.especificacoes["peças"] == "5"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(connection):
     # The description and specifications of id 137 disagree (DQ-05): the data is not reliable.
     produto = buscar_produtos(connection, termo="Yamaha Bass 3X")[0]
@@ -262,7 +262,7 @@ def test_nao_expoe_o_numero_de_cordas_do_bass_3x_porque_o_cadastro_diverge(conne
     assert produto.especificacoes["braço"] == "Maple"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_informa_se_o_estoque_atende_a_quantidade_sem_revelar_o_numero(connection):
     # The Yamaha C40 has 12 units in stock.
     atende = buscar_produtos(connection, termo="Yamaha C40", quantidade=10)[0]
@@ -282,7 +282,7 @@ def test_produto_fora_de_catalogo_nunca_atende_a_quantidade_mesmo_com_estoque(co
     assert produto.atende_quantidade is False
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(connection):
     # "Yamha" is not a substring of "Yamaha": only the fuzzy search finds it.
     (disponivel,) = buscar_produtos(connection, termo="Yamha C40", somente_disponiveis=True, quantidade=10)
@@ -292,7 +292,7 @@ def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(con
     assert sem_estoque.atende_quantidade is False
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     ("consulta", "expected"),
     [
@@ -302,14 +302,14 @@ def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(con
     ],
 )
 def test_palavra_da_categoria_junto_do_nome_encontra_o_produto(connection, consulta, expected):
-    nomes = [p.nome for p in buscar_produtos(connection, termo=consulta)]
+    nomes = [p.name for p in buscar_produtos(connection, termo=consulta)]
 
     assert expected in nomes
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_palavras_de_ligacao_na_consulta_nao_impedem_a_busca(connection):
-    nomes = [p.nome for p in buscar_produtos(connection, termo="guitarra stratocaster da fender")]
+    nomes = [p.name for p in buscar_produtos(connection, termo="guitarra stratocaster da fender")]
 
     assert nomes == ["Fender Stratocaster American Pro II"]
 
@@ -318,7 +318,7 @@ def test_consulta_so_com_palavras_de_ligacao_nao_devolve_o_catalogo_inteiro(conn
     assert buscar_produtos(connection, termo="o da um") == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     ("consulta", "expected"),
     [
@@ -329,18 +329,18 @@ def test_consulta_so_com_palavras_de_ligacao_nao_devolve_o_catalogo_inteiro(conn
     ],
 )
 def test_codigo_de_modelo_sem_hifen_encontra_o_produto(connection, consulta, expected):
-    nomes = [p.nome for p in buscar_produtos(connection, termo=consulta)]
+    nomes = [p.name for p in buscar_produtos(connection, termo=consulta)]
 
     assert expected in nomes
 
 
 def test_codigo_sem_hifen_continua_sem_confundir_modelos_vizinhos(connection):
-    nomes = [p.nome for p in buscar_produtos(connection, termo="D28E")]
+    nomes = [p.name for p in buscar_produtos(connection, termo="D28E")]
 
     assert nomes == ["Martin D-28E Elétrico Aço Natural"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("pedaco", ["tar", "iolao", "vio", "ita"])
 def test_pedaco_de_palavra_da_categoria_nao_encontra_produtos(connection, pedaco):
     assert buscar_produtos(connection, termo=pedaco) == []
@@ -350,7 +350,7 @@ def test_categoria_no_plural_continua_encontrando_pela_palavra_inteira(connectio
     assert len(buscar_produtos(connection, termo="guitarras")) == 5
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_produto_em_promocao_explica_que_o_pix_nao_soma_ao_desconto(connection):
     (promocional,) = buscar_produtos(connection, termo="Crafter HT-100")
     (sem_promocao,) = buscar_produtos(connection, termo="Yamaha C40")

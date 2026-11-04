@@ -102,7 +102,7 @@ def _ler_mensagens(connection: sqlite3.Connection, phone: str | None) -> list[Mo
     chave = normalize_phone(phone or "")
     if chave is None:
         return []
-    linhas = connection.execute(
+    rows = connection.execute(
         """
         SELECT m.content FROM messages m
         JOIN conversations c ON c.id = m.conversation_id
@@ -111,9 +111,9 @@ def _ler_mensagens(connection: sqlite3.Connection, phone: str | None) -> list[Mo
         (chave,),
     ).fetchall()
     mensagens: list[ModelMessage] = []
-    for linha in linhas:
+    for row in rows:
         try:
-            mensagens.extend(ModelMessagesTypeAdapter.validate_json(linha["content"]))
+            mensagens.extend(ModelMessagesTypeAdapter.validate_json(row["content"]))
         except ValidationError:
             # An unreadable row cannot block the service or leave a turn
             # half-done: the history starts again after it.
@@ -173,11 +173,11 @@ def salvar_mensagens(
 
 def carregar_estado(connection: sqlite3.Connection, phone: str | None) -> Estado:
     chave = normalize_phone(phone or "")
-    linha = connection.execute(
+    row = connection.execute(
         "SELECT pedido_em_analise, produto_em_foco FROM conversation_state WHERE phone = ?",
         (chave,),
     ).fetchone()
-    return Estado(linha["pedido_em_analise"], linha["produto_em_foco"]) if linha else Estado()
+    return Estado(row["pedido_em_analise"], row["produto_em_foco"]) if row else Estado()
 
 
 def salvar_estado(connection: sqlite3.Connection, phone: str | None, estado: Estado) -> None:

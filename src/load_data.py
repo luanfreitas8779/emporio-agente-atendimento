@@ -80,12 +80,12 @@ class ErroDeCarga(Exception):
     pass
 
 
-def para_centavos(valor: str) -> int:
+def para_centavos(amount: str) -> int:
     """Converts reais to cents, rejecting negative values and fractions of a cent."""
-    centavos = Decimal(valor) * 100
-    if centavos < 0 or centavos != centavos.to_integral_value():
-        raise ValueError(valor)
-    return int(centavos)
+    cents = Decimal(amount) * 100
+    if cents < 0 or cents != cents.to_integral_value():
+        raise ValueError(amount)
+    return int(cents)
 
 
 def rejeitar_duplicado(rotulo: str, identificador: str, vistos: set[str]) -> None:
@@ -95,8 +95,8 @@ def rejeitar_duplicado(rotulo: str, identificador: str, vistos: set[str]) -> Non
 
 
 def ler_csv(path: Path) -> list[dict[str, str]]:
-    with path.open(encoding="utf-8-sig", newline="") as arquivo:
-        return list(csv.DictReader(arquivo))
+    with path.open(encoding="utf-8-sig", newline="") as file:
+        return list(csv.DictReader(file))
 
 
 def preparar_produto(
@@ -257,8 +257,8 @@ def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -
 
 
 def carregar_pedidos(connection: sqlite3.Connection, pasta_dados: Path) -> None:
-    clientes = {linha[0] for linha in connection.execute("SELECT customer_id FROM customers")}
-    produtos = {linha[0] for linha in connection.execute("SELECT product_id FROM products")}
+    clientes = {row[0] for row in connection.execute("SELECT customer_id FROM customers")}
+    produtos = {row[0] for row in connection.execute("SELECT product_id FROM products")}
     # Validation comes before the schema so that a failure does not erase the current database.
     vistos: set[str] = set()
     pedidos = [
@@ -299,12 +299,12 @@ TABELAS_DA_CARGA = ("categories", "products", "promotions", "customers", "orders
 def banco_carregado(connection: sqlite3.Connection) -> bool:
     """Says whether the data load has already created the catalog, customer, and order tables."""
     existentes = {
-        linha[0] for linha in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
     }
     if not set(TABELAS_DA_CARGA) <= existentes:
         return False
     # A load from before the specifications lacks the column and requires a new load.
-    colunas = {linha[1] for linha in connection.execute("PRAGMA table_info(products)")}
+    colunas = {row[1] for row in connection.execute("PRAGMA table_info(products)")}
     return "specs" in colunas
 
 

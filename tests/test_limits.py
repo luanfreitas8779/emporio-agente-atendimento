@@ -35,7 +35,7 @@ def erro_429(corpo, retry_after=None):
     )
 
 
-def linhas(path):
+def rows(path):
     return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines()]
 
 
@@ -44,7 +44,7 @@ def test_registra_o_limite_efetivo_informado_pelo_provedor(tmp_path):
 
     registrar_limite(erro_429(CORPO_DO_GEMINI, retry_after=27), path)
 
-    (evento,) = linhas(path)
+    (evento,) = rows(path)
     assert evento["modelo"] == "gemini-3.5-flash-lite"
     assert evento["status"] == 429
     assert evento["limite"] == "20"
@@ -60,7 +60,7 @@ def test_sem_detalhes_do_provedor_os_campos_ficam_nulos_e_cada_evento_ganha_uma_
     registrar_limite(erro_429(None), path)
     registrar_limite(erro_429("texto solto"), path)
 
-    eventos = linhas(path)
+    eventos = rows(path)
     assert len(eventos) == 2
     for evento in eventos:
         assert evento["status"] == 429

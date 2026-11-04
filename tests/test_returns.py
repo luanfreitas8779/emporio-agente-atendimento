@@ -14,7 +14,7 @@ def test_compra_online_tres_dias_apos_a_entrega_esta_dentro_do_prazo_de_arrepend
     )
 
     assert veredito.resultado == "dentro_do_prazo"
-    assert [(r.nome, r.resultado, r.prazo_ate) for r in veredito.regras] == [
+    assert [(r.name, r.resultado, r.prazo_ate) for r in veredito.regras] == [
         ("arrependimento", "dentro_do_prazo", "24/02/2026")
     ]
 
@@ -62,7 +62,7 @@ def test_pedido_7_com_defeito_esta_fora_dos_30_dias_e_dentro_da_garantia_legal(c
     )
 
     assert veredito.resultado == "dentro_do_prazo"
-    assert [(r.nome, r.resultado, r.prazo_ate) for r in veredito.regras] == [
+    assert [(r.name, r.resultado, r.prazo_ate) for r in veredito.regras] == [
         ("troca_por_defeito", "fora_do_prazo", "05/03/2026"),
         ("garantia_legal", "dentro_do_prazo", "18/05/2026"),
     ]
@@ -105,7 +105,7 @@ def test_troca_por_preferencia_vale_7_dias_a_partir_do_recebimento(connection):
         connection, cliente_id=14, numero=7, motivo="preferencia", canal=None, hoje=date(2026, 2, 25),
     )
 
-    assert [(r.nome, r.prazo_ate) for r in dentro.regras] == [("troca_por_preferencia", "24/02/2026")]
+    assert [(r.name, r.prazo_ate) for r in dentro.regras] == [("troca_por_preferencia", "24/02/2026")]
     assert (dentro.resultado, fora.resultado) == ("dentro_do_prazo", "fora_do_prazo")
 
 
@@ -123,7 +123,7 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
 
 
 @pytest.mark.parametrize("canal", [None, "presencial", "online"])
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_pedido_de_outro_cliente_volta_como_nao_encontrado_em_arrependimento_com_qualquer_canal(
     connection, canal
 ):

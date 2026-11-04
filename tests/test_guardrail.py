@@ -129,14 +129,14 @@ def test_resposta_sem_valores_passa_sem_ferramenta(connection):
     assert resposta == "Oi! Como posso ajudar?"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
     # "18.5%" became 185 when the period was removed as if it were a thousands separator.
     assert valores_nao_confirmados("São 185% de desconto.", ["Desconto de 18.5%."]) == ["185"]
     assert valores_nao_confirmados("São 18.5% de desconto.", ["Desconto de 18,5%."]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     ("resposta", "fonte", "expected"),
     [
@@ -151,7 +151,7 @@ def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, e
     assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     ("resposta", "fonte", "expected"),
     [
@@ -165,7 +165,7 @@ def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(resposta, fonte
     assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     ("resposta", "fonte", "expected"),
     [
@@ -178,7 +178,7 @@ def test_mil_reais_por_extenso_tambem_e_conferido(resposta, fonte, expected):
     assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     ("resposta", "fonte", "expected"),
     [
@@ -193,18 +193,18 @@ def test_data_por_extenso_com_ano_e_conferida_com_o_ano(resposta, fonte, expecte
 POLITICA_DE_HORARIOS = "Segunda a sexta-feira: 09:00 às 18:00. Sábado: 09:00 às 13:00."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_horario_inventado_e_barrado():
     assert valores_nao_confirmados("Abrimos às 10h.", [POLITICA_DE_HORARIOS]) == ["10:00"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("resposta", ["Abrimos das 9h às 18h.", "Das 09:00 às 18:00.", "Sábado fechamos às 13h."])
 def test_horario_da_politica_passa_em_qualquer_formato(resposta):
     assert valores_nao_confirmados(resposta, [POLITICA_DE_HORARIOS]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_cliente_nao_confirma_horario_da_loja():
     assert valores_nao_confirmados("Abrimos às 22h.", [POLITICA_DE_HORARIOS], ["Vocês abrem às 22h?"]) == ["22:00"]
 
@@ -212,32 +212,32 @@ def test_cliente_nao_confirma_horario_da_loja():
 CONTATOS_DA_LOJA = "Telefone: (67) 3341-4444. WhatsApp: (67) 3321-4500."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_telefone_inventado_e_barrado():
     assert valores_nao_confirmados("Ligue para (67) 3999-0000.", [CONTATOS_DA_LOJA]) == ["39990000"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("resposta", ["WhatsApp (67) 3321-4500.", "Fale no 3321-4500.", "Ligue 67 3341-4444"])
 def test_telefone_da_loja_passa_com_ou_sem_ddd(resposta):
     assert valores_nao_confirmados(resposta, [CONTATOS_DA_LOJA]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_cliente_nao_confirma_telefone_da_loja():
     assert valores_nao_confirmados(
         "Ligue para (67) 3999-0000.", [CONTATOS_DA_LOJA], ["Liga pro (67) 3999-0000?"]
     ) == ["39990000"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_resposta_pode_citar_o_telefone_da_propria_sessao(connection):
     resposta = perguntar(connection, "Qual número vocês têm de mim?", None, None, ["Tenho o (67) 99654-7821."])
 
     assert resposta == "Tenho o (67) 99654-7821."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(connection):
     modelo = modelo_com_respostas(None, None, ["Tenho o (67) 99654-7821."])
     with agente.override(model=FunctionModel(modelo)):
@@ -246,17 +246,17 @@ def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(connection):
     assert resposta == "Tenho o (67) 99654-7821."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_quantidade_de_unidades_inventada_e_barrada():
     assert valores_nao_confirmados("Temos 3 unidades.", ["Takamine GD20 disponível"]) == ["3"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_quantidade_da_conta_e_aceita_como_fonte():
     assert valores_nao_confirmados("São 2 unidades.", ['{"quantidade":2,"subtotal":"R$ 4.398,00"}']) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_parcelas_da_ferramenta_passam_e_outras_sao_barradas():
     fonte = "O parcelamento sem juros tem máximo de 4x de R$ 87,48."
 
@@ -264,12 +264,12 @@ def test_parcelas_da_ferramenta_passam_e_outras_sao_barradas():
     assert valores_nao_confirmados("Em até 6 parcelas de R$ 87,48.", [fonte]) == ["6"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_cliente_confirma_a_quantidade_que_ele_mesmo_pediu():
     assert valores_nao_confirmados("Anotei 10 unidades.", [], ["Preciso de 10 unidades"]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     "resposta",
     ["Seu pedido chega semana que vem.", "Passe na próxima semana.", "Volta ao normal no mês que vem.", "No próximo mês."],
@@ -278,26 +278,26 @@ def test_data_relativa_inventada_e_barrada(resposta):
     assert len(valores_nao_confirmados(resposta, ["Prazo de 1 a 3 dias úteis."])) == 1
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_data_relativa_dita_pela_ferramenta_ou_pelo_cliente_passa():
     assert valores_nao_confirmados("Na próxima semana.", ["Chega na próxima semana."]) == []
     assert valores_nao_confirmados("Semana que vem, então.", [], ["Passo aí semana que vem"]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(connection):
     resposta = perguntar(
         connection,
         "A que horas vocês abrem na segunda?",
-        "consultar_politicas",
-        {"secao": "horarios"},
+        "get_policies",
+        {"section": "horarios"},
         ["Abrimos às 10h.", "De segunda a sexta, das 9h às 18h."],
     )
 
     assert resposta == "De segunda a sexta, das 9h às 18h."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     "resposta",
     [
@@ -314,13 +314,13 @@ def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta
     assert valores_nao_confirmados(resposta, [politica]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_percentual_por_extenso_e_conferido():
     assert valores_nao_confirmados("São 50 por cento de desconto.", ["O PIX tem 5% de desconto."]) != []
     assert valores_nao_confirmados("São 5 por cento de desconto.", ["O PIX tem 5% de desconto."]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     "resposta",
     ["Dá para parcelar em 6 vezes.", "Fica em 6 x de R$ 87,48.", "Restam 3 no estoque.", "Temos apenas 3 em estoque."],
@@ -329,12 +329,12 @@ def test_quantidade_em_outros_formatos_e_barrada(resposta):
     assert valores_nao_confirmados(resposta, ["O máximo é de 4x de R$ 87,48."]) == ["3" if "3" in resposta else "6"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_quantidade_em_outros_formatos_passa_quando_vem_da_fonte():
     assert valores_nao_confirmados("Em 4 vezes.", ["O máximo é de 4x de R$ 87,48."]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_data_curta_sem_ano_e_conferida_contra_as_datas_das_fontes():
     fonte = "Previsão de entrega: 2026-12-15."
 
@@ -344,13 +344,13 @@ def test_data_curta_sem_ano_e_conferida_contra_as_datas_das_fontes():
     assert valores_nao_confirmados("Chega em 15/12/2026.", [fonte]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_horas_escritas_por_extenso_sao_conferidas_como_horario():
     assert valores_nao_confirmados("Abrimos às 7 horas.", [POLITICA_DE_HORARIOS]) == ["07:00"]
     assert valores_nao_confirmados("Abrimos às 9 horas.", [POLITICA_DE_HORARIOS]) == []
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     "resposta",
     [
@@ -366,7 +366,7 @@ def test_outras_formas_de_prometer_aviso_sao_barradas(resposta):
     assert promete_aviso(resposta)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     "resposta",
     [
@@ -379,7 +379,7 @@ def test_interesse_para_avisar_e_promessa_de_aviso(resposta):
     assert promete_aviso(resposta)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize(
     "resposta",
     [
@@ -393,7 +393,7 @@ def test_negar_a_promessa_de_aviso_continua_passando(resposta):
     assert not promete_aviso(resposta)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(connection):
     chamadas = []
     resposta = perguntar(
@@ -409,7 +409,7 @@ def test_limite_de_preco_da_busca_sustenta_o_valor_citado_na_resposta(connection
     assert len(chamadas) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(connection):
     resposta = perguntar(
         connection,
@@ -422,7 +422,7 @@ def test_limite_de_preco_ditado_sem_busca_continua_nao_confirmado(connection):
     assert resposta == "Posso buscar violões para você."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(connection):
     chamadas = []
     resposta = perguntar(
@@ -438,14 +438,14 @@ def test_quantidade_pedida_na_busca_sustenta_a_quantidade_citada_na_resposta(con
     assert len(chamadas) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_numero_dito_pelo_cliente_confirma_quantidade_mas_nao_dinheiro():
     assert valores_nao_confirmados("Consigo atender 13 unidades.", [], ["Tem 13 Yamaha C40? E 12?"]) == []
     assert valores_nao_confirmados("Consigo atender 12 unidades.", [], ["Tem 13 Yamaha C40? E 12?"]) == []
     assert valores_nao_confirmados("Custa R$ 13,00.", [], ["Tem 13 Yamaha C40?"]) == ["13.00"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(connection):
     chamadas = []
     resposta = perguntar(
@@ -460,7 +460,7 @@ def test_percentual_do_pix_devolvido_pela_busca_pode_ser_citado(connection):
     assert len(chamadas) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(connection):
     chamadas = []
     resposta = perguntar(
@@ -476,7 +476,7 @@ def test_resposta_que_anuncia_uma_lista_sem_entregar_pede_nova_resposta(connecti
     assert len(chamadas) == 2
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_limite_da_busca_nao_confirma_o_valor_como_preco(connection):
     resposta = perguntar(
         connection,
@@ -489,7 +489,7 @@ def test_limite_da_busca_nao_confirma_o_valor_como_preco(connection):
     assert resposta == "Não encontrei esse produto por esse valor."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_limite_da_busca_so_confirma_o_valor_dito_como_limite():
     limites = [Decimal("1000")]
 
@@ -498,7 +498,7 @@ def test_limite_da_busca_so_confirma_o_valor_dito_como_limite():
     assert valores_nao_confirmados("Esse custa R$ 1.000,00.", [], limites_da_busca=limites) == ["1000.00"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_numero_do_cliente_e_quantidade_da_busca_nao_confirmam_estoque():
     assert valores_nao_confirmados("Restam 3 no estoque.", [], ["Tem 3?"]) == ["3"]
     assert valores_nao_confirmados("Temos 3 em estoque.", ['{"quantidade": 3}'], ["Preciso de 3 unidades"]) == ["3"]

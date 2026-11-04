@@ -72,7 +72,7 @@ def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypa
     assert all(m["text"] != "Resposta da Ana" for m in tela.session_state["mensagens"])
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceback(tela, monkeypatch):
     def responder_com_falha(mensagem, sessao):
         raise RuntimeError("falha em /caminho/interno")
@@ -87,7 +87,7 @@ def test_falha_inesperada_libera_o_campo_e_mostra_a_mensagem_tecnica_sem_traceba
     assert not tela.chat_input[0].disabled
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkeypatch):
     # Opening the database for the session is the part that fails; the screen's initial check already passed.
     def sessao_com_falha(*argumentos, **nomeados):
@@ -103,7 +103,7 @@ def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkey
     assert not tela.chat_input[0].disabled
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_traceback(tmp_path, monkeypatch):
     monkeypatch.setattr("src.config.DATABASE_PATH", tmp_path / "vazio.db")
 
@@ -114,7 +114,7 @@ def test_banco_sem_a_carga_de_dados_orienta_o_comando_em_vez_de_mostrar_tracebac
     assert len(tela.chat_input) == 0
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_falha_ao_abrir_o_banco_na_abertura_da_tela_orienta_sem_traceback(tmp_path, monkeypatch):
     def conectar_com_falha(path):
         raise OSError("sem permissão em /caminho/interno")
@@ -133,7 +133,7 @@ def test_falha_ao_abrir_o_banco_na_abertura_da_tela_orienta_sem_traceback(tmp_pa
 ANA = "(67) 99654-7821"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_informar_o_telefone_depois_da_primeira_pergunta_preserva_a_conversa(tela):
     tela.chat_input[0].set_value("Cadê meu pedido?").run()
 
@@ -142,7 +142,7 @@ def test_informar_o_telefone_depois_da_primeira_pergunta_preserva_a_conversa(tel
     assert [m["text"] for m in tela.session_state["mensagens"]][:2] == ["Cadê meu pedido?", "Olá!"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone_novo(tela, monkeypatch):
     chamadas: list = []
 
@@ -160,7 +160,7 @@ def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone
     assert tela.session_state["pendente"] is None
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_tom_abre_a_conversa_com_uma_saudacao(tela):
     assert tela.chat_message[0].markdown[0].value.startswith("Olá! Sou o Tom")
 
@@ -173,7 +173,7 @@ def test_saudacao_some_quando_a_conversa_ja_tem_mensagens(tela):
     assert not any(t.startswith("Olá! Sou o Tom") for t in textos)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("phone", ["123", "(67) 9965", "abc"])
 def test_telefone_invalido_gera_aviso_na_barra_lateral(tela, phone):
     tela.sidebar.text_input[0].set_value(phone).run()
@@ -188,7 +188,7 @@ def test_telefone_vazio_ou_valido_nao_gera_aviso(tela, phone):
     assert len(tela.sidebar.warning) == 0
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_sem_telefone_a_tela_indica_onde_informar_no_menu_lateral(tela):
     legendas = [c.value for c in tela.caption]
 
@@ -201,7 +201,7 @@ def test_com_telefone_valido_a_indicacao_do_menu_lateral_some(tela):
     assert not any("menu lateral" in c.value for c in tela.caption)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_texto_do_cliente_e_exibido_literal_sem_interpretar_markdown(tela):
     pergunta = "# TITULO ![x](http://exemplo.com/a.png) :red[colorido] $10"
 
@@ -212,7 +212,7 @@ def test_texto_do_cliente_e_exibido_literal_sem_interpretar_markdown(tela):
     assert len(do_cliente.markdown) == 0
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(tela, monkeypatch):
     def responder_com_ferramentas(mensagem, sessao):
         sessao.ferramentas = [
@@ -231,7 +231,7 @@ def test_painel_de_ferramentas_mostra_rotulos_sem_nomes_internos_nem_argumentos(
     assert len(painel.code) == 0
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_configuracao_do_streamlit_esconde_as_opcoes_de_desenvolvedor_do_cliente():
     # AppTest does not render the browser bar: what is checked is the configuration (docs/05, section 8).
     configuracao = tomllib.loads((Path(APP).parent / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
@@ -239,14 +239,14 @@ def test_configuracao_do_streamlit_esconde_as_opcoes_de_desenvolvedor_do_cliente
     assert configuracao["client"]["toolbarMode"] == "viewer"
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_com_telefone_invalido_so_o_aviso_aparece_sem_a_dica_do_menu_lateral(tela):
     tela.sidebar.text_input[0].set_value("123").run()
 
     assert not any("menu lateral" in c.value for c in tela.caption)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, monkeypatch):
     chamadas: list = []
 
@@ -264,7 +264,7 @@ def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, mon
     assert [m["papel"] for m in tela.session_state["mensagens"]] == ["user", "assistant"]
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_pergunta_que_dependia_do_cadastro_e_refeita_com_o_telefone(tela, monkeypatch):
     chamadas: list = []
 

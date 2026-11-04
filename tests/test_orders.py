@@ -10,7 +10,7 @@ def test_identifica_o_cliente_pelo_telefone_com_mascara(connection):
 
     assert cliente is not None
     assert cliente.id == 2
-    assert cliente.nome == "Ana Carolina Ferreira"
+    assert cliente.name == "Ana Carolina Ferreira"
 
 
 def test_telefone_sem_cadastro_nao_identifica_ninguem(connection):
@@ -49,7 +49,7 @@ def test_pedido_mostra_itens_data_e_pagamento(connection):
 
     assert pedido.order_date == "15/02/2026"
     assert pedido.pagamento == "débito"
-    assert [(i.nome, i.quantidade) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
+    assert [(i.name, i.quantidade) for i in pedido.itens] == [("Kala KA-C Concert Mogno", 1)]
 
 
 def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(connection):
@@ -58,7 +58,7 @@ def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(connecti
 
     assert pedido.total == "R$ 3.450,00"
     assert pedido.pagamento == "cartão de crédito em 12x"
-    assert [(i.nome, i.quantidade) for i in pedido.itens] == [
+    assert [(i.name, i.quantidade) for i in pedido.itens] == [
         ("Kala KA-ABP-CTG Barítono Cedar", 2)
     ]
 
@@ -98,7 +98,7 @@ def test_pedido_traz_a_situacao_traduzida_em_codigo(connection, cliente, numero,
     assert pedido.situacao == situacao
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_pedido_enviado_depois_da_entrega_estimada_informa_os_dias_de_atraso(connection):
     # Order 8: shipped, estimated delivery on 28/02/2026 (DQ-16).
     (pedido,) = consultar_pedidos(connection, cliente_id=2, numero=8, hoje=date(2026, 3, 25))

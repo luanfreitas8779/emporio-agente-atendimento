@@ -148,7 +148,7 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, e
     assert exibir_conversa(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("error", [
         ModelUnavailableError("modelo", "indisponível"),
         ModelOverloadedError("modelo", "sobrecarga"),
@@ -255,7 +255,7 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, e
     assert carregar_estado(connection, ANA).produto_em_foco is None
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("error", [ValueError("data inválida"), decimal.InvalidOperation(), OverflowError("grande")])
 def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(connection, esperas, error):
     modelo = modelo_que_falha_antes_de_responder([error], [])
@@ -267,7 +267,7 @@ def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(connectio
     assert exibir_conversa(connection, ANA)[-1] == ("assistant", MENSAGEM_DE_ERRO_TECNICO)
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_erro_de_servidor_persistente_gera_mensagem_tecnica_e_nao_a_de_limite(connection, esperas):
     tentativas: list[int] = []
     erros = [ModelServerError("modelo", "erro 504")] * 3
@@ -293,7 +293,7 @@ def limite_do_provedor(cota: str, retry_delay: str | None = None) -> ModelRateLi
     )
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(connection, esperas):
     tentativas: list[int] = []
     error = limite_do_provedor("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
@@ -307,7 +307,7 @@ def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(connectio
     assert resposta == MENSAGEM_DE_LIMITE_DIARIO
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("retry_delay, expected", [("27s", [15]), ("7.5s", [7.5]), ("lixo", [2])])
 def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
     connection, esperas, retry_delay, expected
@@ -321,7 +321,7 @@ def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
     assert esperas == expected
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(connection, esperas):
     error = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "20s")
     modelo = modelo_que_falha_antes_de_responder([error, error, error], [])
@@ -332,7 +332,7 @@ def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(connection
     assert resposta == "Estamos com muitos atendimentos ao mesmo tempo. Tente novamente em alguns minutos."
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_minuto(connection, esperas):
     violacoes = [
         {"quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"},
@@ -354,7 +354,7 @@ def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_min
     assert resposta == MENSAGEM_DE_LIMITE_DIARIO
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(connection, esperas):
     modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])
 
@@ -364,7 +364,7 @@ def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(connection, espera
     assert resposta == MENSAGEM_DE_LIMITE_DIARIO
 
 
-@pytest.mark.regressao
+@pytest.mark.regression
 @pytest.mark.parametrize("error", [ValueError("dado inválido"), OSError("disco cheio")])
 def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(connection, esperas, monkeypatch, error):
     def gravar_com_falha(*argumentos, **nomeados):
