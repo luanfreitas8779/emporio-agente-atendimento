@@ -5,7 +5,7 @@ from pydantic_ai import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from src.agent import RESPOSTA_SEGURA, Sessao, agente, responder
-from src.config import PASTA_DADOS
+from src.config import DATA_DIR
 from src.guardrail import promete_aviso, valores_nao_confirmados
 
 ANA = "(67) 99654-7821"
@@ -309,7 +309,7 @@ def test_horario_errado_e_corrigido_com_o_que_a_politica_diz(connection):
 )
 def test_frases_naturais_sobre_a_politica_real_nao_geram_falso_positivo(resposta):
     # Formats different from the file's (9h x 09:00, phone without area code) against data/politicas.md.
-    politica = (PASTA_DADOS / "politicas.md").read_text(encoding="utf-8")
+    politica = (DATA_DIR / "politicas.md").read_text(encoding="utf-8")
 
     assert valores_nao_confirmados(resposta, [politica]) == []
 

@@ -20,10 +20,10 @@ def test_informa_o_endereco_da_loja():
 
 
 def test_telefone_geral_e_whatsapp_sao_numeros_distintos():
-    texto = consultar_politicas("sobre_a_loja")
+    text = consultar_politicas("sobre_a_loja")
 
-    assert "Telefone: (67) 3341-4444" in texto
-    assert "WhatsApp: (67) 3321-4500" in texto
+    assert "Telefone: (67) 3341-4444" in text
+    assert "WhatsApp: (67) 3321-4500" in text
 
 
 def test_email_de_contato_e_escrito_sem_acento():
@@ -31,10 +31,10 @@ def test_email_de_contato_e_escrito_sem_acento():
 
 
 def test_loja_nao_vende_acessorios():
-    texto = consultar_politicas("sobre_a_loja")
+    text = consultar_politicas("sobre_a_loja")
 
-    assert "exclusivamente com instrumentos musicais" in texto
-    assert "cordas, palhetas, cabos, cases, pedais ou amplificadores" in texto
+    assert "exclusivamente com instrumentos musicais" in text
+    assert "cordas, palhetas, cabos, cases, pedais ou amplificadores" in text
 
 
 def test_frete_em_campo_grande_abaixo_de_500_reais_tem_taxa_fixa_de_35():
@@ -54,10 +54,10 @@ def test_boquilha_de_instrumento_de_sopro_nao_e_elegivel_para_troca():
 
 
 def test_arrependimento_vale_7_dias_apos_o_recebimento_somente_em_compra_online():
-    texto = consultar_politicas("trocas_e_devolucoes")
+    text = consultar_politicas("trocas_e_devolucoes")
 
-    assert "7 dias corridos após o recebimento" in texto
-    assert "compras online" in texto
+    assert "7 dias corridos após o recebimento" in text
+    assert "compras online" in text
 
 
 def test_troca_por_defeito_vale_30_dias_apos_a_compra():
@@ -94,17 +94,17 @@ def test_parcela_minima_de_ate_3x_e_50_reais():
 
 
 def test_349_90_em_6x_nao_atende_a_parcela_minima_e_o_maximo_e_4x():
-    texto = consultar_politicas("pagamentos", valor=349.90, parcelas=6)
+    text = consultar_politicas("pagamentos", valor=349.90, parcelas=6)
 
-    assert "6x não atende" in texto
-    assert "máximo de 4x" in texto
+    assert "6x não atende" in text
+    assert "máximo de 4x" in text
 
 
 def test_700_reais_em_7x_atende_a_parcela_minima_de_100_reais():
-    texto = consultar_politicas("pagamentos", valor=700, parcelas=7)
+    text = consultar_politicas("pagamentos", valor=700, parcelas=7)
 
-    assert "7x atende" in texto
-    assert "máximo de 7x de R$ 100,00" in texto
+    assert "7x atende" in text
+    assert "máximo de 7x de R$ 100,00" in text
 
 
 def test_reclamacao_tem_retorno_em_ate_24_horas_uteis():
@@ -125,10 +125,10 @@ def test_troca_por_defeito_e_garantia_legal_sao_regras_distintas():
 
 
 def test_cliente_pode_pedir_a_exclusao_dos_dados():
-    texto = consultar_politicas("privacidade")
+    text = consultar_politicas("privacidade")
 
-    assert "LGPD" in texto
-    assert "exclusão dos dados" in texto
+    assert "LGPD" in text
+    assert "exclusão dos dados" in text
 
 
 def test_toda_secao_da_especificacao_tem_conteudo():
@@ -138,11 +138,11 @@ def test_toda_secao_da_especificacao_tem_conteudo():
 
 @pytest.mark.regressao
 def test_mais_de_12_parcelas_nao_sao_oferecidas():
-    texto = consultar_politicas("pagamentos", valor=5000, parcelas=13)
+    text = consultar_politicas("pagamentos", valor=5000, parcelas=13)
 
-    assert "até 12x" in texto
-    assert "13x" in texto
-    assert "atende à parcela mínima" not in texto
+    assert "até 12x" in text
+    assert "13x" in text
+    assert "atende à parcela mínima" not in text
 
 
 @pytest.mark.parametrize("valor, parcelas", [(0, 3), (-10, 3), (100, 0), (100, -2)])

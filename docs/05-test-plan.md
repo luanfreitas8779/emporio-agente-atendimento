@@ -111,7 +111,7 @@ The inputs and expected answers are in Portuguese, the language the agent speaks
 | TC-423 | The limit persists or the quota is exhausted | Clear message, without a traceback, and the customer's message enters the history | RNF-07 |
 | TC-424 | The provider does not answer within the timeout | Clear message, without a retry | RNF-07 |
 | TC-425 | Network, key, or database failure | Friendly technical message, without details | RNF-07 |
-| TC-426 | Persistent limit with quota data in the error | One JSON line in `data/limites_provedor.log` with status, metric, quota, and limit | RNF-07 |
+| TC-426 | Persistent limit with quota data in the error | One JSON line in `data/provider_limits.log` with status, metric, quota, and limit | RNF-07 |
 | TC-427 | Answer with a tool | The session records the name and arguments of the turn's tools, and the next turn restarts the list | RF-11 |
 | TC-428 | Question sent in the interface | The question stays pending during the answer, the screen keeps one answer per question, and the field is enabled again | ADR-020 |
 | TC-429 | The model returns `<system>…</system>`, `<thinking>`, and other reasoning tags, in any case, in the text | The customer and the history receive only the message; an open block or an empty answer ask for a new answer | ADR-013 |
@@ -284,7 +284,7 @@ Status after issues #3 to #16 and the QA retests. The items below remain open or
 | Approximate receipt | Receipt uses the estimated delivery, including for `delivered` orders (DQ-17). The deadline may be off by a few days; the verdict warns and points to the team | Replace with the actual date when the source provides it |
 | Exchange by preference (DQ-26) | The handbook does not say from when the 7 days count; the code counts from receipt | Validate with store management |
 | Items not eligible for exchange | Mouthpiece, customization, and final sale are not assessed in code, because the order does not include this data. The prompt tells the agent to look up the policy | Consider a catalog field if the case appears |
-| Provider failures without real validation | Rate-limit, timeout, and network errors were only tested with simulated exceptions; it was not possible to force a real 429. The format of Gemini's error body that `src/limits.py` expects (quota details) has not been seen in a real response | When a real 429 occurs, check `data/limites_provedor.log` and adjust the extraction (issue #11) |
+| Provider failures without real validation | Rate-limit, timeout, and network errors were only tested with simulated exceptions; it was not possible to force a real 429. The format of Gemini's error body that `src/limits.py` expects (quota details) has not been seen in a real response | When a real 429 occurs, check `data/provider_limits.log` and adjust the extraction (issue #11) |
 | Recording the effective limit | The release checklist still asks for the model's effective limit, which only appears when the provider reports it | Fill in after a real 429 |
 | Retry repeats the tools | After a rate limit, the run starts again from the history and the turn's tools run again; the write tools are idempotent, but each repetition spends quota | Accepted in the MVP |
 | Panel only on new answers | Answers reloaded by phone number do not show the tools used | Accepted; extract from the history if needed |

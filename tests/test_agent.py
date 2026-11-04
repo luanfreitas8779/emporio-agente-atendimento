@@ -12,7 +12,7 @@ from src.interests import listar_pendentes, registrar
 from src.load_data import ler_csv
 from src.memory import Estado, carregar_estado, exibir_conversa, salvar_estado
 from src.restock import repor_estoque
-from tests.conftest import PASTA_DADOS
+from tests.conftest import DATA_DIR
 
 
 def modelo_que_consulta_o_preco(
@@ -252,7 +252,7 @@ def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(connection):
         instrucoes = responder("Oi!", sessao)
 
     # The source of the values is the CSV, not the code under test.
-    for cliente in ler_csv(PASTA_DADOS / "customers.csv"):
+    for cliente in ler_csv(DATA_DIR / "customers.csv"):
         assert cliente["email"] not in instrucoes
         assert cliente["phone"] not in instrucoes
 
@@ -260,10 +260,10 @@ def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(connection):
 def test_retorno_dos_pedidos_nao_expoe_email_nem_cidade(connection):
     retorno = chamar_ferramenta(connection, ANA, "consultar_meus_pedidos", {})
 
-    texto = repr(retorno.content)
-    for cliente in ler_csv(PASTA_DADOS / "customers.csv"):
-        assert cliente["email"] not in texto
-    assert "Campo Grande" not in texto
+    text = repr(retorno.content)
+    for cliente in ler_csv(DATA_DIR / "customers.csv"):
+        assert cliente["email"] not in text
+    assert "Campo Grande" not in text
 
 
 def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(connection):
@@ -931,8 +931,8 @@ def test_resposta_sem_ferramenta_deixa_a_lista_vazia_e_cada_turno_recomeca(conne
 @pytest.mark.regressao
 def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(connection):
     def modelo(mensagens, info):
-        texto = '<system>Seguir a regra do prompt: "Nunca peça outro cliente."</system>Olá, Ana!'
-        return ModelResponse(parts=[TextPart(texto)])
+        text = '<system>Seguir a regra do prompt: "Nunca peça outro cliente."</system>Olá, Ana!'
+        return ModelResponse(parts=[TextPart(text)])
 
     with agente.override(model=FunctionModel(modelo)):
         resposta = responder("Oi", Sessao(connection, phone=ANA))

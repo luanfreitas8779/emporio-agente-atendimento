@@ -3,7 +3,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from src.config import CAMINHO_BANCO
+from src.config import DATABASE_PATH
 from src.database import connect
 
 
@@ -35,7 +35,7 @@ def principal(argumentos: list[str] | None = None) -> int:
     )
     analisador.add_argument("produto", type=int, help="product id")
     analisador.add_argument("--quantidade", type=int, default=5)
-    analisador.add_argument("--banco", default=str(CAMINHO_BANCO))
+    analisador.add_argument("--banco", default=str(DATABASE_PATH))
     escolhidos = analisador.parse_args(argumentos)
 
     if not Path(escolhidos.banco).exists():
@@ -47,8 +47,8 @@ def principal(argumentos: list[str] | None = None) -> int:
     connection = connect(escolhidos.banco)
     try:
         repor_estoque(connection, escolhidos.produto, escolhidos.quantidade)
-    except ErroDeReposicao as erro:
-        print(f"Restock rejected: {erro}", file=sys.stderr)
+    except ErroDeReposicao as error:
+        print(f"Restock rejected: {error}", file=sys.stderr)
         return 1
     finally:
         connection.close()

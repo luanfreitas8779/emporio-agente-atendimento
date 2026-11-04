@@ -8,8 +8,8 @@ from src import config
 
 
 def _detalhes(corpo: object) -> list[dict]:
-    erro = corpo.get("error", {}) if isinstance(corpo, dict) else {}
-    return [d for d in erro.get("details", []) if isinstance(d, dict)]
+    error = corpo.get("error", {}) if isinstance(corpo, dict) else {}
+    return [d for d in error.get("details", []) if isinstance(d, dict)]
 
 
 def _violacoes(corpo: object) -> list[dict]:
@@ -21,15 +21,15 @@ def _violacao(corpo: object) -> dict:
     return next(iter(_violacoes(corpo)), {})
 
 
-def registrar_limite(erro: ModelAPIError, path: Path | None = None) -> None:
+def registrar_limite(error: ModelAPIError, path: Path | None = None) -> None:
     """Appends a JSON line with the limit the provider reported; missing fields are null."""
-    path = path or config.CAMINHO_LOG_DE_LIMITES
-    violacao = _violacao(erro.body)
+    path = path or config.LIMITS_LOG_PATH
+    violacao = _violacao(error.body)
     evento = {
         "data": datetime.now(timezone.utc).isoformat(),
-        "modelo": erro.model_name,
-        "status": getattr(erro, "status_code", None),
-        "retry_after": erro.retry_after,
+        "modelo": error.model_name,
+        "status": getattr(error, "status_code", None),
+        "retry_after": error.retry_after,
         "metrica": violacao.get("quotaMetric"),
         "cota": violacao.get("quotaId"),
         "limite": violacao.get("quotaValue"),
@@ -38,14 +38,14 @@ def registrar_limite(erro: ModelAPIError, path: Path | None = None) -> None:
         arquivo.write(json.dumps(evento, ensure_ascii=False) + "\n")
 
 
-def e_limite_diario(erro: ModelAPIError) -> bool:
+def e_limite_diario(error: ModelAPIError) -> bool:
     """The daily quota only comes back the next day, so waiting a few seconds does not help."""
-    return any("PerDay" in (v.get("quotaId") or "") for v in _violacoes(erro.body))
+    return any("PerDay" in (v.get("quotaId") or "") for v in _violacoes(error.body))
 
 
-def espera_indicada(erro: ModelAPIError) -> float | None:
+def espera_indicada(error: ModelAPIError) -> float | None:
     """Seconds of the `retryDelay` ("27s") in the error body, or None if missing or unreadable."""
-    for detalhe in _detalhes(erro.body):
+    for detalhe in _detalhes(error.body):
         atraso = detalhe.get("retryDelay")
         if isinstance(atraso, str) and atraso.endswith("s"):
             try:

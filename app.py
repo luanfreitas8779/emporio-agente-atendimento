@@ -4,7 +4,7 @@ import sqlite3
 import streamlit as st
 
 from src.agent import MENSAGEM_DE_ERRO_TECNICO, Sessao, responder
-from src.config import CAMINHO_BANCO
+from src.config import DATABASE_PATH
 from src.database import connect
 from src.load_data import banco_carregado
 from src.memory import exibir_conversa
@@ -30,14 +30,14 @@ ROTULOS_DAS_FERRAMENTAS = {
 FERRAMENTAS_SEM_CADASTRO = frozenset({"buscar_produtos", "consultar_politicas", "calcular_compra"})
 
 
-def exibir(papel: str, texto: str, ferramentas: list[dict] | None = None) -> None:
+def exibir(papel: str, text: str, ferramentas: list[dict] | None = None) -> None:
     with st.chat_message(papel):
         if papel == "user":
             # What the customer types is not interpreted: headings, external images, and colors become text.
-            st.text(texto)
+            st.text(text)
         else:
             # Streamlit interprets "$" as a math formula, which breaks the prices.
-            st.markdown(texto.replace("$", r"\$"))
+            st.markdown(text.replace("$", r"\$"))
         # The panel only exists for answers on this screen; the reloaded history does not bring it.
         if ferramentas is not None:
             with st.expander("Como o Tom chegou a essa resposta"):
@@ -54,7 +54,7 @@ st.caption("Sua música começa aqui.")
 
 # Without the data load there is no catalog or orders to look up.
 try:
-    _conexao = connect(CAMINHO_BANCO)
+    _conexao = connect(DATABASE_PATH)
     try:
         _carregado = banco_carregado(_conexao)
     finally:
@@ -84,17 +84,17 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
     # Whoever chatted before entering the phone number keeps seeing what was said (QA-15).
     sem_telefone = [] if st.session_state.get("conversa_de") else st.session_state.mensagens
     st.session_state.conversa_de = telefone_da_conversa
-    connection = connect(CAMINHO_BANCO)
+    connection = connect(DATABASE_PATH)
     try:
         st.session_state.mensagens = [
-            {"papel": papel, "texto": texto}
-            for papel, texto in exibir_conversa(connection, st.session_state.phone)
+            {"papel": papel, "text": text}
+            for papel, text in exibir_conversa(connection, st.session_state.phone)
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         connection.close()
     # The last question asked without a phone number is answered again, now with the phone number,
     # unless the answer only used lookups that do not depend on the customer record.
-    perguntas = [m["texto"] for m in sem_telefone if m["papel"] == "user"]
+    perguntas = [m["text"] for m in sem_telefone if m["papel"] == "user"]
     usadas = {c["nome"] for m in sem_telefone[-1:] for c in m.get("ferramentas") or []}
     if (
         telefone_da_conversa
@@ -113,14 +113,14 @@ if not st.session_state.mensagens:
     exibir("assistant", SAUDACAO)
 
 for mensagem in st.session_state.mensagens:
-    exibir(mensagem["papel"], mensagem["texto"], mensagem.get("ferramentas"))
+    exibir(mensagem["papel"], mensagem["text"], mensagem.get("ferramentas"))
 
 # A new message during the answer interrupts the run and leaves the previous one unanswered.
 # That is why the field is locked while there is a pending question (ADR-020). The question
 # keeps the phone number of whoever sent it, which does not change if the sidebar field changes.
 pendente = st.session_state.get("pendente")
 if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
-    st.session_state.mensagens.append({"papel": "user", "texto": pergunta})
+    st.session_state.mensagens.append({"papel": "user", "text": pergunta})
     st.session_state.pendente = {"pergunta": pergunta, "phone": st.session_state.phone}
     st.rerun()
 
@@ -128,7 +128,7 @@ if pendente is not None:
     sessao = None
     try:
         try:
-            sessao = Sessao(connect(CAMINHO_BANCO), pendente["phone"])
+            sessao = Sessao(connect(DATABASE_PATH), pendente["phone"])
             with st.spinner("O Tom está digitando..."):
                 resposta = responder(pendente["pergunta"], sessao)
         except Exception:
@@ -141,7 +141,7 @@ if pendente is not None:
             st.session_state.mensagens.append(
                 {
                     "papel": "assistant",
-                    "texto": resposta,
+                    "text": resposta,
                     "ferramentas": [
                         {"nome": chamada.nome, "argumentos": chamada.argumentos}
                         for chamada in (sessao.ferramentas if sessao is not None else [])

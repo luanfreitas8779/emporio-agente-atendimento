@@ -79,15 +79,15 @@ def formatar_preco(centavos: int) -> str:
     return f"R$ {reais:,}".replace(",", ".") + f",{resto:02d}"
 
 
-def normalizar(texto: str) -> str:
-    sem_acento = unicodedata.normalize("NFD", texto.casefold())
+def normalizar(text: str) -> str:
+    sem_acento = unicodedata.normalize("NFD", text.casefold())
     return "".join(c for c in sem_acento if not unicodedata.combining(c))
 
 
-def singularizar(texto: str) -> str:
+def singularizar(text: str) -> str:
     """Reduces each normalized word to the singular, so that "violão" matches "Violões"."""
     palavras = []
-    for palavra in texto.split():
+    for palavra in text.split():
         if len(palavra) > 3:
             for plural, singular in (("oes", "ao"), ("aes", "ao"), ("ns", "m"), ("s", "")):
                 if palavra.endswith(plural):

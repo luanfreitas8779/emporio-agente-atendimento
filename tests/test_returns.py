@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from src.config import data_de_referencia
+from src.config import reference_date
 from src.returns import avaliar_devolucao
 
 
@@ -24,7 +24,7 @@ def test_pedido_7_com_a_data_padrao_esta_fora_do_prazo_de_arrependimento(connect
 
     veredito = avaliar_devolucao(
         connection, cliente_id=14, numero=7, motivo="arrependimento", canal="online",
-        hoje=data_de_referencia(),
+        hoje=reference_date(),
     )
 
     assert veredito.resultado == "fora_do_prazo"
@@ -119,7 +119,7 @@ def test_veredito_informa_que_o_recebimento_e_aproximado_e_depende_da_analise_do
     assert veredito.data_de_recebimento == "17/02/2026"
     assert any("entrega estimada" in a for a in veredito.avisos)
     assert any("análise do produto" in a for a in veredito.avisos)
-    assert veredito.data_de_referencia == "20/02/2026"
+    assert veredito.reference_date == "20/02/2026"
 
 
 @pytest.mark.parametrize("canal", [None, "presencial", "online"])

@@ -110,14 +110,14 @@ def test_a_conversa_nao_se_perde_quando_o_limite_persiste(connection, esperas):
 
 
 @pytest.mark.parametrize(
-    "erro",
+    "error",
     [ModelTimeoutError("modelo", "sem resposta"), ModelRequestTimeout("modelo", 40)],
 )
 def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa(
-    connection, esperas, erro
+    connection, esperas, error
 ):
     tentativas: list[int] = []
-    modelo = modelo_que_falha_antes_de_responder([erro], tentativas)
+    modelo = modelo_que_falha_antes_de_responder([error], tentativas)
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -128,7 +128,7 @@ def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa
 
 
 @pytest.mark.parametrize(
-    "erro",
+    "error",
     [
         ModelConnectionError("modelo", "sem rede"),
         ModelAuthenticationError("modelo", "chave inválida"),
@@ -136,8 +136,8 @@ def test_chamada_sem_resposta_do_provedor_gera_mensagem_clara_sem_nova_tentativa
         sqlite3.OperationalError("no such table: products"),
     ],
 )
-def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, erro):
-    modelo = modelo_que_falha_antes_de_responder([erro], [])
+def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, error):
+    modelo = modelo_que_falha_antes_de_responder([error], [])
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -149,14 +149,14 @@ def test_erro_tecnico_gera_mensagem_amigavel_sem_detalhes(connection, esperas, e
 
 
 @pytest.mark.regressao
-@pytest.mark.parametrize("erro", [
+@pytest.mark.parametrize("error", [
         ModelUnavailableError("modelo", "indisponível"),
         ModelOverloadedError("modelo", "sobrecarga"),
         ModelServerError("modelo", "erro 504"),
     ])
-def test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa(connection, esperas, erro):
+def test_indisponibilidade_temporaria_do_provedor_tambem_gera_nova_tentativa(connection, esperas, error):
     tentativas: list[int] = []
-    modelo = modelo_que_falha_antes_de_responder([erro], tentativas)
+    modelo = modelo_que_falha_antes_de_responder([error], tentativas)
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -202,10 +202,10 @@ def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
     connection, esperas, log_de_limites_temporario
 ):
     corpo = {"error": {"details": [{"violations": [{"quotaValue": "20", "quotaId": "PorDia"}]}]}}
-    erro = ModelHTTPError.for_category(
+    error = ModelHTTPError.for_category(
         ModelRateLimitError, status_code=429, model_name="gemini-3.5-flash-lite", body=corpo
     )
-    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], [])
+    modelo = modelo_que_falha_antes_de_responder([error, error, error], [])
 
     with agente.override(model=modelo):
         responder("Oi", Sessao(connection, phone=ANA))
@@ -216,7 +216,7 @@ def test_limite_que_persiste_e_registrado_com_o_que_o_provedor_informou(
 
 def test_falha_ao_gravar_o_registro_de_limites_nao_impede_a_mensagem(connection, esperas, tmp_path, monkeypatch):
     # A directory in place of the file makes the write fail.
-    monkeypatch.setattr("src.config.CAMINHO_LOG_DE_LIMITES", tmp_path)
+    monkeypatch.setattr("src.config.LIMITS_LOG_PATH", tmp_path)
     modelo = modelo_que_falha_antes_de_responder([limite_atingido() for _ in range(5)], [])
 
     with agente.override(model=modelo):
@@ -256,9 +256,9 @@ def test_nova_tentativa_nao_herda_o_estado_da_tentativa_que_falhou(connection, e
 
 
 @pytest.mark.regressao
-@pytest.mark.parametrize("erro", [ValueError("data inválida"), decimal.InvalidOperation(), OverflowError("grande")])
-def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(connection, esperas, erro):
-    modelo = modelo_que_falha_antes_de_responder([erro], [])
+@pytest.mark.parametrize("error", [ValueError("data inválida"), decimal.InvalidOperation(), OverflowError("grande")])
+def test_excecao_inesperada_gera_mensagem_amigavel_e_guarda_a_conversa(connection, esperas, error):
+    modelo = modelo_que_falha_antes_de_responder([error], [])
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -296,8 +296,8 @@ def limite_do_provedor(cota: str, retry_delay: str | None = None) -> ModelRateLi
 @pytest.mark.regressao
 def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(connection, esperas):
     tentativas: list[int] = []
-    erro = limite_do_provedor("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
-    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], tentativas)
+    error = limite_do_provedor("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+    modelo = modelo_que_falha_antes_de_responder([error, error, error], tentativas)
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -312,8 +312,8 @@ def test_limite_diario_nao_repete_e_diz_que_o_atendimento_volta_amanha(connectio
 def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
     connection, esperas, retry_delay, expected
 ):
-    erro = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", retry_delay)
-    modelo = modelo_que_falha_antes_de_responder([erro], [])
+    error = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", retry_delay)
+    modelo = modelo_que_falha_antes_de_responder([error], [])
 
     with agente.override(model=modelo):
         responder("Oi", Sessao(connection, phone=ANA))
@@ -323,8 +323,8 @@ def test_espera_usa_o_retry_delay_do_corpo_quando_retry_after_vem_vazio(
 
 @pytest.mark.regressao
 def test_mensagem_de_limite_nao_cita_o_servico_de_ia_nem_o_fornecedor(connection, esperas):
-    erro = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "20s")
-    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], [])
+    error = limite_do_provedor("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "20s")
+    modelo = modelo_que_falha_antes_de_responder([error, error, error], [])
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -338,14 +338,14 @@ def test_limite_diario_e_reconhecido_mesmo_quando_vem_depois_da_violacao_por_min
         {"quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"},
         {"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"},
     ]
-    erro = ModelHTTPError.for_category(
+    error = ModelHTTPError.for_category(
         ModelRateLimitError,
         status_code=429,
         model_name="gemini-3.5-flash-lite",
         body={"error": {"details": [{"violations": violacoes}]}},
     )
     tentativas: list[int] = []
-    modelo = modelo_que_falha_antes_de_responder([erro, erro, erro], tentativas)
+    modelo = modelo_que_falha_antes_de_responder([error, error, error], tentativas)
 
     with agente.override(model=modelo):
         resposta = responder("Oi", Sessao(connection, phone=ANA))
@@ -365,10 +365,10 @@ def test_cota_esgotada_informa_que_o_atendimento_volta_amanha(connection, espera
 
 
 @pytest.mark.regressao
-@pytest.mark.parametrize("erro", [ValueError("dado inválido"), OSError("disco cheio")])
-def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(connection, esperas, monkeypatch, erro):
+@pytest.mark.parametrize("error", [ValueError("dado inválido"), OSError("disco cheio")])
+def test_qualquer_falha_ao_gravar_a_mensagem_tecnica_nao_impede_a_resposta(connection, esperas, monkeypatch, error):
     def gravar_com_falha(*argumentos, **nomeados):
-        raise erro
+        raise error
 
     monkeypatch.setattr("src.agent.memory.salvar_mensagens", gravar_com_falha)
     modelo = modelo_que_falha_antes_de_responder([ModelQuotaExceededError("modelo", "cota")], [])

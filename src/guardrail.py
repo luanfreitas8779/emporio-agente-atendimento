@@ -70,38 +70,38 @@ def promete_aviso(resposta: str) -> bool:
 
     The team's reply after a handoff ("entraremos em contato") is not a notice promise.
     """
-    texto = normalizar(resposta)
-    for achado in PADRAO_PROMESSA_DE_AVISO.finditer(texto):
-        antes = texto[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
+    text = normalizar(resposta)
+    for achado in PADRAO_PROMESSA_DE_AVISO.finditer(text):
+        antes = text[max(0, achado.start() - JANELA_DA_NEGACAO) : achado.start()]
         if not PADRAO_NEGACAO.search(antes):
             return True
     return False
 
 
-def numero(texto: str) -> Decimal:
+def numero(text: str) -> Decimal:
     """Reads "2.199,00" or "18,5" as a number."""
-    return Decimal(texto.replace(".", "").replace(",", "."))
+    return Decimal(text.replace(".", "").replace(",", "."))
 
 
-def valores(texto: str) -> dict[str, set]:
+def valores(text: str) -> dict[str, set]:
     """Values in the text by type, in canonical form to compare with the sources.
 
     Money, time, phone number, and tracking code use the text as it came; dates written out, quantities,
     and relative dates use the text without accents and in lowercase.
     """
-    normalizado = normalizar(texto)
+    normalizado = normalizar(text)
     # In percentages the period and the comma are decimal: "18.5%" and "18,5%" mean 18.5.
-    percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(texto)}
-    percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(texto)}
+    percentuais = {Decimal(p.replace(",", ".")) for p in PADRAO_PERCENTUAL.findall(text)}
+    percentuais |= {Decimal(p) for p in PADRAO_PERCENTUAL_JSON.findall(text)}
     found_dates = set()
-    for dia, mes, ano in PADRAO_DATA_BR.findall(texto):
+    for dia, mes, ano in PADRAO_DATA_BR.findall(text):
         found_dates.add(_data(ano, mes, dia))
-    for ano, mes, dia in PADRAO_DATA_ISO.findall(texto):
+    for ano, mes, dia in PADRAO_DATA_ISO.findall(text):
         found_dates.add(_data(ano, mes, dia))
-    dinheiro = {numero(v) for v in PADRAO_DINHEIRO.findall(texto)}
-    dinheiro |= {numero(v) for v in PADRAO_REAIS.findall(texto)}
+    dinheiro = {numero(v) for v in PADRAO_DINHEIRO.findall(text)}
+    dinheiro |= {numero(v) for v in PADRAO_REAIS.findall(text)}
     # "mil reais" without a number means 1.000.
-    dinheiro |= {numero(v) * 1000 if v else Decimal(1000) for v in PADRAO_MIL_REAIS.findall(texto)}
+    dinheiro |= {numero(v) * 1000 if v else Decimal(1000) for v in PADRAO_MIL_REAIS.findall(text)}
     # "15 de dezembro" has no year: we check only the day and the month ("DD/MM").
     # With the year ("3 de março de 2026"), the full date is checked.
     por_extenso = set()
@@ -110,15 +110,15 @@ def valores(texto: str) -> dict[str, set]:
             found_dates.add(_data(ano, str(MESES[mes]), dia))
         else:
             por_extenso.add(f"{int(dia):02d}/{MESES[mes]:02d}")
-    for dia, mes in PADRAO_DATA_CURTA.findall(texto):
+    for dia, mes in PADRAO_DATA_CURTA.findall(text):
         if _data(2000, mes, dia):
             por_extenso.add(f"{int(dia):02d}/{int(mes):02d}")
     horarios = {
         f"{int(hora):02d}:{minuto or minuto_com_pontos or '00'}"
-        for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(texto)
+        for hora, minuto, minuto_com_pontos in PADRAO_HORARIO.findall(text)
     }
-    horarios |= {f"{int(hora):02d}:00" for hora in PADRAO_HORAS.findall(texto)}
-    telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(texto)}
+    horarios |= {f"{int(hora):02d}:00" for hora in PADRAO_HORAS.findall(text)}
+    telefones = {"".join(c for c in t if c.isdigit())[-8:] for t in PADRAO_TELEFONE.findall(text)}
     quantidades = {
         int(numero_) for achado in PADRAO_QUANTIDADE.findall(normalizado) for numero_ in achado if numero_
     }
@@ -134,7 +134,7 @@ def valores(texto: str) -> dict[str, set]:
         "dia_mes": por_extenso,
         "percentual": percentuais,
         "data": found_dates - {None},
-        "rastreio": set(PADRAO_RASTREIO.findall(texto)),
+        "rastreio": set(PADRAO_RASTREIO.findall(text)),
     }
 
 

@@ -3,9 +3,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from src.catalog import formatar_preco
-from src.config import PASTA_DADOS
+from src.config import DATA_DIR
 
-ARQUIVO_POLITICAS = PASTA_DADOS / "politicas.md"
+ARQUIVO_POLITICAS = DATA_DIR / "politicas.md"
 
 SECOES = (
     "sobre_a_loja",
@@ -81,7 +81,7 @@ def consultar_politicas(
 ) -> str:
     if secao not in SECOES:
         raise ValueError(f"Unknown section: {secao}. Use one of {', '.join(SECOES)}.")
-    texto = ler_secoes(ARQUIVO_POLITICAS)[secao]
+    text = ler_secoes(ARQUIVO_POLITICAS)[secao]
     if secao == "pagamentos" and valor is not None:
-        texto += "\n\nCálculo para esta compra:\n" + descrever_parcelamento(valor, parcelas)
-    return texto
+        text += "\n\nCálculo para esta compra:\n" + descrever_parcelamento(valor, parcelas)
+    return text

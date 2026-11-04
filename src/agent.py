@@ -31,7 +31,7 @@ from pydantic_ai.messages import (
 )
 
 from src import calculos, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
-from src.config import MODELO_GEMINI, data_de_referencia
+from src.config import GEMINI_MODEL, reference_date
 from src.dates import weekday_name, format_date
 from src.phone import format_phone
 
@@ -290,7 +290,7 @@ class Sessao:
     connection: sqlite3.Connection
     phone: str | None = None
     estado: memory.Estado = field(default_factory=memory.Estado)
-    hoje: date = field(default_factory=data_de_referencia)
+    hoje: date = field(default_factory=reference_date)
     ferramentas: list[ChamadaDeFerramenta] = field(default_factory=list)
 
     @property
@@ -309,7 +309,7 @@ VALOR_MAXIMO = 1_000_000
 NUMERO_MAXIMO = 2**31 - 1
 
 agente = Agent(
-    f"google:{MODELO_GEMINI}",
+    f"google:{GEMINI_MODEL}",
     deps_type=Sessao,
     instructions=INSTRUCOES,
     # A call without an answer cannot freeze the chat: timeout per attempt and per request.
@@ -382,8 +382,8 @@ BLOCO_INTERNO = re.compile(
 TAG_INTERNA = re.compile(rf"<\s*/?\s*(?:{NOMES_DE_BLOCO_INTERNO})\s*>", re.IGNORECASE)
 
 
-def sem_bloco_interno(texto: str) -> str:
-    return BLOCO_INTERNO.sub("", texto).strip()
+def sem_bloco_interno(text: str) -> str:
+    return BLOCO_INTERNO.sub("", text).strip()
 
 
 def limpar_texto_das_respostas(mensagens: list) -> None:
@@ -438,28 +438,28 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
 def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
     cliente = ctx.deps.cliente
     if cliente is None:
-        texto = "O cliente desta conversa está sem cadastro: não consulte pedidos."
+        text = "O cliente desta conversa está sem cadastro: não consulte pedidos."
     else:
         # Only the first name reaches the model; the last name stays in the code.
-        texto = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
+        text = f"O cliente desta conversa se chama {cliente.primeiro_nome}."
     hoje = ctx.deps.hoje
-    texto += f"\nHoje: {format_date(hoje)}, {weekday_name(hoje)}. O sistema não informa a hora atual."
+    text += f"\nHoje: {format_date(hoje)}, {weekday_name(hoje)}. O sistema não informa a hora atual."
     pedido = ctx.deps.estado.pedido_em_analise
     if pedido is not None:
-        texto += f"\nPedido em análise: {pedido}."
+        text += f"\nPedido em análise: {pedido}."
     foco = ctx.deps.estado.produto_em_foco
     if foco is not None:
         nome = catalog.nome_do_produto(ctx.deps.connection, foco)
         if nome:
-            texto += f"\nProduto em foco: {nome}."
+            text += f"\nProduto em foco: {nome}."
     interesses = interests.listar_pendentes(ctx.deps.connection, ctx.deps.phone or "")
     # Only the names: the current stock always comes from buscar_produtos.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
     nomes = "; ".join(recentes) or "nenhum"
     if len(interesses) > len(recentes):
         nomes += f" (e mais {len(interesses) - len(recentes)} mais antigos)"
-    texto += f"\nInteresses pendentes: {nomes}."
-    return texto
+    text += f"\nInteresses pendentes: {nomes}."
+    return text
 
 
 @agente.tool
@@ -666,15 +666,15 @@ def _executar(mensagem: str, sessao: Sessao, historico: list):
         )
         try:
             return execucao.result()
-        except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as erro:
-            if espera is None or limits.e_limite_diario(erro):
+        except (*ERROS_TEMPORARIOS, *ERROS_DE_SERVIDOR) as error:
+            if espera is None or limits.e_limite_diario(error):
                 raise
             # The provider may say when to try again; a cap avoids freezing the chat.
-            indicada = erro.retry_after or limits.espera_indicada(erro)
+            indicada = error.retry_after or limits.espera_indicada(error)
             _aguardar(min(indicada, ESPERA_MAXIMA) if indicada else espera)
 
 
-def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
+def _responder_sem_modelo(mensagem: str, sessao: Sessao, text: str) -> str:
     """Stores the customer's message and the text sent to them, without the failed attempt."""
     try:
         memory.salvar_mensagens(
@@ -682,13 +682,13 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
             sessao.phone,
             [
                 ModelRequest(parts=[UserPromptPart(mensagem)]),
-                ModelResponse(parts=[TextPart(texto)]),
+                ModelResponse(parts=[TextPart(text)]),
             ],
         )
     except Exception:
         # If the database is the cause of the failure, the customer still gets the message.
         registro.exception("Could not store the conversation")
-    return texto
+    return text
 
 
 def responder(mensagem: str, sessao: Sessao) -> str:
@@ -702,14 +702,14 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         memory.salvar_mensagens(sessao.connection, sessao.phone, resultado.new_messages())
         memory.salvar_estado(sessao.connection, sessao.phone, sessao.estado)
         return resultado.output
-    except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as erro:
+    except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as error:
         try:
-            limits.registrar_limite(erro)
+            limits.registrar_limite(error)
         except OSError:
             registro.exception("Could not log the provider limit")
         # Exhausted quota is not solved by waiting: there is no retry, only the same message.
         # Exhausted quota also only comes back the next day.
-        diario = isinstance(erro, ModelQuotaExceededError) or limits.e_limite_diario(erro)
+        diario = isinstance(error, ModelQuotaExceededError) or limits.e_limite_diario(error)
         return _responder_sem_modelo(
             mensagem, sessao, MENSAGEM_DE_LIMITE_DIARIO if diario else MENSAGEM_DE_LIMITE
         )

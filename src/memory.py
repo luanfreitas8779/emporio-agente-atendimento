@@ -134,10 +134,10 @@ def exibir_conversa(connection: sqlite3.Connection, phone: str | None) -> list[t
             if resposta is not None:
                 conversa.append(("assistant", resposta))
                 resposta = None
-            texto = " ".join(
+            text = " ".join(
                 str(p.content) for p in mensagem.parts if isinstance(p, UserPromptPart)
             )
-            conversa.append(("user", texto))
+            conversa.append(("user", text))
         elif isinstance(mensagem, ModelResponse):
             textos = [p.content for p in mensagem.parts if isinstance(p, TextPart)]
             if textos:

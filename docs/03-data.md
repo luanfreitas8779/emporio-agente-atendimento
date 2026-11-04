@@ -116,7 +116,7 @@ Orders go up to 2026-03-22, so the system uses the configurable date `2026-03-25
 
 With this value, no delivered order is within the 7-day withdrawal period. The most recent one has an estimated delivery on 2026-02-17, 36 days earlier. Cases within the deadline are validated in tests, with the date set by the test itself.
 
-The value comes from the `DATA_DE_REFERENCIA` environment variable (format `YYYY-MM-DD`), read by `config.data_de_referencia()`. An invalid value stops execution with a message stating the format.
+The value comes from the `REFERENCE_DATE` environment variable (format `YYYY-MM-DD`), read by `config.reference_date()`. An invalid value stops execution with a message stating the format.
 
 ### 5.4 Exchange and return deadlines
 

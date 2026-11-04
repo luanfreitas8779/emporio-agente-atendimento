@@ -3,7 +3,7 @@ import sqlite3
 from decimal import Decimal
 from pathlib import Path
 
-from src.config import CAMINHO_BANCO, PASTA_DADOS
+from src.config import DATABASE_PATH, DATA_DIR
 from src.database import connect
 from src.orders import STATUS_DE_PEDIDO, pagamento_valido
 from src.phone import normalize_phone
@@ -116,8 +116,8 @@ def preparar_produto(
             produto["status"],
             produto["specs"],
         )
-    except (ValueError, ArithmeticError) as erro:
-        raise ErroDeCarga(f"product {identificador}: invalid value") from erro
+    except (ValueError, ArithmeticError) as error:
+        raise ErroDeCarga(f"product {identificador}: invalid value") from error
     if registro[4] < 0 or registro[5] not in STATUS_DE_PRODUTO:
         raise ErroDeCarga(f"product {identificador}: invalid value")
     return registro
@@ -138,8 +138,8 @@ def preparar_promocao(
             promocao["description"],
             int(promocao["is_active"]),
         )
-    except ValueError as erro:
-        raise ErroDeCarga(f"promotion {identificador}: invalid value") from erro
+    except ValueError as error:
+        raise ErroDeCarga(f"promotion {identificador}: invalid value") from error
     if not 0 <= registro[2] <= 100 or registro[4] not in (0, 1):
         raise ErroDeCarga(f"promotion {identificador}: invalid value")
     return registro
@@ -188,8 +188,8 @@ def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[s
     rejeitar_duplicado("customer", identificador, vistos)
     try:
         numero = int(identificador)
-    except ValueError as erro:
-        raise ErroDeCarga(f"customer {identificador}: invalid value") from erro
+    except ValueError as error:
+        raise ErroDeCarga(f"customer {identificador}: invalid value") from error
     phone = normalize_phone(cliente["phone"])
     if phone is None or not cliente["name"].strip():
         raise ErroDeCarga(f"customer {identificador}: invalid value")
@@ -219,8 +219,8 @@ def preparar_pedido(pedido: dict[str, str], clientes: set[int], vistos: set[str]
         cliente = int(pedido["customer_id"])
         total = para_centavos(pedido["total_brl"])
         numero = int(identificador)
-    except (ValueError, ArithmeticError) as erro:
-        raise ErroDeCarga(f"order {identificador}: invalid value") from erro
+    except (ValueError, ArithmeticError) as error:
+        raise ErroDeCarga(f"order {identificador}: invalid value") from error
     if pedido["status"] not in STATUS_DE_PEDIDO or not pagamento_valido(pedido["payment_method"]):
         raise ErroDeCarga(f"order {identificador}: invalid value")
     if cliente not in clientes:
@@ -245,8 +245,8 @@ def preparar_item(item: dict[str, str], pedidos: set[int], produtos: set[int]) -
             int(item["product_id"]),
             int(item["quantity"]),
         )
-    except ValueError as erro:
-        raise ErroDeCarga(f"order item {identificador}: invalid value") from erro
+    except ValueError as error:
+        raise ErroDeCarga(f"order item {identificador}: invalid value") from error
     if quantidade < 1:
         raise ErroDeCarga(f"order item {identificador}: invalid value")
     if numero not in pedidos:
@@ -309,7 +309,7 @@ def banco_carregado(connection: sqlite3.Connection) -> bool:
 
 
 if __name__ == "__main__":
-    connection = connect(CAMINHO_BANCO)
-    carregar_dados(connection, PASTA_DADOS)
+    connection = connect(DATABASE_PATH)
+    carregar_dados(connection, DATA_DIR)
     connection.close()
-    print(f"Database created at {CAMINHO_BANCO}")
+    print(f"Database created at {DATABASE_PATH}")

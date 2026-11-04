@@ -73,7 +73,7 @@ class Veredito:
     avisos: list[str] = field(default_factory=list)
     data_aproximada: bool = False
     data_de_recebimento: str | None = None
-    data_de_referencia: str | None = None
+    reference_date: str | None = None
 
 
 def avaliar_devolucao(
@@ -119,7 +119,7 @@ def avaliar_devolucao(
         avisos=avisos,
         data_aproximada=True,
         data_de_recebimento=format_date(recebimento),
-        data_de_referencia=format_date(hoje),
+        reference_date=format_date(hoje),
     )
 
 

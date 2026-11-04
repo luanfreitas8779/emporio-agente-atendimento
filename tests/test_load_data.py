@@ -11,7 +11,7 @@ from src.load_data import (
     carregar_pedidos,
 )
 from src.orders import consultar_pedidos, identificar_cliente
-from tests.conftest import PASTA_DADOS
+from tests.conftest import DATA_DIR
 
 
 def escrever_catalogo(pasta, produto):
@@ -26,7 +26,7 @@ def escrever_catalogo(pasta, produto):
 
 
 def test_recarregar_recria_o_catalogo_sem_duplicar_produtos(connection):
-    carregar_catalogo(connection, PASTA_DADOS)
+    carregar_catalogo(connection, DATA_DIR)
 
     assert len(buscar_produtos(connection, termo="Takamine GD20")) == 1
 
@@ -70,7 +70,7 @@ def test_interrompe_a_carga_quando_a_promocao_aponta_para_produto_inexistente(tm
 
 
 def test_recarregar_todos_os_dados_nao_duplica_pedidos(connection):
-    carregar_dados(connection, PASTA_DADOS)
+    carregar_dados(connection, DATA_DIR)
 
     assert len(consultar_pedidos(connection, cliente_id=3)) == 2
 
@@ -92,7 +92,7 @@ def escrever_pedidos(pasta, cliente, pedido, item):
 def carregar_pedidos_de(pasta, cliente, pedido, item):
     escrever_pedidos(pasta, cliente, pedido, item)
     connection = connect(pasta / "teste.db")
-    carregar_catalogo(connection, PASTA_DADOS)
+    carregar_catalogo(connection, DATA_DIR)
     carregar_clientes(connection, pasta)
     try:
         carregar_pedidos(connection, pasta)

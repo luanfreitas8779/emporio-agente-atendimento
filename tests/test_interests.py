@@ -2,7 +2,7 @@ import pytest
 
 from src.interests import Resultado, listar_pendentes, registrar
 from src.load_data import carregar_dados
-from tests.conftest import PASTA_DADOS
+from tests.conftest import DATA_DIR
 
 TELEFONE = "(67) 99654-7821"
 GIANNINI_GF_3D = 96
@@ -44,6 +44,6 @@ def test_repetir_o_pedido_nao_duplica_o_interesse(connection):
 def test_nova_carga_dos_dados_preserva_os_interesses(connection):
     registrar(connection, TELEFONE, GIANNINI_GF_3D)
 
-    carregar_dados(connection, PASTA_DADOS)
+    carregar_dados(connection, DATA_DIR)
 
     assert listar_pendentes(connection, TELEFONE) == ["Giannini GF-3D Dreadnought Sunburst"]
