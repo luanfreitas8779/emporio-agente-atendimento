@@ -59,7 +59,9 @@ pip install -r requirements.txt
 
 On Linux or macOS, use `source .venv/bin/activate` instead of the second line.
 
-Copy `.env.example` to `.env`, fill in `GOOGLE_API_KEY`, and create the local database by loading the data (without it, the app shows this command):
+Copy `.env.example` to `.env` and fill in `GOOGLE_API_KEY`. `REFERENCE_DATE` (`YYYY-MM-DD`) sets the date used as "today" for deadlines; it defaults to `2026-03-25`, because the order data ends in March 2026.
+
+Create the local database by loading the data (without it, the app shows this command):
 
 ```bash
 python -m src.load_data

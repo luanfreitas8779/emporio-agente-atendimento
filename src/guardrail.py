@@ -29,7 +29,7 @@ TIME_PATTERN = re.compile(r"\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?!\w)")
 # so they count with or without the area code.
 PHONE_PATTERN = re.compile(r"(?:\(?\d{2}\)?[\s.]*)?9?\d{4}-\d{4}")
 # "3 unidades", "6 parcelas", "6 vezes", "4x"/"4 x", "restam 3", and "3 em estoque" in the answer;
-# "quantidade": 2 in the calculation result.
+# "quantity": 2 in the calculation result (the older "quantidade" key is still accepted).
 QUANTITY_PATTERN = re.compile(
     r"\b(\d+)\s*(?:unidades?|parcelas?|vezes)\b|\b(\d+)\s*x\b|(?:quantidade|quantity)\W{1,3}(\d+)"
 )
