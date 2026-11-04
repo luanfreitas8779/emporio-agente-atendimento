@@ -3,7 +3,7 @@ from enum import StrEnum
 
 from src.catalog import nome_do_produto
 from src.memory import agora
-from src.phone import normalizar_telefone
+from src.phone import normalize_phone
 
 
 class Resultado(StrEnum):
@@ -13,8 +13,8 @@ class Resultado(StrEnum):
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
-def registrar(conexao: sqlite3.Connection, telefone: str, product_id: int) -> Resultado:
-    chave = normalizar_telefone(telefone)
+def registrar(conexao: sqlite3.Connection, phone: str, product_id: int) -> Resultado:
+    chave = normalize_phone(phone)
     if chave is None:
         return Resultado.TELEFONE_INVALIDO
     if nome_do_produto(conexao, product_id) is None:
@@ -28,8 +28,8 @@ def registrar(conexao: sqlite3.Connection, telefone: str, product_id: int) -> Re
     return Resultado.REGISTRADO if cursor.rowcount else Resultado.JA_REGISTRADO
 
 
-def listar_pendentes(conexao: sqlite3.Connection, telefone: str) -> list[str]:
-    chave = normalizar_telefone(telefone)
+def listar_pendentes(conexao: sqlite3.Connection, phone: str) -> list[str]:
+    chave = normalize_phone(phone)
     if chave is None:
         return []
     linhas = conexao.execute(

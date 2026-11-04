@@ -13,7 +13,7 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from src.phone import normalizar_telefone
+from src.phone import normalize_phone
 
 # Unlike the source tables, these are never recreated by the load: they store
 # what the customers said. That is why the schema is idempotent.
@@ -98,8 +98,8 @@ def limitar_historico(mensagens: list[ModelMessage]) -> list[ModelMessage]:
     return []
 
 
-def _ler_mensagens(conexao: sqlite3.Connection, telefone: str | None) -> list[ModelMessage]:
-    chave = normalizar_telefone(telefone or "")
+def _ler_mensagens(conexao: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
+    chave = normalize_phone(phone or "")
     if chave is None:
         return []
     linhas = conexao.execute(
@@ -121,15 +121,15 @@ def _ler_mensagens(conexao: sqlite3.Connection, telefone: str | None) -> list[Mo
     return mensagens
 
 
-def carregar_historico(conexao: sqlite3.Connection, telefone: str | None) -> list[ModelMessage]:
-    return limitar_historico(_ler_mensagens(conexao, telefone))
+def carregar_historico(conexao: sqlite3.Connection, phone: str | None) -> list[ModelMessage]:
+    return limitar_historico(_ler_mensagens(conexao, phone))
 
 
-def exibir_conversa(conexao: sqlite3.Connection, telefone: str | None) -> list[tuple[str, str]]:
+def exibir_conversa(conexao: sqlite3.Connection, phone: str | None) -> list[tuple[str, str]]:
     """The customer's message and the final answer of each turn, as the customer saw them."""
     conversa: list[tuple[str, str]] = []
     resposta: str | None = None
-    for mensagem in _ler_mensagens(conexao, telefone):
+    for mensagem in _ler_mensagens(conexao, phone):
         if _inicia_um_turno(mensagem):
             if resposta is not None:
                 conversa.append(("assistant", resposta))
@@ -149,9 +149,9 @@ def exibir_conversa(conexao: sqlite3.Connection, telefone: str | None) -> list[t
 
 
 def salvar_mensagens(
-    conexao: sqlite3.Connection, telefone: str | None, mensagens: list[ModelMessage]
+    conexao: sqlite3.Connection, phone: str | None, mensagens: list[ModelMessage]
 ) -> None:
-    chave = normalizar_telefone(telefone or "")
+    chave = normalize_phone(phone or "")
     if chave is None:
         return
     momento = agora()
@@ -171,8 +171,8 @@ def salvar_mensagens(
     conexao.commit()
 
 
-def carregar_estado(conexao: sqlite3.Connection, telefone: str | None) -> Estado:
-    chave = normalizar_telefone(telefone or "")
+def carregar_estado(conexao: sqlite3.Connection, phone: str | None) -> Estado:
+    chave = normalize_phone(phone or "")
     linha = conexao.execute(
         "SELECT pedido_em_analise, produto_em_foco FROM conversation_state WHERE phone = ?",
         (chave,),
@@ -180,8 +180,8 @@ def carregar_estado(conexao: sqlite3.Connection, telefone: str | None) -> Estado
     return Estado(linha["pedido_em_analise"], linha["produto_em_foco"]) if linha else Estado()
 
 
-def salvar_estado(conexao: sqlite3.Connection, telefone: str | None, estado: Estado) -> None:
-    chave = normalizar_telefone(telefone or "")
+def salvar_estado(conexao: sqlite3.Connection, phone: str | None, estado: Estado) -> None:
+    chave = normalize_phone(phone or "")
     if chave is None:
         return
     conexao.execute(

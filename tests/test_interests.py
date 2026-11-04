@@ -23,9 +23,9 @@ def test_produto_inexistente_nao_grava_interesse(conexao):
     assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0
 
 
-@pytest.mark.parametrize("telefone", ["", "12345", "abc"])
-def test_telefone_invalido_nao_grava_interesse(conexao, telefone):
-    resultado = registrar(conexao, telefone, GIANNINI_GF_3D)
+@pytest.mark.parametrize("phone", ["", "12345", "abc"])
+def test_telefone_invalido_nao_grava_interesse(conexao, phone):
+    resultado = registrar(conexao, phone, GIANNINI_GF_3D)
 
     assert resultado == Resultado.TELEFONE_INVALIDO
     assert conexao.execute("SELECT COUNT(*) FROM product_interests").fetchone()[0] == 0

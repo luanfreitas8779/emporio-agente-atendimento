@@ -64,8 +64,8 @@ def test_exibe_o_total_registrado_mesmo_quando_difere_da_soma_dos_itens(conexao)
 
 
 def test_identifica_o_cliente_pelo_telefone_com_codigo_do_pais(conexao):
-    for telefone in ("+55 (67) 99654-7821", "5567996547821"):
-        cliente = identificar_cliente(conexao, telefone)
+    for phone in ("+55 (67) 99654-7821", "5567996547821"):
+        cliente = identificar_cliente(conexao, phone)
 
         assert cliente is not None
         assert cliente.id == 2

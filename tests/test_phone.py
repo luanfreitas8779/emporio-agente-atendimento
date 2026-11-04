@@ -1,10 +1,10 @@
 import pytest
 
-from src.phone import formatar_telefone
+from src.phone import format_phone
 
 
 @pytest.mark.parametrize(
-    "digitado, esperado",
+    "typed, expected",
     [
         ("67996547821", "(67) 99654-7821"),
         ("(67) 99654-7821", "(67) 99654-7821"),
@@ -14,5 +14,5 @@ from src.phone import formatar_telefone
         ("", ""),
     ],
 )
-def test_formata_o_telefone_a_partir_de_qualquer_forma_digitada(digitado, esperado):
-    assert formatar_telefone(digitado) == esperado
+def test_formats_the_phone_from_any_typed_form(typed, expected):
+    assert format_phone(typed) == expected

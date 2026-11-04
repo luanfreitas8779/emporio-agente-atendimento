@@ -8,7 +8,7 @@ from pydantic.dataclasses import dataclass as dataclass_pydantic
 
 from src.catalog import formatar_preco
 from src.datas import formatar_data
-from src.phone import normalizar_telefone
+from src.phone import normalize_phone
 
 FORMAS_DE_PAGAMENTO = {
     "pix": "PIX",
@@ -49,12 +49,12 @@ class Pedido:
     atraso: str | None = None
 
 
-def identificar_cliente(conexao: sqlite3.Connection, telefone: str | None) -> Cliente | None:
-    digitos = normalizar_telefone(telefone or "")
-    if digitos is None:
+def identificar_cliente(conexao: sqlite3.Connection, phone: str | None) -> Cliente | None:
+    digits = normalize_phone(phone or "")
+    if digits is None:
         return None
     linha = conexao.execute(
-        "SELECT customer_id, name FROM customers WHERE phone = ?", (digitos,)
+        "SELECT customer_id, name FROM customers WHERE phone = ?", (digits,)
     ).fetchone()
     return Cliente(linha["customer_id"], linha["name"]) if linha else None
 

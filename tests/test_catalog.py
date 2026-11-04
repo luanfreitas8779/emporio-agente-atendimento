@@ -294,17 +294,17 @@ def test_quantidade_vale_junto_de_somente_disponiveis_e_do_erro_de_digitacao(con
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    ("consulta", "esperado"),
+    ("consulta", "expected"),
     [
         ("guitarra stratocaster fender", "Fender Stratocaster American Pro II"),
         ("violao takamine", "Takamine GD20 Dreadnought Natural"),
         ("ukulele kala", "Kala KA-C Concert Mogno"),
     ],
 )
-def test_palavra_da_categoria_junto_do_nome_encontra_o_produto(conexao, consulta, esperado):
+def test_palavra_da_categoria_junto_do_nome_encontra_o_produto(conexao, consulta, expected):
     nomes = [p.nome for p in buscar_produtos(conexao, termo=consulta)]
 
-    assert esperado in nomes
+    assert expected in nomes
 
 
 @pytest.mark.regressao
@@ -320,7 +320,7 @@ def test_consulta_so_com_palavras_de_ligacao_nao_devolve_o_catalogo_inteiro(cone
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    ("consulta", "esperado"),
+    ("consulta", "expected"),
     [
         ("Martin D28", "Martin D-28 Dreadnought Natural"),
         ("GF3D", "Giannini GF-3D Dreadnought Sunburst"),
@@ -328,10 +328,10 @@ def test_consulta_so_com_palavras_de_ligacao_nao_devolve_o_catalogo_inteiro(cone
         ("KAC", "Kala KA-C Concert Mogno"),
     ],
 )
-def test_codigo_de_modelo_sem_hifen_encontra_o_produto(conexao, consulta, esperado):
+def test_codigo_de_modelo_sem_hifen_encontra_o_produto(conexao, consulta, expected):
     nomes = [p.nome for p in buscar_produtos(conexao, termo=consulta)]
 
-    assert esperado in nomes
+    assert expected in nomes
 
 
 def test_codigo_sem_hifen_continua_sem_confundir_modelos_vizinhos(conexao):

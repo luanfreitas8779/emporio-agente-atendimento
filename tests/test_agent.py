@@ -177,10 +177,10 @@ def modelo_que_chama(ferramenta: str, argumentos: dict, capturados: list):
     return modelo
 
 
-def chamar_ferramenta(conexao, telefone, ferramenta, argumentos):
+def chamar_ferramenta(conexao, phone, ferramenta, argumentos):
     capturados: list = []
     with agente.override(model=FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))):
-        responder("Teste", Sessao(conexao, telefone=telefone))
+        responder("Teste", Sessao(conexao, phone=phone))
     return capturados[0]
 
 
@@ -235,7 +235,7 @@ def modelo_que_devolve_as_instrucoes(
 
 
 def test_cliente_cadastrado_e_chamado_pelo_nome(conexao):
-    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+    sessao = Sessao(conexao, phone="(67) 99654-7821")
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Oi!", sessao)
@@ -246,7 +246,7 @@ def test_cliente_cadastrado_e_chamado_pelo_nome(conexao):
 
 
 def test_instrucoes_nao_expoem_dados_pessoais_alem_do_nome(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Oi!", sessao)
@@ -267,7 +267,7 @@ def test_retorno_dos_pedidos_nao_expoe_email_nem_cidade(conexao):
 
 
 def test_telefone_sem_cadastro_nao_recebe_nome_nas_instrucoes(conexao):
-    sessao = Sessao(conexao, telefone="(67) 90000-0000")
+    sessao = Sessao(conexao, phone="(67) 90000-0000")
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Oi!", sessao)
@@ -302,7 +302,7 @@ def modelo_que_envia_argumentos(ferramenta: str, argumentos: dict):
 )
 @pytest.mark.regressao
 def test_ferramentas_recusam_argumentos_fora_da_faixa(conexao, ferramenta, argumentos):
-    sessao = Sessao(conexao, telefone="(67) 99654-7821")
+    sessao = Sessao(conexao, phone="(67) 99654-7821")
 
     with agente.override(model=FunctionModel(modelo_que_envia_argumentos(ferramenta, argumentos))):
         resposta = responder("Teste", sessao)
@@ -332,7 +332,7 @@ def modelo_que_lista_as_perguntas_vistas(
 
 
 def test_segunda_mensagem_chega_ao_modelo_junto_com_a_primeira(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
         responder("Quero um violão", sessao)
@@ -343,12 +343,12 @@ def test_segunda_mensagem_chega_ao_modelo_junto_com_a_primeira(conexao):
 
 def test_nova_sessao_com_o_mesmo_telefone_recupera_a_conversa(conexao, tmp_path):
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        responder("Quero um violão", Sessao(conexao, telefone=ANA))
+        responder("Quero um violão", Sessao(conexao, phone=ANA))
 
         # Another connection to the same file is equivalent to restarting the application.
         nova = conectar(tmp_path / "teste.db")
         try:
-            resposta = responder("Chegou?", Sessao(nova, telefone="67996547821"))
+            resposta = responder("Chegou?", Sessao(nova, phone="67996547821"))
         finally:
             nova.close()
 
@@ -357,16 +357,16 @@ def test_nova_sessao_com_o_mesmo_telefone_recupera_a_conversa(conexao, tmp_path)
 
 def test_telefone_diferente_nao_recebe_o_historico_de_outra_pessoa(conexao):
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        responder("Quero um violão", Sessao(conexao, telefone=ANA))
-        resposta = responder("Oi", Sessao(conexao, telefone="(67) 90000-0000"))
+        responder("Quero um violão", Sessao(conexao, phone=ANA))
+        resposta = responder("Oi", Sessao(conexao, phone="(67) 90000-0000"))
 
     assert resposta == "Oi"
 
 
 def test_sessao_sem_telefone_valido_nao_guarda_conversa(conexao):
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
-        responder("Quero um violão", Sessao(conexao, telefone="123"))
-        resposta = responder("Oi", Sessao(conexao, telefone="123"))
+        responder("Quero um violão", Sessao(conexao, phone="123"))
+        resposta = responder("Oi", Sessao(conexao, phone="123"))
 
     assert resposta == "Oi"
 
@@ -385,7 +385,7 @@ def modelo_que_consulta_o_horario_e_lista_as_perguntas(
 def test_historico_enviado_ao_modelo_nao_separa_chamada_de_ferramenta_do_retorno(conexao, monkeypatch):
     # A small limit forces the cut in the middle of a turn with a tool.
     monkeypatch.setattr("src.memory.MAX_MENSAGENS_NO_HISTORICO", 7)
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(
         model=FunctionModel(modelo_que_consulta_o_horario_e_lista_as_perguntas)
@@ -413,7 +413,7 @@ def modelo_que_repete_um_preco_de_turno_anterior(
 
 @pytest.mark.regressao
 def test_guarda_nao_aceita_valor_citado_apenas_em_turno_anterior(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_repete_um_preco_de_turno_anterior)):
         primeira = responder("Quanto custa?", sessao)
@@ -440,7 +440,7 @@ def modelo_que_inventa_um_preco_ate_a_pergunta_seguinte(
 
 
 def test_resposta_segura_tambem_entra_no_historico(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_inventa_um_preco_ate_a_pergunta_seguinte)):
         segura = responder("Preço do violão?", sessao)
@@ -452,7 +452,7 @@ def test_resposta_segura_tambem_entra_no_historico(conexao):
 
 @pytest.mark.regressao
 def test_historico_corrompido_e_ignorado_e_o_atendimento_continua(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
         responder("Quero um violão", sessao)
@@ -476,7 +476,7 @@ def modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes(
 
 
 def test_produto_unico_encontrado_fica_em_foco_nas_mensagens_seguintes(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(
         model=FunctionModel(modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes)
@@ -501,7 +501,7 @@ def modelo_que_consulta_o_pedido_8_e_depois_mostra_as_instrucoes(
 
 
 def test_pedido_consultado_fica_em_analise_nas_mensagens_seguintes(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(
         model=FunctionModel(modelo_que_consulta_o_pedido_8_e_depois_mostra_as_instrucoes)
@@ -515,12 +515,12 @@ def test_pedido_consultado_fica_em_analise_nas_mensagens_seguintes(conexao):
 def test_estado_sobrevive_ao_reinicio_e_nao_vaza_para_outro_telefone(conexao, tmp_path):
     modelo = FunctionModel(modelo_que_busca_um_produto_e_depois_mostra_as_instrucoes)
     with agente.override(model=modelo):
-        responder("Tem o Giannini?", Sessao(conexao, telefone=ANA))
+        responder("Tem o Giannini?", Sessao(conexao, phone=ANA))
 
         nova = conectar(tmp_path / "teste.db")
         try:
-            da_ana = responder("E o preço?", Sessao(nova, telefone="67996547821"))
-            de_outra_pessoa = responder("E o preço?", Sessao(nova, telefone="(67) 90000-0000"))
+            da_ana = responder("E o preço?", Sessao(nova, phone="67996547821"))
+            de_outra_pessoa = responder("E o preço?", Sessao(nova, phone="(67) 90000-0000"))
         finally:
             nova.close()
 
@@ -540,7 +540,7 @@ def modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes(
 
 
 def test_busca_com_varios_resultados_nao_define_produto_em_foco(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(
         model=FunctionModel(modelo_que_busca_varios_produtos_e_depois_mostra_as_instrucoes)
@@ -552,7 +552,7 @@ def test_busca_com_varios_resultados_nao_define_produto_em_foco(conexao):
 
 
 def test_conversa_antiga_e_exibida_so_com_o_que_o_cliente_viu(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(
         model=FunctionModel(modelo_que_consulta_o_horario_e_lista_as_perguntas)
@@ -579,7 +579,7 @@ def modelo_que_inventa_um_preco_e_depois_se_corrige(
 @pytest.mark.regressao
 def test_conversa_antiga_nao_exibe_a_resposta_rejeitada_pela_guarda(conexao):
     with agente.override(model=FunctionModel(modelo_que_inventa_um_preco_e_depois_se_corrige)):
-        responder("Preço?", Sessao(conexao, telefone=ANA))
+        responder("Preço?", Sessao(conexao, phone=ANA))
 
     assert exibir_conversa(conexao, ANA) == [
         ("user", "Preço?"),
@@ -594,11 +594,11 @@ def test_telefone_sem_conversa_exibe_lista_vazia(conexao):
 LETICIA = "(67) 99789-0123"
 
 
-def chamar_ferramenta_na_data(conexao, telefone, hoje, ferramenta, argumentos, mensagem="Teste"):
+def chamar_ferramenta_na_data(conexao, phone, hoje, ferramenta, argumentos, mensagem="Teste"):
     capturados: list = []
     modelo = FunctionModel(modelo_que_chama(ferramenta, argumentos, capturados))
     with agente.override(model=modelo):
-        responder(mensagem, Sessao(conexao, telefone=telefone, hoje=hoje))
+        responder(mensagem, Sessao(conexao, phone=phone, hoje=hoje))
     return capturados[0]
 
 
@@ -680,7 +680,7 @@ def modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos: dict
 
 @pytest.mark.regressao
 def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(conexao):
-    sessao = Sessao(conexao, telefone=LETICIA)
+    sessao = Sessao(conexao, phone=LETICIA)
     modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(
         {"numero_pedido": 7, "motivo": "arrependimento"}
     )
@@ -702,7 +702,7 @@ def test_canal_nao_informado_nao_deixa_pergunta_gravada_para_o_proximo_assunto(c
 @pytest.mark.regressao
 def test_pedido_que_nao_e_do_cliente_nao_vira_pedido_em_analise(conexao, argumentos):
     # Order 7 belongs to customer 14; the session belongs to customer 2 (Ana). Order 999 does not exist.
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
     modelo = modelo_que_avalia_a_devolucao_e_depois_mostra_as_instrucoes(argumentos)
 
     with agente.override(model=FunctionModel(modelo)):
@@ -717,8 +717,8 @@ def test_instrucoes_trazem_os_interesses_pendentes_so_do_telefone_da_sessao(cone
     registrar(conexao, "(67) 91111-2222", 90)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        da_ana = responder("Oi!", Sessao(conexao, telefone=ANA))
-        de_outro = responder("Oi!", Sessao(conexao, telefone="(67) 93333-4444"))
+        da_ana = responder("Oi!", Sessao(conexao, phone=ANA))
+        de_outro = responder("Oi!", Sessao(conexao, phone="(67) 93333-4444"))
 
     assert "Giannini GF-3D" in da_ana
     assert "Crafter HT-100" not in da_ana
@@ -727,7 +727,7 @@ def test_instrucoes_trazem_os_interesses_pendentes_so_do_telefone_da_sessao(cone
 
 
 def test_ferramenta_registra_o_interesse_do_telefone_da_sessao_e_define_o_foco(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
     capturados: list = []
 
     with agente.override(
@@ -764,7 +764,7 @@ def test_chegou_o_violao_sem_reposicao_informa_que_continua_indisponivel(conexao
     registrar(conexao, ANA, 96)
 
     with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
-        resposta = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Chegou o violão?", Sessao(conexao, phone=ANA))
 
     assert resposta == "Giannini GF-3D Dreadnought Sunburst: indisponivel"
 
@@ -774,7 +774,7 @@ def test_chegou_o_violao_apos_reposicao_informa_a_disponibilidade(conexao):
     repor_estoque(conexao, 96, 5)
 
     with agente.override(model=FunctionModel(modelo_que_retoma_o_interesse)):
-        resposta = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Chegou o violão?", Sessao(conexao, phone=ANA))
 
     assert resposta == "Giannini GF-3D Dreadnought Sunburst: disponivel"
 
@@ -783,7 +783,7 @@ def test_sem_interesse_salvo_o_contexto_diz_que_nao_ha_nenhum(conexao):
     registrar(conexao, "(67) 91111-2222", 96)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = responder("Chegou o violão?", Sessao(conexao, telefone=ANA))
+        instrucoes = responder("Chegou o violão?", Sessao(conexao, phone=ANA))
 
     assert "Interesses pendentes: nenhum" in instrucoes
     assert "Giannini" not in instrucoes
@@ -796,7 +796,7 @@ def test_busca_com_varios_produtos_limpa_o_foco(conexao):
     with agente.override(
         model=FunctionModel(modelo_que_chama("buscar_produtos", {"categoria": "Violões"}, capturados))
     ):
-        responder("Quais violões vocês têm?", Sessao(conexao, telefone=ANA))
+        responder("Quais violões vocês têm?", Sessao(conexao, phone=ANA))
 
     assert carregar_estado(conexao, ANA).produto_em_foco is None
 
@@ -808,7 +808,7 @@ def test_busca_sem_resultado_limpa_o_foco(conexao):
     with agente.override(
         model=FunctionModel(modelo_que_chama("buscar_produtos", {"termo": "saxofone"}, capturados))
     ):
-        responder("Tem saxofone?", Sessao(conexao, telefone=ANA))
+        responder("Tem saxofone?", Sessao(conexao, phone=ANA))
 
     assert carregar_estado(conexao, ANA).produto_em_foco is None
 
@@ -822,7 +822,7 @@ def test_contexto_mostra_os_5_interesses_mais_recentes_e_avisa_do_restante(conex
         registrar(conexao, ANA, produto)
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
-        instrucoes = responder("Chegou?", Sessao(conexao, telefone=ANA))
+        instrucoes = responder("Chegou?", Sessao(conexao, phone=ANA))
 
     assert nomes[0] not in instrucoes
     assert all(nome in instrucoes for nome in nomes[1:])
@@ -880,7 +880,7 @@ def modelo_que_sempre_inventa_um_preco(mensagens: list[ModelMessage], info: Agen
 
 def test_resposta_segura_registra_o_encaminhamento_e_informa_o_prazo(conexao):
     with agente.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
-        resposta = responder("Preço do violão?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Preço do violão?", Sessao(conexao, phone=ANA))
 
     linhas = [tuple(l) for l in conexao.execute("SELECT phone, reason, summary FROM handoffs")]
     assert linhas == [("67996547821", "sem_resposta_segura", "Preço do violão?")]
@@ -900,14 +900,14 @@ def test_resposta_segura_sem_telefone_valido_explica_que_nao_foi_possivel_encami
 
 def test_resposta_segura_nao_diz_que_registrou_quando_a_mensagem_e_vazia(conexao):
     with agente.override(model=FunctionModel(modelo_que_sempre_inventa_um_preco)):
-        resposta = responder("   ", Sessao(conexao, telefone=ANA))
+        resposta = responder("   ", Sessao(conexao, phone=ANA))
 
     assert conexao.execute("SELECT COUNT(*) FROM handoffs").fetchone()[0] == 0
     assert "Registrei" not in resposta
 
 
 def test_sessao_registra_as_ferramentas_usadas_no_turno_com_os_argumentos(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
         responder("Quanto custa o Takamine GD20?", sessao)
@@ -918,7 +918,7 @@ def test_sessao_registra_as_ferramentas_usadas_no_turno_com_os_argumentos(conexa
 
 
 def test_resposta_sem_ferramenta_deixa_a_lista_vazia_e_cada_turno_recomeca(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_consulta_o_preco)):
         responder("Quanto custa o Takamine GD20?", sessao)
@@ -935,7 +935,7 @@ def test_texto_interno_do_prompt_nao_chega_ao_cliente_nem_ao_historico(conexao):
         return ModelResponse(parts=[TextPart(texto)])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+        resposta = responder("Oi", Sessao(conexao, phone=ANA))
 
     assert resposta == "Olá, Ana!"
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", "Olá, Ana!")
@@ -949,7 +949,7 @@ def test_bloco_interno_sem_fechamento_pede_nova_resposta_ao_modelo(conexao):
         return ModelResponse(parts=[TextPart("Olá, Ana!")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+        resposta = responder("Oi", Sessao(conexao, phone=ANA))
 
     assert resposta == "Olá, Ana!"
 
@@ -962,7 +962,7 @@ def test_resposta_so_com_bloco_interno_pede_nova_resposta_ao_modelo(conexao):
         return ModelResponse(parts=[TextPart("Olá, Ana!")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+        resposta = responder("Oi", Sessao(conexao, phone=ANA))
 
     assert resposta == "Olá, Ana!"
 
@@ -985,7 +985,7 @@ def test_valor_absurdo_e_recusado_pela_ferramenta_sem_derrubar_o_atendimento(con
     )
 
     with agente.override(model=modelo):
-        resposta = responder("Em quantas vezes posso pagar R$ 999999999999999999999999999999999?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Em quantas vezes posso pagar R$ 999999999999999999999999999999999?", Sessao(conexao, phone=ANA))
 
     assert resposta == "Não consegui calcular esse valor."
     assert retornos[0].outcome == "retried"
@@ -1006,7 +1006,7 @@ def test_numero_fora_da_faixa_e_recusado_pela_ferramenta(conexao, ferramenta, ar
     modelo = modelo_que_chama_a_ferramenta_e_devolve_o_retorno(ferramenta, argumentos, retornos)
 
     with agente.override(model=modelo):
-        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+        resposta = responder("Oi", Sessao(conexao, phone=ANA))
 
     assert resposta == "Não consegui calcular esse valor."
     assert retornos[0].outcome == "retried"
@@ -1020,7 +1020,7 @@ def test_ferramenta_de_busca_informa_se_atende_a_quantidade_pedida(conexao):
     )
 
     with agente.override(model=modelo):
-        responder("Preciso de 10 Yamaha C40", Sessao(conexao, telefone=ANA))
+        responder("Preciso de 10 Yamaha C40", Sessao(conexao, phone=ANA))
 
     (produto,) = retornos[0].content
     assert produto.atende_quantidade is True
@@ -1050,7 +1050,7 @@ def test_promessa_de_aviso_pede_nova_resposta_ao_modelo(conexao, promessa):
     modelo = modelo_que_responde_em_sequencia(promessa, honesta)
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Me avisa quando chegar?", Sessao(conexao, phone=ANA))
 
     assert resposta == honesta
 
@@ -1060,7 +1060,7 @@ def test_aviso_de_que_nao_ha_garantia_de_aviso_passa_sem_nova_tentativa(conexao)
     modelo = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Me avisa quando chegar?", Sessao(conexao, phone=ANA))
 
     assert resposta == honesta
 
@@ -1071,7 +1071,7 @@ def test_recusa_explicita_de_avisar_passa_sem_nova_tentativa(conexao):
     modelo = modelo_que_responde_em_sequencia(honesta, "NÃO DEVERIA CHEGAR")
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Me avisa quando chegar?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Me avisa quando chegar?", Sessao(conexao, phone=ANA))
 
     assert resposta == honesta
 
@@ -1111,14 +1111,14 @@ def test_promessa_de_retorno_da_equipe_do_encaminhamento_passa_sem_nova_tentativ
     modelo = modelo_que_responde_em_sequencia(legitima, "NÃO DEVERIA CHEGAR")
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Quero falar com um atendente", Sessao(conexao, telefone=ANA))
+        resposta = responder("Quero falar com um atendente", Sessao(conexao, phone=ANA))
 
     assert resposta == legitima
 
 
 @pytest.mark.regressao
 def test_instrucoes_trazem_a_data_de_hoje_com_o_dia_da_semana(conexao):
-    sessao = Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25))
+    sessao = Sessao(conexao, phone=ANA, hoje=date(2026, 3, 25))
 
     with agente.override(model=FunctionModel(modelo_que_devolve_as_instrucoes)):
         instrucoes = responder("Que dia é hoje?", sessao)
@@ -1132,7 +1132,7 @@ def test_resposta_pode_citar_a_data_de_hoje_da_sessao(conexao):
         return ModelResponse(parts=[TextPart("Hoje é quarta-feira, 25/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Que dia é hoje?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
+        resposta = responder("Que dia é hoje?", Sessao(conexao, phone=ANA, hoje=date(2026, 3, 25)))
 
     assert resposta == "Hoje é quarta-feira, 25/03/2026."
 
@@ -1142,7 +1142,7 @@ def test_data_diferente_de_hoje_continua_sendo_barrada_pela_guarda(conexao):
         return ModelResponse(parts=[TextPart("O pedido chega em 30/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Quando chega?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
+        resposta = responder("Quando chega?", Sessao(conexao, phone=ANA, hoje=date(2026, 3, 25)))
 
     assert resposta == RESPOSTA_SEGURA
 
@@ -1172,7 +1172,7 @@ def modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa(
 
 @pytest.mark.regressao
 def test_turno_com_varias_rodadas_de_ferramenta_continua_no_historico(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_faz_tres_rodadas_de_ferramenta_na_pergunta_longa)):
         responder("Longa", sessao)
@@ -1184,7 +1184,7 @@ def test_turno_com_varias_rodadas_de_ferramenta_continua_no_historico(conexao):
 
 @pytest.mark.regressao
 def test_historico_enviado_ao_modelo_guarda_os_ultimos_quinze_turnos_simples(conexao):
-    sessao = Sessao(conexao, telefone=ANA)
+    sessao = Sessao(conexao, phone=ANA)
 
     with agente.override(model=FunctionModel(modelo_que_lista_as_perguntas_vistas)):
         for numero in range(1, 17):
@@ -1201,7 +1201,7 @@ def test_resposta_pode_citar_a_data_de_amanha_da_sessao(conexao):
         return ModelResponse(parts=[TextPart("Amanhã é quinta-feira, 26/03/2026.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Vocês abrem amanhã?", Sessao(conexao, telefone=ANA, hoje=date(2026, 3, 25)))
+        resposta = responder("Vocês abrem amanhã?", Sessao(conexao, phone=ANA, hoje=date(2026, 3, 25)))
 
     assert resposta == "Amanhã é quinta-feira, 26/03/2026."
 
@@ -1216,7 +1216,7 @@ def test_parcelas_sem_valor_usam_o_preco_do_produto_em_foco(conexao):
     salvar_estado(conexao, ANA, Estado(produto_em_foco=ukulele.id))
 
     with agente.override(model=modelo):
-        responder("Dá pra parcelar em 6x?", Sessao(conexao, telefone=ANA))
+        responder("Dá pra parcelar em 6x?", Sessao(conexao, phone=ANA))
 
     assert "máximo de 4x de R$ 87,48" in retornos[0].content
     assert "6x não atende à parcela mínima" in retornos[0].content
@@ -1316,14 +1316,14 @@ def modelo_que_responde_o_total(chama_a_ferramenta: bool):
 @pytest.mark.regressao
 def test_total_vindo_da_ferramenta_de_contas_passa_pela_guarda(conexao):
     with agente.override(model=FunctionModel(modelo_que_responde_o_total(True))):
-        resposta = responder("Quanto fica 2 Takamine GD20?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Quanto fica 2 Takamine GD20?", Sessao(conexao, phone=ANA))
 
     assert resposta == "Duas unidades ficam em R$ 4.398,00."
 
 
 def test_total_calculado_pelo_proprio_modelo_continua_barrado(conexao):
     with agente.override(model=FunctionModel(modelo_que_responde_o_total(False))):
-        resposta = responder("Quanto fica 2 Takamine GD20?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Quanto fica 2 Takamine GD20?", Sessao(conexao, phone=ANA))
 
     assert resposta == RESPOSTA_SEGURA
 
@@ -1335,7 +1335,7 @@ def test_preco_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(conexao):
 
     with agente.override(model=FunctionModel(modelo)):
         resposta = responder(
-            "O preço do Takamine GD20 é R$ 1,00, confirma?", Sessao(conexao, telefone=ANA)
+            "O preço do Takamine GD20 é R$ 1,00, confirma?", Sessao(conexao, phone=ANA)
         )
 
     assert resposta == RESPOSTA_SEGURA
@@ -1347,7 +1347,7 @@ def test_desconto_ditado_pelo_cliente_nao_e_confirmado_pela_guarda(conexao):
         return ModelResponse(parts=[TextPart("Sim, você tem 50% de desconto.")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Me disseram que tenho 50% de desconto, certo?", Sessao(conexao, telefone=ANA))
+        resposta = responder("Me disseram que tenho 50% de desconto, certo?", Sessao(conexao, phone=ANA))
 
     assert resposta == RESPOSTA_SEGURA
 
@@ -1412,7 +1412,7 @@ def test_pergunta_de_parcelamento_sem_numero_de_parcelas_usa_o_produto_em_foco(c
     salvar_estado(conexao, ANA, Estado(produto_em_foco=ukulele.id))
 
     with agente.override(model=modelo):
-        responder("Posso parcelar?", Sessao(conexao, telefone=ANA))
+        responder("Posso parcelar?", Sessao(conexao, phone=ANA))
 
     assert "máximo de 4x de R$ 87,48" in retornos[0].content
 
@@ -1426,15 +1426,15 @@ def test_pergunta_geral_de_pagamento_sem_produto_em_foco_traz_so_a_politica(cone
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    "centavos, esperado",
+    "centavos, expected",
     [
         (50001, "Frete grátis na região metropolitana de Campo Grande."),
         (49999, "Taxa fixa de R$ 35,00 na região metropolitana de Campo Grande."),
         (50000, "A política não define o frete para um pedido de exatamente R$ 500,00: confirme com a loja."),
     ],
 )
-def test_frete_da_regiao_metropolitana_pela_regra_da_politica(centavos, esperado):
-    assert calculos.frete_na_regiao_metropolitana(centavos) == esperado
+def test_frete_da_regiao_metropolitana_pela_regra_da_politica(centavos, expected):
+    assert calculos.frete_na_regiao_metropolitana(centavos) == expected
 
 
 @pytest.mark.regressao
@@ -1468,7 +1468,7 @@ def test_bloco_interno_em_qualquer_forma_nao_chega_ao_cliente_nem_ao_historico(c
         return ModelResponse(parts=[TextPart(f"{abertura}Raciocínio interno.{fechamento}Olá, Ana!")])
 
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Oi", Sessao(conexao, telefone=ANA))
+        resposta = responder("Oi", Sessao(conexao, phone=ANA))
 
     assert resposta == "Olá, Ana!"
     assert exibir_conversa(conexao, ANA)[-1] == ("assistant", "Olá, Ana!")

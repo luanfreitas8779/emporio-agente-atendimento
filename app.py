@@ -8,7 +8,7 @@ from src.config import CAMINHO_BANCO
 from src.database import conectar
 from src.load_data import banco_carregado
 from src.memory import exibir_conversa
-from src.phone import normalizar_telefone
+from src.phone import normalize_phone
 
 
 SAUDACAO = "Olá! Sou o Tom, do atendimento da Empório da Música. Posso ajudar com produtos, pedidos, trocas e pagamentos."
@@ -72,13 +72,13 @@ if "mensagens" not in st.session_state:
 
 # The phone number identifies the session. Typing it does not prove identity (ADR-009).
 # The key keeps the same field across runs; changing the value on each run recreated it empty.
-st.sidebar.text_input("Seu telefone", key="telefone", placeholder="(67) 99999-9999")
+st.sidebar.text_input("Seu telefone", key="phone", placeholder="(67) 99999-9999")
 st.sidebar.caption("Informe o telefone cadastrado para consultar seus pedidos.")
 
 # When the phone number is entered (or changed), the screen shows the conversation stored for it.
 # An invalid phone number has no stored conversation, so the screen starts empty.
-telefone_da_conversa = normalizar_telefone(st.session_state.telefone)
-if st.session_state.telefone.strip() and telefone_da_conversa is None:
+telefone_da_conversa = normalize_phone(st.session_state.phone)
+if st.session_state.phone.strip() and telefone_da_conversa is None:
     st.sidebar.warning("Telefone inválido. Informe o DDD e o número, por exemplo (67) 99999-9999.")
 if st.session_state.get("conversa_de") != telefone_da_conversa:
     # Whoever chatted before entering the phone number keeps seeing what was said (QA-15).
@@ -88,7 +88,7 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
     try:
         st.session_state.mensagens = [
             {"papel": papel, "texto": texto}
-            for papel, texto in exibir_conversa(conexao, st.session_state.telefone)
+            for papel, texto in exibir_conversa(conexao, st.session_state.phone)
         ] + (sem_telefone if telefone_da_conversa else [])
     finally:
         conexao.close()
@@ -102,10 +102,10 @@ if st.session_state.get("conversa_de") != telefone_da_conversa:
         and not (usadas and usadas <= FERRAMENTAS_SEM_CADASTRO)
         and st.session_state.get("pendente") is None
     ):
-        st.session_state.pendente = {"pergunta": perguntas[-1], "telefone": st.session_state.telefone}
+        st.session_state.pendente = {"pergunta": perguntas[-1], "phone": st.session_state.phone}
 
 # On mobile the sidebar starts collapsed and the phone field is hidden.
-if not st.session_state.telefone.strip():
+if not st.session_state.phone.strip():
     st.caption("Para consultar seus pedidos, informe o telefone cadastrado no menu lateral (ícone no canto superior esquerdo).")
 
 # The greeting belongs only to the screen: it is not stored in the history or sent to the model.
@@ -121,14 +121,14 @@ for mensagem in st.session_state.mensagens:
 pendente = st.session_state.get("pendente")
 if pergunta := st.chat_input("Escreva sua mensagem", disabled=pendente is not None):
     st.session_state.mensagens.append({"papel": "user", "texto": pergunta})
-    st.session_state.pendente = {"pergunta": pergunta, "telefone": st.session_state.telefone}
+    st.session_state.pendente = {"pergunta": pergunta, "phone": st.session_state.phone}
     st.rerun()
 
 if pendente is not None:
     sessao = None
     try:
         try:
-            sessao = Sessao(conectar(CAMINHO_BANCO), pendente["telefone"])
+            sessao = Sessao(conectar(CAMINHO_BANCO), pendente["phone"])
             with st.spinner("O Tom está digitando..."):
                 resposta = responder(pendente["pergunta"], sessao)
         except Exception:
@@ -137,7 +137,7 @@ if pendente is not None:
             resposta = MENSAGEM_DE_ERRO_TECNICO
         # If the screen's phone number changed, the answer was already stored for whoever asked and
         # must not appear in another number's conversation.
-        if normalizar_telefone(pendente["telefone"]) == st.session_state.get("conversa_de"):
+        if normalize_phone(pendente["phone"]) == st.session_state.get("conversa_de"):
             st.session_state.mensagens.append(
                 {
                     "papel": "assistant",

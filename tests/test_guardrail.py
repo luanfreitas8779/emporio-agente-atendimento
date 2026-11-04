@@ -28,7 +28,7 @@ def modelo_com_respostas(ferramenta, argumentos, respostas, chamadas=None):
 def perguntar(conexao, mensagem, ferramenta, argumentos, respostas, chamadas=None):
     modelo = modelo_com_respostas(ferramenta, argumentos, respostas, chamadas)
     with agente.override(model=FunctionModel(modelo)):
-        return responder(mensagem, Sessao(conexao, telefone=ANA))
+        return responder(mensagem, Sessao(conexao, phone=ANA))
 
 
 TAKAMINE = ("buscar_produtos", {"termo": "Takamine GD20"})
@@ -138,7 +138,7 @@ def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "esperado"),
+    ("resposta", "fonte", "expected"),
     [
         ("Custa 2.199 reais.", "Preço: R$ 2.199,00", []),
         ("Custa 2.199 reais.", "Preço: R$ 599,90", ["2199"]),
@@ -147,13 +147,13 @@ def test_percentual_com_ponto_decimal_nao_se_confunde_com_um_numero_inteiro():
         ("Custa 599,90 reais.", "Preço: R$ 599,90", []),
     ],
 )
-def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, esperado):
-    assert valores_nao_confirmados(resposta, [fonte]) == esperado
+def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, expected):
+    assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "esperado"),
+    ("resposta", "fonte", "expected"),
     [
         ("O prazo vai até 15 de dezembro.", "Prazo até 15/12/2026.", []),
         ("O prazo vai até 15 de dezembro.", "Prazo até 16/12/2026.", ["15/12"]),
@@ -161,33 +161,33 @@ def test_valor_escrito_com_a_palavra_reais_tambem_e_conferido(resposta, fonte, e
         ("O prazo vai até 15 de dezembro.", "Sem datas.", ["15/12"]),
     ],
 )
-def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(resposta, fonte, esperado):
-    assert valores_nao_confirmados(resposta, [fonte]) == esperado
+def test_data_por_extenso_e_conferida_contra_as_datas_das_fontes(resposta, fonte, expected):
+    assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "esperado"),
+    ("resposta", "fonte", "expected"),
     [
         ("Custa mil reais.", "Preço: R$ 1.000,00", []),
         ("Custa mil reais.", "Preço: R$ 599,90", ["1000"]),
         ("Custa 1,5 mil reais.", "Preço: R$ 1.500,00", []),
     ],
 )
-def test_mil_reais_por_extenso_tambem_e_conferido(resposta, fonte, esperado):
-    assert valores_nao_confirmados(resposta, [fonte]) == esperado
+def test_mil_reais_por_extenso_tambem_e_conferido(resposta, fonte, expected):
+    assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
 @pytest.mark.regressao
 @pytest.mark.parametrize(
-    ("resposta", "fonte", "esperado"),
+    ("resposta", "fonte", "expected"),
     [
         ("O prazo vai até 3 de março de 2026.", "Prazo até 03/03/2026.", []),
         ("O prazo vai até 3 de março de 2027.", "Prazo até 03/03/2026.", ["2027-03-03"]),
     ],
 )
-def test_data_por_extenso_com_ano_e_conferida_com_o_ano(resposta, fonte, esperado):
-    assert valores_nao_confirmados(resposta, [fonte]) == esperado
+def test_data_por_extenso_com_ano_e_conferida_com_o_ano(resposta, fonte, expected):
+    assert valores_nao_confirmados(resposta, [fonte]) == expected
 
 
 POLITICA_DE_HORARIOS = "Segunda a sexta-feira: 09:00 às 18:00. Sábado: 09:00 às 13:00."
@@ -241,7 +241,7 @@ def test_resposta_pode_citar_o_telefone_da_propria_sessao(conexao):
 def test_telefone_da_sessao_digitado_so_com_numeros_tambem_e_fonte(conexao):
     modelo = modelo_com_respostas(None, None, ["Tenho o (67) 99654-7821."])
     with agente.override(model=FunctionModel(modelo)):
-        resposta = responder("Qual número vocês têm de mim?", Sessao(conexao, telefone="67996547821"))
+        resposta = responder("Qual número vocês têm de mim?", Sessao(conexao, phone="67996547821"))
 
     assert resposta == "Tenho o (67) 99654-7821."
 

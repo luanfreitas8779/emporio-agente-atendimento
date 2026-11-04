@@ -6,7 +6,7 @@ from pathlib import Path
 from src.config import CAMINHO_BANCO, PASTA_DADOS
 from src.database import conectar
 from src.orders import STATUS_DE_PEDIDO, pagamento_valido
-from src.phone import normalizar_telefone
+from src.phone import normalize_phone
 
 ESQUEMA_CATALOGO = """
 DROP TABLE IF EXISTS order_items;
@@ -190,14 +190,14 @@ def preparar_cliente(cliente: dict[str, str], vistos: set[str], telefones: set[s
         numero = int(identificador)
     except ValueError as erro:
         raise ErroDeCarga(f"customer {identificador}: invalid value") from erro
-    telefone = normalizar_telefone(cliente["phone"])
-    if telefone is None or not cliente["name"].strip():
+    phone = normalize_phone(cliente["phone"])
+    if phone is None or not cliente["name"].strip():
         raise ErroDeCarga(f"customer {identificador}: invalid value")
-    if telefone in telefones:
+    if phone in telefones:
         raise ErroDeCarga(f"customer {identificador}: duplicate phone number")
-    telefones.add(telefone)
+    telefones.add(phone)
     # E-mail and city are not loaded: the agent does not need them (privacy).
-    return (numero, cliente["name"].strip(), telefone)
+    return (numero, cliente["name"].strip(), phone)
 
 
 def carregar_clientes(conexao: sqlite3.Connection, pasta_dados: Path) -> None:

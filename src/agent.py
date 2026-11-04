@@ -33,7 +33,7 @@ from pydantic_ai.messages import (
 from src import calculos, catalog, guardrail, handoffs, interests, limits, memory, orders, policies, returns
 from src.config import MODELO_GEMINI, data_de_referencia
 from src.datas import dia_da_semana, formatar_data
-from src.phone import formatar_telefone
+from src.phone import format_phone
 
 MAX_INTERESSES_NO_CONTEXTO = 5
 
@@ -288,14 +288,14 @@ class ChamadaDeFerramenta:
 @dataclass
 class Sessao:
     conexao: sqlite3.Connection
-    telefone: str | None = None
+    phone: str | None = None
     estado: memory.Estado = field(default_factory=memory.Estado)
     hoje: date = field(default_factory=data_de_referencia)
     ferramentas: list[ChamadaDeFerramenta] = field(default_factory=list)
 
     @property
     def cliente(self) -> orders.Cliente | None:
-        return orders.identificar_cliente(self.conexao, self.telefone)
+        return orders.identificar_cliente(self.conexao, self.phone)
 
 
 # Streamlit may run the script with another message in progress, and run_sync
@@ -422,7 +422,7 @@ def confirmar_valores(ctx: RunContext[Sessao], resposta: str) -> str:
         *quantidades_da_busca(ctx.messages),
         formatar_data(hoje),
         formatar_data(hoje + timedelta(days=1)),
-        formatar_telefone(ctx.deps.telefone or ""),
+        format_phone(ctx.deps.phone or ""),
     ]
     inventados = guardrail.valores_nao_confirmados(resposta, fontes, do_cliente, limites_de_preco(ctx.messages))
     if inventados:
@@ -452,7 +452,7 @@ def contexto_do_cliente(ctx: RunContext[Sessao]) -> str:
         nome = catalog.nome_do_produto(ctx.deps.conexao, foco)
         if nome:
             texto += f"\nProduto em foco: {nome}."
-    interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.telefone or "")
+    interesses = interests.listar_pendentes(ctx.deps.conexao, ctx.deps.phone or "")
     # Only the names: the current stock always comes from buscar_produtos.
     recentes = interesses[-MAX_INTERESSES_NO_CONTEXTO:]
     nomes = "; ".join(recentes) or "nenhum"
@@ -621,7 +621,7 @@ def registrar_interesse(ctx: RunContext[Sessao], product_id: Annotated[int, Fiel
     Args:
         product_id: Id do produto, como devolvido por buscar_produtos.
     """
-    resultado = interests.registrar(ctx.deps.conexao, ctx.deps.telefone or "", product_id)
+    resultado = interests.registrar(ctx.deps.conexao, ctx.deps.phone or "", product_id)
     if resultado in (interests.Resultado.REGISTRADO, interests.Resultado.JA_REGISTRADO):
         ctx.deps.estado.produto_em_foco = product_id
     return MENSAGENS_DE_INTERESSE[resultado]
@@ -640,7 +640,7 @@ def encaminhar_para_atendente(
         motivo: reclamacao, atendente_solicitado ou sem_resposta_segura.
         resumo: Resumo curto e objetivo do caso, para a equipe continuar o atendimento.
     """
-    resultado = handoffs.registrar(ctx.deps.conexao, ctx.deps.telefone or "", motivo, resumo)
+    resultado = handoffs.registrar(ctx.deps.conexao, ctx.deps.phone or "", motivo, resumo)
     return MENSAGENS_DE_ENCAMINHAMENTO[resultado]
 
 
@@ -679,7 +679,7 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
     try:
         memory.salvar_mensagens(
             sessao.conexao,
-            sessao.telefone,
+            sessao.phone,
             [
                 ModelRequest(parts=[UserPromptPart(mensagem)]),
                 ModelResponse(parts=[TextPart(texto)]),
@@ -694,13 +694,13 @@ def _responder_sem_modelo(mensagem: str, sessao: Sessao, texto: str) -> str:
 def responder(mensagem: str, sessao: Sessao) -> str:
     sessao.ferramentas = []
     try:
-        historico = memory.carregar_historico(sessao.conexao, sessao.telefone)
-        sessao.estado = memory.carregar_estado(sessao.conexao, sessao.telefone)
+        historico = memory.carregar_historico(sessao.conexao, sessao.phone)
+        sessao.estado = memory.carregar_estado(sessao.conexao, sessao.phone)
         resultado = _executar(mensagem, sessao, historico)
         sessao.ferramentas = ferramentas_do_turno(resultado.new_messages())
         limpar_texto_das_respostas(resultado.new_messages())
-        memory.salvar_mensagens(sessao.conexao, sessao.telefone, resultado.new_messages())
-        memory.salvar_estado(sessao.conexao, sessao.telefone, sessao.estado)
+        memory.salvar_mensagens(sessao.conexao, sessao.phone, resultado.new_messages())
+        memory.salvar_estado(sessao.conexao, sessao.phone, sessao.estado)
         return resultado.output
     except (*ERROS_TEMPORARIOS, ModelQuotaExceededError) as erro:
         try:
@@ -721,7 +721,7 @@ def responder(mensagem: str, sessao: Sessao) -> str:
         try:
             resultado = handoffs.registrar(
                 sessao.conexao,
-                sessao.telefone or "",
+                sessao.phone or "",
                 handoffs.Motivo.SEM_RESPOSTA_SEGURA,
                 mensagem,
             )

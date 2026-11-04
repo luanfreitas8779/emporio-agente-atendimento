@@ -52,12 +52,12 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
     telefones: list = []
 
     def responder_observando(mensagem, sessao):
-        telefones.append(sessao.telefone)
+        telefones.append(sessao.phone)
         return "Olá!"
 
     monkeypatch.setattr("src.agent.responder", responder_observando)
 
-    tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": "(67) 99654-7821"}
+    tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
     assert telefones == ["(67) 99654-7821"]
@@ -66,7 +66,7 @@ def test_pergunta_pendente_e_respondida_com_o_telefone_de_quem_a_enviou(tela, mo
 def test_resposta_de_um_telefone_nao_aparece_na_conversa_de_outro(tela, monkeypatch):
     monkeypatch.setattr("src.agent.responder", lambda mensagem, sessao: "Resposta da Ana")
 
-    tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": "(67) 99654-7821"}
+    tela.session_state["pendente"] = {"pergunta": "Oi", "phone": "(67) 99654-7821"}
     tela.sidebar.text_input[0].set_value("(67) 99789-0123").run()
 
     assert all(m["texto"] != "Resposta da Ana" for m in tela.session_state["mensagens"])
@@ -94,7 +94,7 @@ def test_falha_ao_iniciar_a_sessao_tambem_mostra_a_mensagem_tecnica(tela, monkey
         raise OSError("disco indisponível")
 
     monkeypatch.setattr("src.agent.Sessao", sessao_com_falha)
-    tela.session_state["pendente"] = {"pergunta": "Oi", "telefone": ""}
+    tela.session_state["pendente"] = {"pergunta": "Oi", "phone": ""}
 
     tela.run()
 
@@ -147,7 +147,7 @@ def test_informar_o_telefone_responde_de_novo_a_pergunta_pendente_com_o_telefone
     chamadas: list = []
 
     def responder_observando(mensagem, sessao):
-        chamadas.append((mensagem, sessao.telefone))
+        chamadas.append((mensagem, sessao.phone))
         return "Olá!"
 
     monkeypatch.setattr("src.agent.responder", responder_observando)
@@ -174,16 +174,16 @@ def test_saudacao_some_quando_a_conversa_ja_tem_mensagens(tela):
 
 
 @pytest.mark.regressao
-@pytest.mark.parametrize("telefone", ["123", "(67) 9965", "abc"])
-def test_telefone_invalido_gera_aviso_na_barra_lateral(tela, telefone):
-    tela.sidebar.text_input[0].set_value(telefone).run()
+@pytest.mark.parametrize("phone", ["123", "(67) 9965", "abc"])
+def test_telefone_invalido_gera_aviso_na_barra_lateral(tela, phone):
+    tela.sidebar.text_input[0].set_value(phone).run()
 
     assert "telefone" in tela.sidebar.warning[0].value.lower()
 
 
-@pytest.mark.parametrize("telefone", ["", ANA])
-def test_telefone_vazio_ou_valido_nao_gera_aviso(tela, telefone):
-    tela.sidebar.text_input[0].set_value(telefone).run()
+@pytest.mark.parametrize("phone", ["", ANA])
+def test_telefone_vazio_ou_valido_nao_gera_aviso(tela, phone):
+    tela.sidebar.text_input[0].set_value(phone).run()
 
     assert len(tela.sidebar.warning) == 0
 
@@ -251,7 +251,7 @@ def test_pergunta_ja_respondida_sem_depender_do_cadastro_nao_e_refeita(tela, mon
     chamadas: list = []
 
     def responder_com_catalogo(mensagem, sessao):
-        chamadas.append(sessao.telefone)
+        chamadas.append(sessao.phone)
         sessao.ferramentas = [ChamadaDeFerramenta("buscar_produtos", {"termo": "violão"})]
         return "Custa R$ 100,00."
 
@@ -269,7 +269,7 @@ def test_pergunta_que_dependia_do_cadastro_e_refeita_com_o_telefone(tela, monkey
     chamadas: list = []
 
     def responder_com_pedidos(mensagem, sessao):
-        chamadas.append(sessao.telefone)
+        chamadas.append(sessao.phone)
         sessao.ferramentas = [ChamadaDeFerramenta("consultar_meus_pedidos", {})]
         return "Telefone sem cadastro."
 

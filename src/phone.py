@@ -1,15 +1,15 @@
-CODIGO_DO_PAIS = "55"
+COUNTRY_CODE = "55"
 
 
-def normalizar_telefone(telefone: str) -> str | None:
+def normalize_phone(phone: str) -> str | None:
     """Returns the area code and number as digits only, or None if it is not a Brazilian phone number."""
-    digitos = "".join(c for c in telefone if c.isdigit())
-    if len(digitos) in (12, 13) and digitos.startswith(CODIGO_DO_PAIS):
-        digitos = digitos[len(CODIGO_DO_PAIS) :]
-    return digitos if len(digitos) in (10, 11) else None
+    digits = "".join(c for c in phone if c.isdigit())
+    if len(digits) in (12, 13) and digits.startswith(COUNTRY_CODE):
+        digits = digits[len(COUNTRY_CODE) :]
+    return digits if len(digits) in (10, 11) else None
 
 
-def formatar_telefone(telefone: str) -> str:
+def format_phone(phone: str) -> str:
     """"(67) 99654-7821" from any typed form, or empty if it is not a phone number."""
-    digitos = normalizar_telefone(telefone)
-    return f"({digitos[:2]}) {digitos[2:-4]}-{digitos[-4:]}" if digitos else ""
+    digits = normalize_phone(phone)
+    return f"({digits[:2]}) {digits[2:-4]}-{digits[-4:]}" if digits else ""

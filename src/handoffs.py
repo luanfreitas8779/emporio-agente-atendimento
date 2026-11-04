@@ -5,7 +5,7 @@ from enum import StrEnum
 
 from src.catalog import normalizar
 from src.memory import agora
-from src.phone import normalizar_telefone
+from src.phone import normalize_phone
 
 
 MAX_RESUMO = 500
@@ -50,8 +50,8 @@ class Resultado(StrEnum):
     TELEFONE_INVALIDO = "telefone_invalido"
 
 
-def registrar(conexao: sqlite3.Connection, telefone: str, motivo: Motivo, resumo: str) -> Resultado:
-    chave = normalizar_telefone(telefone)
+def registrar(conexao: sqlite3.Connection, phone: str, motivo: Motivo, resumo: str) -> Resultado:
+    chave = normalize_phone(phone)
     if chave is None:
         return Resultado.TELEFONE_INVALIDO
     resumo = resumo.strip()[:MAX_RESUMO].strip()

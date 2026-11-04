@@ -130,7 +130,7 @@ def valores(texto: str) -> dict[str, set]:
         "quantidade": quantidades,
         "estoque": estoque,
         "horario": horarios,
-        "telefone": telefones,
+        "phone": telefones,
         "dia_mes": por_extenso,
         "percentual": percentuais,
         "data": datas - {None},
@@ -148,7 +148,7 @@ def _data(ano: str, mes: str, dia: str) -> date | None:
 # These only count if they come from the system: the customer may "state" a price, a discount, opening
 # hours, a store phone number, or the stock. Dates, tracking codes, quantities, and relative dates
 # stated by the customer may be repeated.
-TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "telefone", "estoque")
+TIPOS_QUE_O_CLIENTE_NAO_CONFIRMA = ("dinheiro", "percentual", "horario", "phone", "estoque")
 
 
 def valores_nao_confirmados(
