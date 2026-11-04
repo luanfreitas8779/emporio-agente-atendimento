@@ -87,7 +87,7 @@ def test_customer_gives_the_first_name(connection):
     [
         (3, 1, "entregue"),
         (6, 9, "confirmado"),
-        (8, 13, "pendente"),
+        (8, 13, "pending"),
         (2, 8, "enviado"),
         (15, 17, "cancelado"),
     ],

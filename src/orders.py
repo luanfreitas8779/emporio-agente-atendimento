@@ -62,7 +62,7 @@ def identify_customer(connection: sqlite3.Connection, phone: str | None) -> Cust
 CREDIT_INSTALLMENTS = {f"credit_{n}x": n for n in range(1, 13)}
 # Fixed, literal translation (ADR-012): it adds no meaning that the data does not have.
 ORDER_STATUS = {
-    "pending": "pendente",
+    "pending": "pending",
     "confirmed": "confirmado",
     "shipped": "enviado",
     "delivered": "entregue",
